@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -32,37 +32,64 @@ def test_checkpointer_healthy_false_when_bridge_missing() -> None:
 
 def test_recall_returns_none_for_empty_user_id() -> None:
     recall = make_agentbase_recall(
-        Settings(app_env="agentbase", memory_id="mem-1", log_level="error")
+        Settings(app_env="agentbase", memory_id="mem-1", memory_strategy_id="strat-1", log_level="error")
     )
     assert recall("", "session-1") is None
 
 
+def test_recall_returns_none_when_memory_id_missing() -> None:
+    recall = make_agentbase_recall(
+        Settings(app_env="agentbase", memory_id="", memory_strategy_id="strat-1", log_level="error")
+    )
+    assert recall("user-1", "session-1") is None
+
+
+def test_recall_returns_none_when_strategy_id_missing() -> None:
+    recall = make_agentbase_recall(
+        Settings(app_env="agentbase", memory_id="mem-1", memory_strategy_id="", log_level="error")
+    )
+    assert recall("user-1", "session-1") is None
+
+
 def test_recall_joins_memory_records() -> None:
-    settings = Settings(app_env="agentbase", memory_id="mem-abc", log_level="error")
+    settings = Settings(
+        app_env="agentbase",
+        memory_id="mem-abc",
+        memory_strategy_id="strat-xyz",
+        log_level="error",
+    )
     recall = make_agentbase_recall(settings)
 
-    mock_client = MagicMock()
-    mock_client.search.return_value = [
-        {"content": "Prefer concise answers"},
-        {"content": ""},
-        {"content": "Use Vietnamese when asked"},
-    ]
+    record1 = MagicMock()
+    record1.memory = "Prefer concise answers"
+    record2 = MagicMock()
+    record2.memory = ""
+    record3 = MagicMock()
+    record3.memory = "Use Vietnamese when asked"
 
-    mock_memory_client = MagicMock(return_value=mock_client)
+    mock_client = MagicMock()
+    mock_client.searchMemoryRecords_async = AsyncMock(return_value=[record1, record2, record3])
+    mock_client_cls = MagicMock(return_value=mock_client)
+
+    mock_memory_module = MagicMock()
+    mock_memory_module.MemoryClient = mock_client_cls
+
+    mock_models_module = MagicMock()
+    mock_models_module.MemoryRecordSearchRequest = MagicMock()
+
     with patch.dict(
         "sys.modules",
-        {"greennode_agent_bridge": MagicMock(), "greennode_agent_bridge.memory": MagicMock()},
+        {
+            "greennode_agentbase": MagicMock(),
+            "greennode_agentbase.memory": mock_memory_module,
+            "greennode_agentbase.memory.models": mock_models_module,
+        },
     ):
-        with patch(
-            "greennode_agent_bridge.memory.MemoryClient",
-            mock_memory_client,
-        ):
-            result = recall("user-42", "sess-9")
+        result = recall("user-42", "sess-9")
 
     assert result == "Prefer concise answers\nUse Vietnamese when asked"
-    mock_memory_client.assert_called_once_with(memory_id="mem-abc")
-    mock_client.search.assert_called_once_with(
-        actor_id="user-42",
-        record_types=["USER_PREFERENCE", "CUSTOM"],
-        limit=5,
-    )
+    mock_client_cls.assert_called_once_with()
+    mock_client.searchMemoryRecords_async.assert_called_once()
+    call_kwargs = mock_client.searchMemoryRecords_async.call_args
+    assert call_kwargs.kwargs["id"] == "mem-abc"
+    assert call_kwargs.kwargs["namespace"] == "/strategies/strat-xyz/actors/user-42"

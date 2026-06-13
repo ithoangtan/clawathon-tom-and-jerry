@@ -39,7 +39,7 @@ class AgentBaseCheckpointer:
             return self._saver
 
         try:
-            from greennode_agent_bridge.langgraph import AgentBaseMemoryEvents
+            from greennode_agent_bridge import AgentBaseMemoryEvents
         except ImportError as exc:  # pragma: no cover — only on misconfigured deploys
             raise RuntimeError(
                 "greennode-agent-bridge[langgraph] is not installed. It is added "

@@ -216,11 +216,19 @@ class Settings(BaseSettings):
         description="Router confidence threshold below which a clarifying question is emitted",
     )
 
-    # ── Memory (STM) ──────────────────────────────────────────────────────────
+    # ── Memory (STM + LTM) ───────────────────────────────────────────────────
 
     memory_id: str = Field(
         default="",
         description="GreenNode AgentBase Memory ID (blank locally → stateless stub)",
+    )
+    memory_strategy_id: str = Field(
+        default="",
+        description=(
+            "Long-term memory strategy ID for user-preference namespace. "
+            "Obtain from the Memory store detail page after creating a LTMS. "
+            "Blank locally → LTM recall disabled."
+        ),
     )
 
     # ── Security (MVP checklist §5–6) ─────────────────────────────────────────
