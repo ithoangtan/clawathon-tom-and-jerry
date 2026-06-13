@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { LocaleEffect } from "@/components/layout/LocaleEffect";
+import { ThemeEffect } from "@/components/layout/ThemeEffect";
 import { TutorialHelpButton } from "@/components/layout/TutorialHelpButton";
 import {
   Brain,
@@ -11,9 +12,11 @@ import {
   LayoutDashboard,
   Loader2,
   MessageSquare,
+  Moon,
   Plus,
   Settings,
   Sparkles,
+  Sun,
 } from "@/components/ui/icons";
 import { runBrandPulse, runHeroFloat, runNavStagger, useGSAP } from "@/lib/gsap";
 import { t } from "@/lib/i18n";
@@ -58,10 +61,13 @@ function BrandMark() {
 
 export function Header() {
   const locale = useUserStore((s) => s.locale);
+  const theme = useUserStore((s) => s.theme);
+  const setTheme = useUserStore((s) => s.setTheme);
   const requestNewSession = useSessionStore((s) => s.requestNewSession);
   const { health } = useHealth();
 
   const indexReady = health?.index_ready ?? false;
+  const isDark = theme === "dark";
 
   return (
     <header className="relative z-20 glass-panel-strong border-b border-border">
@@ -84,6 +90,15 @@ export function Header() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitcher className="hidden sm:inline-flex" />
+          <button
+            type="button"
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            className="inline-flex items-center justify-center rounded-lg border border-border bg-surface-glass p-1.5 text-content-secondary transition-colors hover:border-border-strong hover:text-content-primary"
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            title={isDark ? "Light mode" : "Dark mode"}
+          >
+            {isDark ? <Sun size="sm" /> : <Moon size="sm" />}
+          </button>
           <Badge tone={indexReady ? "success" : "warning"}>
             <span
               className={classNames(
@@ -197,6 +212,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden">
       <LocaleEffect />
+      <ThemeEffect />
       <div className="pointer-events-none fixed inset-0 mesh-bg" aria-hidden />
       <div className="pointer-events-none fixed inset-0 grid-overlay opacity-40" aria-hidden />
 

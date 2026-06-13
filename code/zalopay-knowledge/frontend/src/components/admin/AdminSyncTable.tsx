@@ -45,24 +45,24 @@ export function AdminSyncTable() {
     <>
       <Card className="overflow-hidden p-0">
         {/* Table header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-slate-800">{t("adminKnowledgeSources", locale)}</h3>
+            <h3 className="font-semibold text-content-primary">{t("adminKnowledgeSources", locale)}</h3>
             {anyRunning && (
               <Badge tone="info">{t("syncing", locale)}</Badge>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {/* Filter tabs */}
-            <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+            <div className="flex rounded-lg border border-border bg-surface-glass p-0.5 text-xs">
               {(["all", "confluence", "gdrive"] as Filter[]).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
                     filter === f
-                      ? "bg-white text-slate-800 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
+                      ? "bg-surface-elevated text-content-primary shadow-sm"
+                      : "text-content-secondary hover:text-content-primary"
                   }`}
                 >
                   {f === "all"
@@ -102,7 +102,7 @@ export function AdminSyncTable() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+              <tr className="border-b border-border text-xs uppercase tracking-wide text-content-muted">
                 <th className="px-5 py-3 font-medium">Nguồn</th>
                 <th className="px-4 py-3 font-medium">Trạng thái</th>
                 <th className="px-4 py-3 font-medium text-right">Tài liệu</th>
@@ -206,7 +206,7 @@ function SyncTableRow({ row, anyRunning, loadingKey, onSync, onDetail }: RowProp
     const stateTone = dept.state === "running" ? "info" : dept.state === "error" ? "danger" : "default";
 
     return (
-      <tr className="group border-b border-slate-50 transition-colors hover:bg-slate-50/60 last:border-0">
+      <tr className="group border-b border-border/60 transition-colors hover:bg-surface-glass last:border-0">
         <td className="px-5 py-3.5">
           <div className="flex items-center gap-2.5">
             <span
@@ -214,8 +214,8 @@ function SyncTableRow({ row, anyRunning, loadingKey, onSync, onDetail }: RowProp
               style={{ background: meta?.accent_color ?? "#94a3b8" }}
             />
             <div>
-              <p className="font-medium text-slate-800">{departmentLabel(dept.department, locale)}</p>
-              <p className="text-xs text-slate-400">{t("adminTypeConfluence", locale)}</p>
+              <p className="font-medium text-content-primary">{departmentLabel(dept.department, locale)}</p>
+              <p className="text-xs text-content-muted">{t("adminTypeConfluence", locale)}</p>
             </div>
           </div>
         </td>
@@ -226,15 +226,15 @@ function SyncTableRow({ row, anyRunning, loadingKey, onSync, onDetail }: RowProp
           </div>
         </td>
         <td className="px-4 py-3.5 text-right tabular-nums">
-          <p className="font-medium text-slate-800">{(dept.doc_count ?? 0).toLocaleString()}</p>
+          <p className="font-medium text-content-primary">{(dept.doc_count ?? 0).toLocaleString()}</p>
           {dept.page_count > 0 && (
-            <p className="text-xs text-slate-400">{dept.page_count.toLocaleString()} {t("adminPagesLabel", locale)}</p>
+            <p className="text-xs text-content-muted">{dept.page_count.toLocaleString()} {t("adminPagesLabel", locale)}</p>
           )}
         </td>
-        <td className="px-4 py-3.5 text-right tabular-nums font-medium text-slate-700">
+        <td className="px-4 py-3.5 text-right tabular-nums font-medium text-content-primary">
           {(dept.chunk_count ?? 0).toLocaleString()}
         </td>
-        <td className="px-4 py-3.5 text-slate-500 text-xs">
+        <td className="px-4 py-3.5 text-content-secondary text-xs">
           {dept.freshness_hours != null
             ? formatFreshnessHours(dept.freshness_hours, locale)
             : dept.last_success_at
@@ -275,8 +275,8 @@ function SyncTableRow({ row, anyRunning, loadingKey, onSync, onDetail }: RowProp
         <div className="flex items-center gap-2.5">
           <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-accent" />
           <div>
-            <p className="font-medium text-slate-800">{t("syncGdrive", locale)}</p>
-            <p className="text-xs text-slate-400">{t("adminTypeDrive", locale)}</p>
+            <p className="font-medium text-content-primary">{t("syncGdrive", locale)}</p>
+            <p className="text-xs text-content-muted">{t("adminTypeDrive", locale)}</p>
           </div>
         </div>
       </td>
@@ -287,13 +287,13 @@ function SyncTableRow({ row, anyRunning, loadingKey, onSync, onDetail }: RowProp
         </div>
       </td>
       <td className="px-4 py-3.5 text-right tabular-nums">
-        <p className="font-medium text-slate-800">{(source.doc_count ?? 0).toLocaleString()}</p>
-        <p className="text-xs text-slate-400">{t("adminFilesLabel", locale)}</p>
+        <p className="font-medium text-content-primary">{(source.doc_count ?? 0).toLocaleString()}</p>
+        <p className="text-xs text-content-muted">{t("adminFilesLabel", locale)}</p>
       </td>
-      <td className="px-4 py-3.5 text-right tabular-nums font-medium text-slate-700">
+      <td className="px-4 py-3.5 text-right tabular-nums font-medium text-content-primary">
         {(source.chunk_count ?? 0).toLocaleString()}
       </td>
-      <td className="px-4 py-3.5 text-slate-500 text-xs">
+      <td className="px-4 py-3.5 text-content-secondary text-xs">
         {source.freshness_hours != null
           ? formatFreshnessHours(source.freshness_hours, locale)
           : source.last_success_at

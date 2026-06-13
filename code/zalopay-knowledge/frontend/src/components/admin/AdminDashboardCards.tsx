@@ -20,9 +20,9 @@ function StatCard({ icon, label, value, sub, accent = "bg-brand-muted text-brand
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-        <p className="mt-0.5 text-2xl font-bold text-slate-800 tabular-nums">{value}</p>
-        {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
+        <p className="text-xs font-medium uppercase tracking-wide text-content-secondary">{label}</p>
+        <p className="mt-0.5 text-2xl font-bold text-content-primary tabular-nums">{value}</p>
+        {sub && <p className="mt-0.5 text-xs text-content-muted">{sub}</p>}
       </div>
     </Card>
   );
@@ -90,14 +90,14 @@ export function AdminDashboardCards({ status }: Props) {
             ? t("syncing", locale)
             : undefined
         }
-        accent="bg-emerald-50 text-emerald-600"
+        accent="bg-emerald-500/10 text-emerald-500"
       />
       <StatCard
         icon={<History size="md" />}
         label={t("adminLastUpdate", locale)}
         value={minFreshness != null ? formatFreshnessHours(minFreshness, locale) : "—"}
         sub={lastSync ? undefined : t("adminNeverSynced", locale)}
-        accent="bg-slate-100 text-slate-500"
+        accent="bg-surface-glass text-content-secondary"
       />
     </div>
   );

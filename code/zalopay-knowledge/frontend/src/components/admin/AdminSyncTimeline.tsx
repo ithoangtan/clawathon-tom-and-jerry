@@ -1,4 +1,14 @@
 import { useMemo } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Card } from "@/components/ui/Card";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { t } from "@/lib/i18n";
@@ -7,88 +17,81 @@ import { useUserStore } from "@/store/userStore";
 import type { AdminSyncJob } from "@/lib/types";
 
 const DAYS = 14;
-const BAR_COLORS = {
+
+const COLORS = {
   success: "#10b981",
   failure: "#ef4444",
   running: "#3b82f6",
 };
 
-function getDayKey(iso: string): string {
-  return iso.slice(0, 10); // YYYY-MM-DD
-}
-
-function buildDayBuckets(jobs: AdminSyncJob[]): {
-  date: string;
-  label: string;
-  success: number;
-  failure: number;
-  running: number;
-  total: number;
-}[] {
+function buildDayBuckets(jobs: AdminSyncJob[]) {
   const today = new Date();
-  const buckets: Record<string, { success: number; failure: number; running: number }> = {};
+  const buckets: Record<string, { date: string; label: string; success: number; failure: number; running: number }> = {};
 
-  // pre-fill 14 days
   for (let i = DAYS - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const key = d.toISOString().slice(0, 10);
-    buckets[key] = { success: 0, failure: 0, running: 0 };
+    const label = `${d.getDate()}/${d.getMonth() + 1}`;
+    buckets[key] = { date: key, label, success: 0, failure: 0, running: 0 };
   }
 
   for (const job of jobs) {
-    const key = getDayKey(job.started_at);
+    const key = job.started_at.slice(0, 10);
     if (!buckets[key]) continue;
     if (job.state === "success") buckets[key].success++;
     else if (job.state === "failure") buckets[key].failure++;
     else buckets[key].running++;
   }
 
-  return Object.entries(buckets).map(([date, counts]) => {
-    const d = new Date(date + "T00:00:00");
-    const label = `${d.getDate()}/${d.getMonth() + 1}`;
-    return { date, label, ...counts, total: counts.success + counts.failure + counts.running };
-  });
+  return Object.values(buckets);
 }
 
-const CHART_H = 140;
-const PADDING_L = 32;
-const PADDING_R = 12;
-const PADDING_T = 12;
-const PADDING_B = 28;
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; fill: string }[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  const total = payload.reduce((s, p) => s + (p.value ?? 0), 0);
+  if (total === 0) return null;
+  return (
+    <div className="rounded-lg border border-border bg-surface-elevated px-3 py-2 text-xs shadow-glass">
+      <p className="mb-1 font-semibold text-content-primary">{label}</p>
+      {payload.map((p) =>
+        p.value > 0 ? (
+          <p key={p.name} style={{ color: p.fill }}>
+            {p.name}: {p.value}
+          </p>
+        ) : null,
+      )}
+    </div>
+  );
+}
 
 export function AdminSyncTimeline() {
   const locale = useUserStore((s) => s.locale);
   const { status, loading } = useAdminSyncStatus();
 
   const jobs = status?.recent_jobs ?? [];
-  const buckets = useMemo(() => buildDayBuckets(jobs), [jobs]);
+  const data = useMemo(() => buildDayBuckets(jobs), [jobs]);
 
-  const maxTotal = Math.max(...buckets.map((b) => b.total), 1);
-
-  // Responsive: we use a viewBox with fixed width so SVG scales automatically
-  const SVG_W = 560;
-  const chartW = SVG_W - PADDING_L - PADDING_R;
-  const chartH = CHART_H - PADDING_T - PADDING_B;
-
-  const barW = Math.max((chartW / DAYS) * 0.55, 6);
-  const gap = chartW / DAYS;
-
-  const yLabels = [maxTotal, Math.ceil(maxTotal / 2), 0];
+  const legendItems = (["success", "failure", "running"] as const).map((k) => ({
+    key: k,
+    color: COLORS[k],
+    label:
+      k === "success"
+        ? t("adminJobSuccess", locale)
+        : k === "failure"
+          ? t("adminJobFailure", locale)
+          : t("adminJobRunning", locale),
+  }));
 
   return (
     <Card>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-semibold text-slate-800">{t("adminSyncHistory", locale)}</h3>
-        <div className="flex items-center gap-4 text-xs text-slate-500">
-          {(["success", "failure", "running"] as const).map((k) => (
-            <span key={k} className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: BAR_COLORS[k] }} />
-              {k === "success"
-                ? t("adminJobSuccess", locale)
-                : k === "failure"
-                  ? t("adminJobFailure", locale)
-                  : t("adminJobRunning", locale)}
+        <h3 className="font-semibold text-content-primary">{t("adminSyncHistory", locale)}</h3>
+        <div className="flex items-center gap-4 text-xs text-content-secondary">
+          {legendItems.map((item) => (
+            <span key={item.key} className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: item.color }} />
+              {item.label}
             </span>
           ))}
         </div>
@@ -97,113 +100,43 @@ export function AdminSyncTimeline() {
       {loading && !status ? (
         <LoadingSpinner />
       ) : jobs.length === 0 ? (
-        <p className="py-8 text-center text-sm text-slate-400">{t("adminNoJobs", locale)}</p>
+        <p className="py-8 text-center text-sm text-content-muted">{t("adminNoJobs", locale)}</p>
       ) : (
-        <svg
-          viewBox={`0 0 ${SVG_W} ${CHART_H}`}
-          className="w-full"
-          aria-label={t("adminSyncHistory", locale)}
-          role="img"
-        >
-          {/* Y grid lines */}
-          {yLabels.map((val, i) => {
-            const y = PADDING_T + chartH - (val / maxTotal) * chartH;
-            return (
-              <g key={i}>
-                <line
-                  x1={PADDING_L}
-                  x2={PADDING_L + chartW}
-                  y1={y}
-                  y2={y}
-                  stroke="#e2e8f0"
-                  strokeWidth={1}
-                />
-                <text
-                  x={PADDING_L - 4}
-                  y={y + 4}
-                  textAnchor="end"
-                  fontSize={9}
-                  fill="#94a3b8"
-                >
-                  {val}
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Bars */}
-          {buckets.map((bucket, i) => {
-            const x = PADDING_L + i * gap + gap / 2 - barW / 2;
-            const segments = [
-              { key: "success" as const, count: bucket.success },
-              { key: "failure" as const, count: bucket.failure },
-              { key: "running" as const, count: bucket.running },
-            ];
-
-            let currentY = PADDING_T + chartH;
-            const rects = segments
-              .filter((s) => s.count > 0)
-              .map((seg) => {
-                const h = (seg.count / maxTotal) * chartH;
-                currentY -= h;
-                return (
-                  <rect
-                    key={seg.key}
-                    x={x}
-                    y={currentY}
-                    width={barW}
-                    height={h}
-                    fill={BAR_COLORS[seg.key]}
-                    rx={bucket.total === seg.count ? 3 : 0}
-                    opacity={0.85}
-                  />
-                );
-              });
-
-            // round top of the whole bar
-            const totalH = (bucket.total / maxTotal) * chartH;
-            const barTopY = PADDING_T + chartH - totalH;
-
-            return (
-              <g key={bucket.date}>
-                {bucket.total > 0 && (
-                  <rect
-                    x={x}
-                    y={barTopY}
-                    width={barW}
-                    height={3}
-                    rx={1.5}
-                    fill="transparent"
-                  />
-                )}
-                {rects}
-                {/* Hover tooltip area */}
-                <rect
-                  x={x - 4}
-                  y={PADDING_T}
-                  width={barW + 8}
-                  height={chartH}
-                  fill="transparent"
-                  className="cursor-default"
-                >
-                  <title>{`${bucket.date}: ${bucket.total} ${t("adminJobsDay", locale)} (✓${bucket.success} ✗${bucket.failure})`}</title>
-                </rect>
-                {/* X label */}
-                {(i === 0 || i === DAYS - 1 || i % 3 === 0) && (
-                  <text
-                    x={x + barW / 2}
-                    y={CHART_H - 6}
-                    textAnchor="middle"
-                    fontSize={9}
-                    fill="#94a3b8"
-                  >
-                    {bucket.label}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }} barSize={14}>
+            <CartesianGrid vertical={false} stroke="var(--color-border)" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10, fill: "var(--color-text-muted)" }}
+              tickLine={false}
+              axisLine={false}
+              interval={2}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 10, fill: "var(--color-text-muted)" }}
+              tickLine={false}
+              axisLine={false}
+              width={24}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--color-bg-glass)", radius: 4 }} />
+            <Bar dataKey="success" stackId="a" fill={COLORS.success} radius={[0, 0, 0, 0]}>
+              {data.map((entry, i) => (
+                <Cell key={i} fill={COLORS.success} opacity={entry.success > 0 ? 0.9 : 0} />
+              ))}
+            </Bar>
+            <Bar dataKey="failure" stackId="a" fill={COLORS.failure} radius={[0, 0, 0, 0]}>
+              {data.map((entry, i) => (
+                <Cell key={i} fill={COLORS.failure} opacity={entry.failure > 0 ? 0.9 : 0} />
+              ))}
+            </Bar>
+            <Bar dataKey="running" stackId="a" fill={COLORS.running} radius={[3, 3, 0, 0]}>
+              {data.map((entry, i) => (
+                <Cell key={i} fill={COLORS.running} opacity={entry.running > 0 ? 0.9 : 0} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       )}
     </Card>
   );
