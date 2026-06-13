@@ -17,6 +17,7 @@ from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAU
 @pytest.fixture
 def sync_settings(tmp_path: Path) -> Settings:
     return Settings(
+        _env_file=None,
         confluence_base_url="https://acme.atlassian.net",
         confluence_email="bot@example.com",
         confluence_api_token="secret-token",

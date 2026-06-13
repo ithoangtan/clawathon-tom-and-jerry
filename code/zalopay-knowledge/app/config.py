@@ -8,6 +8,7 @@ directly in application code.
 """
 
 import logging
+import os
 from functools import lru_cache
 
 from pydantic import Field, computed_field, field_validator, model_validator
@@ -85,6 +86,13 @@ class Settings(BaseSettings):
             "Legacy per-department CONFLUENCE_SPACE_* vars are merged at startup."
         ),
     )
+
+    # Individual legacy vars declared as fields so pydantic-settings reads them from
+    # BOTH os.environ and the env_file (unlike bare os.environ reads in validators).
+    # Merged into confluence_spaces by _merge_legacy_confluence_env.
+    confluence_space_risk: str = Field(default="", validation_alias="CONFLUENCE_SPACE_RISK")
+    confluence_space_grow: str = Field(default="", validation_alias="CONFLUENCE_SPACE_GROW")
+    confluence_space_bank: str = Field(default="", validation_alias="CONFLUENCE_SPACE_BANK")
 
     # ── Google Drive ──────────────────────────────────────────────────────────
 
@@ -288,8 +296,20 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _merge_legacy_confluence_env(self) -> "Settings":
-        """Merge legacy CONFLUENCE_SPACE_* env vars when absent from CONFLUENCE_SPACES."""
-        merged = merge_legacy_confluence_env(self.confluence_spaces)
+        """Merge legacy CONFLUENCE_SPACE_* env vars when absent from CONFLUENCE_SPACES.
+
+        We read from the declared field values rather than bare os.environ because
+        pydantic-settings populates fields from BOTH os.environ and the env_file,
+        whereas a direct os.environ lookup misses values that came only from .env.
+        """
+        env_from_fields: dict[str, str] = {
+            "CONFLUENCE_SPACE_RISK": self.confluence_space_risk,
+            "CONFLUENCE_SPACE_GROW": self.confluence_space_grow,
+            "CONFLUENCE_SPACE_BANK": self.confluence_space_bank,
+        }
+        merged = merge_legacy_confluence_env(
+            self.confluence_spaces, environ={**env_from_fields, **os.environ}
+        )
         if merged != self.confluence_spaces:
             object.__setattr__(self, "confluence_spaces", merged)
         validate_confluence_space_keys(self.confluence_spaces)
