@@ -104,39 +104,6 @@ class TestSettingsFromEnv:
             DepartmentKey.BANK_PARTNERSHIPS: "BANK",
         }
 
-    def test_role_dept_access_default_restricts_business_from_risk(self) -> None:
-        settings = Settings(_env_file=None)
-        assert settings.role_dept_access["business"] == [
-            DepartmentKey.GROW_ENABLEMENT,
-            DepartmentKey.BANK_PARTNERSHIPS,
-        ]
-        assert DepartmentKey.RISK in settings.role_dept_access["engineer"]
-
-    def test_role_dept_access_from_json_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv(
-            "ROLE_DEPT_ACCESS",
-            '{"business":["bank_partnerships"],"engineer":["risk","grow_enablement","bank_partnerships"]}',
-        )
-        settings = Settings(_env_file=None)
-        assert settings.role_dept_access["business"] == [DepartmentKey.BANK_PARTNERSHIPS]
-        assert settings.role_dept_access["engineer"] == [
-            DepartmentKey.RISK,
-            DepartmentKey.GROW_ENABLEMENT,
-            DepartmentKey.BANK_PARTNERSHIPS,
-        ]
-
-    def test_role_dept_access_rejects_invalid_json(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("ROLE_DEPT_ACCESS", "not-json")
-        with pytest.raises(ValueError, match="valid JSON"):
-            Settings(_env_file=None)
-
-    def test_role_dept_access_rejects_unknown_department(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("ROLE_DEPT_ACCESS", '{"business":["finance"]}')
-        with pytest.raises(ValueError, match="invalid department"):
-            Settings(_env_file=None)
-
     def test_graph_budget_positive(self) -> None:
         with pytest.raises(Exception):
             Settings(graph_budget_s=0, _env_file=None)

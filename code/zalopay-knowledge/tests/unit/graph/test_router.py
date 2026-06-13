@@ -222,28 +222,6 @@ def test_router_fallback_on_llm_unavailable(test_settings: Settings):
     assert "router_unavailable" in out.get("errors", [])
 
 
-def test_router_access_denied_when_only_denied_targets(test_settings: Settings):
-    payload = json.dumps(
-        {
-            "intent": "policy_lookup",
-            "target_departments": ["risk"],
-            "confidence": 0.9,
-        }
-    )
-    node = make_router_node(StubLLM(payload), settings=test_settings)
-    out = node(
-        {
-            "question": "What is the fraud threshold?",
-            "allowed_departments": ["grow_enablement", "bank_partnerships"],
-            "request_language": "en",
-        }
-    )
-    assert out["target_departments"] == []
-    assert out["status"] == "refused"
-    assert "access_denied" in out.get("errors", [])
-    assert "permission" in out["answer"].lower()
-
-
 def test_router_clarify_options_respect_allowed_departments(test_settings: Settings):
     payload = json.dumps(
         {"intent": "unclear", "target_departments": [], "confidence": 0.2}

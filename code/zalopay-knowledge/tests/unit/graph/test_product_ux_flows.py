@@ -26,36 +26,6 @@ class QueueLLM(StubLLM):
         return LLMResult(text=text, raw={}, usage={})
 
 
-def test_router_access_denied_maps_to_api_refusal_reason(test_settings):
-    node = make_router_node(
-        StubLLM(
-            json.dumps(
-                {
-                    "intent": "policy_lookup",
-                    "target_departments": ["risk"],
-                    "confidence": 0.9,
-                }
-            )
-        ),
-        settings=test_settings,
-    )
-    state = node(
-        {
-            "question": "Fraud threshold?",
-            "allowed_departments": ["grow_enablement", "bank_partnerships"],
-            "request_language": "en",
-        }
-    )
-    respond = make_respond_node(settings=test_settings)(state)
-    merged = {**state, **respond}
-    api = state_to_response(merged)
-
-    assert api.status == "refused"
-    assert api.refusal_reason == "access_denied"
-    assert "permission" in api.answer.lower()
-    assert api.citations == []
-
-
 def test_partial_multi_dept_exposes_refusals_on_api(test_settings):
     grow_chunk = RetrievedChunk(
         chunk_id="c-grow-1",

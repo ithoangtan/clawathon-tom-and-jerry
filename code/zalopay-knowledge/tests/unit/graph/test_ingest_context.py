@@ -1,8 +1,6 @@
-"""ingest_context node tests — RBAC and index readiness."""
+"""ingest_context node tests — index readiness and context population."""
 
 from __future__ import annotations
-
-import json
 
 from app.config import Settings
 from app.graph.nodes.ingest_context import make_ingest_context_node
@@ -10,30 +8,7 @@ from app.graph.nodes.ingest_context import make_ingest_context_node
 from tests.unit.graph.conftest import StubRetriever
 
 
-def test_ingest_context_denies_all_pinned_departments_outside_allowlist():
-    settings = Settings(
-        role_dept_access_json=json.dumps(
-            {"business": ["grow_enablement", "bank_partnerships"]}
-        ),
-        _env_file=None,
-    )
-    node = make_ingest_context_node(StubRetriever(ready=True), settings=settings)
-    out = node(
-        {
-            "question": "What is the fraud threshold?",
-            "role": "business",
-            "pinned": ["risk"],
-            "request_language": "en",
-        }
-    )
-    assert out["status"] == "refused"
-    assert out["allowed_departments"] == ["grow_enablement", "bank_partnerships"]
-    assert "access_denied" in out.get("errors", [])
-    assert out["answer"]
-    assert not out.get("citations")
-
-
-def test_ingest_context_sets_allowed_departments_from_role():
+def test_ingest_context_sets_allowed_departments_to_all():
     settings = Settings(_env_file=None)
     node = make_ingest_context_node(StubRetriever(ready=True), settings=settings)
     out = node(
@@ -44,7 +19,9 @@ def test_ingest_context_sets_allowed_departments_from_role():
             "request_language": "en",
         }
     )
-    assert out["allowed_departments"] == ["grow_enablement", "bank_partnerships"]
+    # Knowledge is open — all departments always allowed regardless of role
+    from app.common.departments import iter_keys
+    assert set(out["allowed_departments"]) == set(iter_keys())
 
 
 def test_ingest_detects_vietnamese_question():

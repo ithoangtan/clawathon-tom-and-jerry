@@ -88,23 +88,6 @@ def test_state_to_response_maps_out_of_scope_refusal_reason() -> None:
     assert response.refusal_reason == "out_of_scope"
 
 
-def test_state_to_response_maps_access_denied_refusal_reason() -> None:
-    response = state_to_response(
-        {
-            "status": "refused",
-            "answer": "You do not have permission.",
-            "errors": ["access_denied"],
-            "citations": [],
-            "source_departments": [],
-            "confidence": 0.0,
-            "feedback_id": "fb-denied",
-            "request_language": "en",
-        }
-    )
-    assert response.refusal_reason == "access_denied"
-    assert response.status == "refused"
-
-
 def test_state_to_response_maps_partial_refusals() -> None:
     response = state_to_response(
         {
