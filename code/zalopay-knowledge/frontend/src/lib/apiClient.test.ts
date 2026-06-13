@@ -150,6 +150,8 @@ describe("apiClient", () => {
     const dashboard = {
       query_count: 0,
       refusal_rate: 0,
+      deflection_rate: 0,
+      answered_wrong_rate: 0,
       partial_rate: 0,
       conflict_rate: 0,
       latency_p50_ms: 0,

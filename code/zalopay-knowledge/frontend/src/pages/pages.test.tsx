@@ -40,6 +40,8 @@ let mockDashboard = {
   data: {
     query_count: 10,
     refusal_rate: 0.1,
+    deflection_rate: 0.85,
+    answered_wrong_rate: 0.05,
     partial_rate: 0.05,
     conflict_rate: 0.02,
     latency_p50_ms: 500,
@@ -82,6 +84,8 @@ describe("DashboardPage", () => {
       data: {
         query_count: 10,
         refusal_rate: 0.1,
+        deflection_rate: 0.85,
+        answered_wrong_rate: 0.05,
         partial_rate: 0.05,
         conflict_rate: 0.02,
         latency_p50_ms: 500,
@@ -103,6 +107,8 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("heading", { name: "Sync Status" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Recent Queries" })).toBeInTheDocument();
     expect(screen.getByText("Total queries")).toBeInTheDocument();
+    expect(screen.getByText("Partial answer rate")).toBeInTheDocument();
+    expect(screen.getByText("Conflict rate")).toBeInTheDocument();
   });
 
   it("shows loading spinner before dashboard data arrives", () => {

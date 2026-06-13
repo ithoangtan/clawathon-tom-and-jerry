@@ -24,6 +24,8 @@ def test_health_contract_shape() -> None:
 
     assert body["status"] == "healthy"
     assert isinstance(body["index_ready"], bool)
+    assert isinstance(body["maas_ready"], bool)
+    assert isinstance(body["ready"], bool)
     assert body["version"] is not None
 
     config = body["config"]

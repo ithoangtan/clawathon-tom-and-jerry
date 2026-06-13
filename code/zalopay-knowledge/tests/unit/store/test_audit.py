@@ -112,6 +112,8 @@ class TestAuditStoreRetrieval:
         metrics = audit_store.dashboard_metrics()
         assert metrics["query_count"] == 0
         assert metrics["refusal_rate"] == 0.0
+        assert metrics["deflection_rate"] == 0.0
+        assert metrics["answered_wrong_rate"] == 0.0
         assert metrics["history"] == []
 
     def test_dashboard_metrics_aggregates_queries(self, audit_store: AuditStore) -> None:
@@ -156,6 +158,7 @@ class TestAuditStoreRetrieval:
         assert metrics["query_count"] == 3
         assert metrics["refusal_rate"] == pytest.approx(1 / 3)
         assert metrics["partial_rate"] == pytest.approx(1 / 3)
+        assert metrics["deflection_rate"] == pytest.approx(2 / 3)
         assert metrics["total_tokens"] == 90
         assert metrics["latency_p50_ms"] == 200.0
         assert len(metrics["history"]) == 2

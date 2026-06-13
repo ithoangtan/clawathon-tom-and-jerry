@@ -323,6 +323,8 @@ class TestDashboardRoute:
         assert resp.status_code == 200
         body = resp.json()
         assert body["query_count"] == 0
+        assert body["deflection_rate"] == 0.0
+        assert body["answered_wrong_rate"] == 0.0
         assert body["refusal_rate"] == 0.0
         assert body["partial_rate"] == 0.0
         assert body["conflict_rate"] == 0.0
@@ -351,3 +353,22 @@ class TestDashboardRoute:
         assert body["query_count"] >= 1
         assert len(body["history"]) >= 1
         assert body["history"][0]["status"] == "answered"
+
+    def test_dashboard_answered_wrong_rate_from_feedback(self, client: TestClient) -> None:
+        from app.api.service import get_feedback_store
+
+        store = get_feedback_store()
+        for fid, rating in (
+            ("fb-dash-up-1", "up"),
+            ("fb-dash-up-2", "up"),
+            ("fb-dash-down-1", "down"),
+        ):
+            store.register_pending(fid)
+            store.submit(feedback_id=fid, user_id="dash-test-user", rating=rating, comment=None)
+
+        resp = client.get("/api/dashboard")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["feedback_up"] == 2
+        assert body["feedback_down"] == 1
+        assert body["answered_wrong_rate"] == pytest.approx(1 / 3)

@@ -7,6 +7,13 @@
 #   - EXPOSE 8080
 #   - GET /health → HTTP 200 when ready
 #   - CMD ["python", "main.py"] binds 0.0.0.0:8080
+#
+# Security (MVP checklist §5–6):
+#   - No secrets in image: .env / credentials excluded via .dockerignore
+#   - Platform injects GREENNODE_* at runtime (AgentBase Identity)
+#   - Egress deny-all + allowlist: configure at AgentBase VPC / network policy
+#     (see deploy/network-policy.md)
+#   - TLS in transit: all outbound URLs must use https:// (enforced in Settings)
 
 # ── Stage 1: frontend ────────────────────────────────────────────────────────
 FROM node:20-alpine AS frontend-build
@@ -49,5 +56,9 @@ ENV PYTHONUNBUFFERED=1 \
     INDEX_DIR=/data/index
 
 EXPOSE 8080
+
+# Readiness gate for container orchestrators (index + MaaS). Liveness stays at /health/live.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD python -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=4); exit(0 if r.status==200 else 1)"
 
 CMD ["python", "main.py"]

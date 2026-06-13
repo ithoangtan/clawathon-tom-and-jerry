@@ -23,7 +23,7 @@ Every node checks it and degrades to a refusal rather than overrunning, so
 import logging
 import time
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
@@ -54,6 +54,14 @@ from app.ports.retriever import RetrieverPort
 logger = logging.getLogger(__name__)
 
 DEPT_SUBGRAPH = "dept_subgraph"
+
+
+def _safe_stream_writer() -> Callable[[dict], None]:
+    """Return LangGraph stream writer, or a no-op outside a runnable context."""
+    try:
+        return get_stream_writer()
+    except RuntimeError:
+        return lambda _payload: None
 
 
 # ── Dependency bundle ─────────────────────────────────────────────────────────
@@ -116,7 +124,7 @@ def _make_dept_branch(subgraph) -> Callable[[DeptState], dict]:
 
     def dept_branch(state: DeptState) -> dict:
         department = state.get("department", "?")
-        emitter = PipelineEmitter(get_stream_writer(), department=department)
+        emitter = PipelineEmitter(_safe_stream_writer(), department=department)
         try:
             emitter.branch_start()
             result: dict = {}

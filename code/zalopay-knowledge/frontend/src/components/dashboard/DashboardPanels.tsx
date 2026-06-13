@@ -4,9 +4,11 @@ import { DepartmentChip } from "@/components/chat/Badges";
 import { ConfidenceBadge } from "@/components/chat/Badges";
 import {
   Activity,
+  AlertTriangle,
   Gauge,
   Hash,
   ShieldX,
+  Sparkles,
   ThumbsDown,
   ThumbsUp,
   Timer,
@@ -35,12 +37,36 @@ export function MetricsGrid({ data }: MetricsGridProps) {
 
   const metrics: MetricDef[] = [
     { label: t("totalQueries", locale), value: data.query_count.toLocaleString(), icon: Hash },
+    { label: t("deflectionRate", locale), value: formatPercent(data.deflection_rate), icon: Sparkles },
+    { label: t("answeredWrongRate", locale), value: formatPercent(data.answered_wrong_rate), icon: AlertTriangle },
     { label: t("refusalRate", locale), value: formatPercent(data.refusal_rate), icon: ShieldX },
+    { label: t("partialRate", locale), value: formatPercent(data.partial_rate), icon: AlertTriangle },
+    { label: t("conflictRate", locale), value: formatPercent(data.conflict_rate), icon: Activity },
     { label: t("latencyP50", locale), value: formatMs(data.latency_p50_ms), icon: Gauge },
     { label: t("latencyP95", locale), value: formatMs(data.latency_p95_ms), icon: Timer },
     { label: t("feedbackUp", locale), value: data.feedback_up.toLocaleString(), icon: ThumbsUp },
     { label: t("feedbackDown", locale), value: data.feedback_down.toLocaleString(), icon: ThumbsDown },
   ];
+
+  if ((data.eval_golden_total ?? 0) > 0) {
+    metrics.push(
+      {
+        label: t("evalFaithfulness", locale),
+        value: formatPercent(data.eval_faithfulness ?? 0),
+        icon: Sparkles,
+      },
+      {
+        label: t("evalRefusalPrecision", locale),
+        value: formatPercent(data.eval_refusal_precision ?? 0),
+        icon: ShieldX,
+      },
+      {
+        label: t("evalRefusalRecall", locale),
+        value: formatPercent(data.eval_refusal_recall ?? 0),
+        icon: Activity,
+      },
+    );
+  }
 
   useGSAP(
     () => {

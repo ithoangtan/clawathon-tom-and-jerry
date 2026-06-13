@@ -197,6 +197,33 @@ describe("ChatInterface", () => {
     expect(sendMessageMock).toHaveBeenCalledWith("What is the policy?", ["risk"]);
   });
 
+  it("renders out_of_scope refusal in the message thread", () => {
+    mockChatState.messages = [
+      {
+        id: "assistant-1",
+        role: "assistant",
+        content: "Outside scope.",
+        timestamp: new Date().toISOString(),
+        response: {
+          answer:
+            "This question is outside indexed documentation (e.g. live or real-time data).",
+          citations: [],
+          source_departments: [],
+          confidence: 0,
+          feedback_id: "fb-oos",
+          status: "refused",
+          refusal_reason: "out_of_scope",
+        },
+      },
+    ];
+
+    renderWithUser(<ChatInterface />);
+    expect(
+      screen.getByRole("heading", { name: "Outside indexed documentation" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Outside scope")).toBeInTheDocument();
+  });
+
   it("renders access_denied refusal in the message thread", () => {
     mockChatState.messages = [
       {

@@ -84,6 +84,9 @@ class ConfluenceClient:
                 "url": _page_url(self._base, data),
                 "last_modified": (data.get("version") or {}).get("createdAt"),
                 "version": (data.get("version") or {}).get("number"),
+                "source": page_id,
+                "author": _extract_author(data),
+                "labels": _extract_labels(data),
             }
             return text, meta
 
@@ -95,6 +98,46 @@ def _page_url(base: str, page: dict[str, Any]) -> str:
         return webui
     site = base.replace("/wiki", "")
     return f"{site}/wiki{webui}" if webui else base
+
+
+def _extract_author(page: dict[str, Any]) -> str | None:
+    """Best-effort author from Confluence v2 page/version payloads."""
+    version = page.get("version") or {}
+    for key in ("authorDisplayName", "createdBy", "authorId"):
+        value = version.get(key)
+        if value:
+            return str(value)
+    for key in ("authorId", "ownerId", "createdBy"):
+        value = page.get(key)
+        if value:
+            return str(value)
+    return None
+
+
+def _extract_labels(page: dict[str, Any]) -> list[str]:
+    """Return label names when the API embeds them; otherwise an empty list."""
+    raw = page.get("labels")
+    if isinstance(raw, dict):
+        results = raw.get("results") or raw.get("values") or []
+    elif isinstance(raw, list):
+        results = raw
+    else:
+        metadata = page.get("metadata") or {}
+        labels_meta = metadata.get("labels") if isinstance(metadata, dict) else None
+        if isinstance(labels_meta, dict):
+            results = labels_meta.get("results") or []
+        else:
+            return []
+
+    labels: list[str] = []
+    for item in results:
+        if isinstance(item, str):
+            labels.append(item)
+        elif isinstance(item, dict):
+            name = item.get("name") or item.get("label")
+            if name:
+                labels.append(str(name))
+    return labels
 
 
 def _storage_to_text(html: str) -> str:

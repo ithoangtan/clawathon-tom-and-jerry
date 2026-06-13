@@ -11,22 +11,37 @@ interface ConfidenceBadgeProps {
   confidence: number;
   status: AnswerStatus;
   refusalReason?: RefusalReason | null;
+  /** When the router asks which department to query, avoid showing a refusal label. */
+  clarifying?: boolean;
 }
 
-export function ConfidenceBadge({ confidence, status, refusalReason }: ConfidenceBadgeProps) {
+export function ConfidenceBadge({
+  confidence,
+  status,
+  refusalReason,
+  clarifying,
+}: ConfidenceBadgeProps) {
   const locale = useUserStore((s) => s.locale);
 
-  const statusTone =
-    status === "answered" ? "success" : status === "partial" ? "warning" : "danger";
+  const statusTone = clarifying
+    ? "warning"
+    : status === "answered"
+      ? "success"
+      : status === "partial"
+        ? "warning"
+        : "danger";
 
-  const statusLabel =
-    status === "answered"
+  const statusLabel = clarifying
+    ? t("statusClarify", locale)
+    : status === "answered"
       ? t("statusAnswered", locale)
       : status === "partial"
         ? t("statusPartial", locale)
         : refusalReason === "access_denied"
           ? t("statusAccessDenied", locale)
-          : t("statusRefused", locale);
+          : refusalReason === "out_of_scope"
+            ? t("statusOutOfScope", locale)
+            : t("statusRefused", locale);
 
   return (
     <div className="flex flex-wrap items-center gap-2">

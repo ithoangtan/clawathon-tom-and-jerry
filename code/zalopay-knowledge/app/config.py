@@ -100,11 +100,29 @@ class Settings(BaseSettings):
         le=1.0,
         description="Min relevance score for a chunk to pass the grade gate (0–1)",
     )
+    retrieve_pool: int = Field(
+        default=40,
+        ge=10,
+        le=100,
+        description="Dense candidate pool size before hybrid fusion + rerank (30–50)",
+    )
     topk: int = Field(
         default=8,
         ge=1,
         le=100,
-        description="Number of chunks to retrieve per department per query",
+        description="Final chunks kept after rerank (MVP: 5–8)",
+    )
+    hybrid_search_enabled: bool = Field(
+        default=True,
+        description="Fuse dense retrieval with BM25 lexical scores (RRF)",
+    )
+    reranker_enabled: bool = Field(
+        default=True,
+        description="Apply cross-encoder reranker after hybrid fusion",
+    )
+    reranker_model: str = Field(
+        default="BAAI/bge-reranker-v2-m3",
+        description="Cross-encoder model for second-stage reranking",
     )
 
     # ── Graph timeouts ────────────────────────────────────────────────────────
@@ -119,6 +137,18 @@ class Settings(BaseSettings):
         gt=0,
         description="Global LangGraph execution budget in seconds",
     )
+    llm_request_timeout_s: float = Field(
+        default=60.0,
+        gt=0,
+        le=300.0,
+        description="Default per-request timeout for MaaS chat completions (seconds)",
+    )
+    health_ping_timeout_s: float = Field(
+        default=3.0,
+        gt=0,
+        le=30.0,
+        description="MaaS readiness probe timeout in seconds",
+    )
     route_confidence_min: float = Field(
         default=0.55,
         ge=0.0,
@@ -131,6 +161,27 @@ class Settings(BaseSettings):
     memory_id: str = Field(
         default="",
         description="GreenNode AgentBase Memory ID (blank locally → stateless stub)",
+    )
+
+    # ── Security (MVP checklist §5–6) ─────────────────────────────────────────
+
+    agent_enabled: bool = Field(
+        default=True,
+        description="Kill-switch: when false, chat/sync endpoints return 503",
+    )
+    gateway_trust_required: bool = Field(
+        default=False,
+        description=(
+            "When true, reject client-supplied X-GreenNode-AgentBase-* identity headers "
+            "unless accompanied by a gateway trust marker"
+        ),
+    )
+    gateway_trust_secret: str = Field(
+        default="",
+        description=(
+            "Optional HMAC secret for X-GreenNode-AgentBase-Gateway-Trust. "
+            "When unset, Gateway-Verified: true is required instead"
+        ),
     )
 
     # ── Access control (FR-7.2) ───────────────────────────────────────────────
@@ -199,6 +250,24 @@ class Settings(BaseSettings):
     # ── Validators ────────────────────────────────────────────────────────────
 
     @model_validator(mode="after")
+    def _apply_agentbase_security_defaults(self) -> "Settings":
+        """Production defaults: require gateway trust when deployed on AgentBase."""
+        if self.is_agentbase and not self.gateway_trust_required:
+            object.__setattr__(self, "gateway_trust_required", True)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_tls_urls(self) -> "Settings":
+        """Outbound service URLs must use HTTPS (TLS in transit)."""
+        for name, url in (
+            ("LLM_BASE_URL", self.llm_base_url),
+            ("CONFLUENCE_BASE_URL", self.confluence_base_url),
+        ):
+            if url and not url.startswith("https://"):
+                raise ValueError(f"{name} must use https:// (TLS required)")
+        return self
+
+    @model_validator(mode="after")
     def _validate_role_dept_access_json(self) -> "Settings":
         """Fail fast when ROLE_DEPT_ACCESS is present but invalid."""
         if (self.role_dept_access_json or "").strip():
@@ -221,6 +290,11 @@ class Settings(BaseSettings):
         if not self.main_model:
             logger.warning(
                 "MAIN_MODEL is not set — synthesis/reconcile nodes will fail at runtime"
+            )
+        if self.is_agentbase and not self.gateway_trust_secret:
+            logger.warning(
+                "GATEWAY_TRUST_SECRET is not set — production should use HMAC "
+                "gateway trust instead of Gateway-Verified marker alone"
             )
         return self
 

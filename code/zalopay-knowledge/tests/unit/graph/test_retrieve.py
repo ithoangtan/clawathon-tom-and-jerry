@@ -10,6 +10,42 @@ from app.ports.types import RetrievedChunk
 from tests.unit.graph.conftest import StubRetriever
 
 
+def test_retrieve_requests_candidate_pool_when_pipeline_enabled(
+    test_settings: Settings, sample_retrieved_chunk: RetrievedChunk
+):
+    """Hybrid/rerank pipeline fetches retrieve_pool candidates before trimming."""
+    settings = Settings(
+        grade_threshold=test_settings.grade_threshold,
+        route_confidence_min=test_settings.route_confidence_min,
+        topk=2,
+        retrieve_pool=10,
+        hybrid_search_enabled=True,
+        reranker_enabled=False,
+    )
+    chunks = [
+        RetrievedChunk(
+            **{
+                **sample_retrieved_chunk.__dict__,
+                "chunk_id": f"c{i}",
+                "url": f"https://example.com/doc-{i}",
+                "score": 1.0 - i * 0.05,
+            }
+        )
+        for i in range(6)
+    ]
+    retriever = StubRetriever(chunks=chunks)
+    node = make_retrieve_node(retriever, settings=settings)
+    out = node(
+        {
+            "department": "risk",
+            "question": "escalation policy",
+            "request_language": "en",
+        }
+    )
+    assert retriever.search_calls[0]["k"] == 10
+    assert len(out["chunks"]) == 2
+
+
 def test_retrieve_returns_top_k_chunks(
     test_settings: Settings, sample_retrieved_chunk: RetrievedChunk
 ):

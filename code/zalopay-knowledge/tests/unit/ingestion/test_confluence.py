@@ -7,7 +7,13 @@ import httpx
 import pytest
 
 from app.config import Settings
-from app.ingestion.confluence import ConfluenceClient, _page_url, _storage_to_text
+from app.ingestion.confluence import (
+    ConfluenceClient,
+    _extract_author,
+    _extract_labels,
+    _page_url,
+    _storage_to_text,
+)
 
 
 class TestStorageToText:
@@ -39,6 +45,16 @@ class TestPageUrl:
         url = "https://acme.atlassian.net/wiki/spaces/RISK/pages/1"
         page = {"_links": {"webui": url}}
         assert _page_url("https://acme.atlassian.net/wiki", page) == url
+
+
+class TestPageMetadataHelpers:
+    def test_extract_author_from_version_display_name(self):
+        page = {"version": {"authorDisplayName": "Risk Owner"}}
+        assert _extract_author(page) == "Risk Owner"
+
+    def test_extract_labels_from_results_list(self):
+        page = {"labels": {"results": [{"name": "ops-guidance"}, {"name": "policy"}]}}
+        assert _extract_labels(page) == ["ops-guidance", "policy"]
 
 
 class TestConfluenceClient:
@@ -141,6 +157,7 @@ class TestConfluenceClient:
         assert meta["title"] == "Risk Escalation Policy"
         assert meta["version"] == 3
         assert meta["last_modified"] == "2025-01-15T10:00:00Z"
+        assert meta["source"] == "12345"
         assert "/wiki/spaces/RISK/pages/12345" in meta["url"]
 
     def test_content_hash_skip_unchanged_body(self, confluence_settings: Settings):

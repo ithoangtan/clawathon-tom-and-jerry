@@ -49,7 +49,22 @@ def test_respond_clarify_question(test_settings: Settings):
     assert out["confidence"] == 0.3
 
 
-def test_respond_short_circuit_greeting(test_settings: Settings):
+def test_respond_short_circuit_capability_includes_scope(test_settings: Settings):
+    node = make_respond_node(settings=test_settings)
+    out = node({"intent": "capability_query", "request_language": "en"})
+    assert out["status"] == "answered"
+    assert "MVP scope" in out["answer"]
+    assert "Bank Partnerships" in out["answer"]
+
+
+def test_respond_out_of_scope_includes_escalation(test_settings: Settings):
+    node = make_respond_node(settings=test_settings)
+    out = node({"intent": "status_or_data", "request_language": "en"})
+    assert out["status"] == "refused"
+    assert "teams-risk-knowledge" in out["answer"]
+    assert "MVP scope" in out["answer"]
+    assert out["citations"] == []
+
     node = make_respond_node(settings=test_settings)
     out = node({"intent": "greeting", "request_language": "en"})
     assert out["status"] == "answered"
@@ -75,12 +90,13 @@ def test_respond_normal_answer_from_reconcile(
         }
     )
     assert out["status"] == "answered"
-    assert out["answer"] == answered_dept_result["answer"]
+    assert answered_dept_result["answer"] in out["answer"]
+    assert "Verify with" in out["answer"]
     assert out["citations"] == [cite]
     assert out["source_departments"] == ["risk"]
     assert "feedback_id" in out
     assert out["messages"]
-    assert getattr(out["messages"][0], "content", "") == answered_dept_result["answer"]
+    assert answered_dept_result["answer"] in getattr(out["messages"][0], "content", "")
 
 
 def test_respond_includes_conflicts(test_settings: Settings):
@@ -113,3 +129,29 @@ def test_respond_includes_conflicts(test_settings: Settings):
     )
     assert out["conflicts"] == [conflict]
     assert out["source_departments"] == ["risk"]
+
+
+def test_respond_passes_through_partial_refusals(test_settings: Settings):
+    node = make_respond_node(settings=test_settings)
+    out = node(
+        {
+            "answer": "Grow only [1].",
+            "status": "partial",
+            "confidence": 0.6,
+            "citations": [],
+            "refusals": ["risk"],
+            "dept_results": [
+                DeptResult(
+                    department="grow_enablement",
+                    status="answered",
+                    answer="Grow only [1].",
+                    citations=[],
+                    confidence=0.6,
+                    warnings=[],
+                )
+            ],
+            "request_language": "en",
+        }
+    )
+    assert out["status"] == "partial"
+    assert out["refusals"] == ["risk"]

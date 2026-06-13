@@ -1,5 +1,8 @@
 # Local development stack — mirrors AgentBase container contract (port 8080, /health).
 # FAISS index + HF cache persist in the named volume across restarts.
+#
+# Network: egress deny-all + allowlist is enforced at AgentBase VPC in production
+# (see deploy/network-policy.md). Local compose does not simulate VPC egress rules.
 
 services:
   agent:
@@ -25,7 +28,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/live')",
         ]
       interval: 30s
       timeout: 10s

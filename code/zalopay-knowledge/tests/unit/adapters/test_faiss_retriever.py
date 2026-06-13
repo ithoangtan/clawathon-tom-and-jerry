@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import faiss
+import numpy as np
 import pytest
 
 from app.adapters.faiss_retriever import FaissRetriever
@@ -126,3 +127,21 @@ def test_reload_picks_up_new_partition(
 
     retriever.reload()
     assert RISK_DEPT in retriever._indexes
+
+
+def test_load_skips_inconsistent_faiss_meta_partition(
+    adapter_settings: Settings,
+    faiss_index_dir: Path,
+    populated_index: MetaStore,
+    mock_embedder: MagicMock,
+) -> None:
+    """Half-built swap: mismatched ntotal vs meta count must not be served."""
+    index = faiss.IndexFlatIP(4)
+    # populated_index fixture seeds 3 meta rows; write only 1 vector on disk.
+    index.add(np.zeros((1, 4), dtype=np.float32))
+    faiss.write_index(index, str(faiss_index_dir / f"{RISK_DEPT}.faiss"))
+
+    retriever = _make_retriever(adapter_settings, mock_embedder)
+
+    assert RISK_DEPT not in retriever._indexes
+    assert retriever.is_ready() is False

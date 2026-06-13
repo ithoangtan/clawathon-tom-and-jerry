@@ -6,6 +6,7 @@ import re
 import pytest
 
 from app.ingestion.chunker import _MAX_CHARS, _MIN_CHARS, _OVERLAP_CHARS, chunk_text, classify_doc_type
+from app.ingestion.metadata import parse_acl, parse_labels
 
 # Approximate token count using the chunker's 4 chars/token heuristic.
 _CHARS_PER_TOKEN = 4
@@ -61,11 +62,16 @@ class TestChunkText:
         chunks = chunk_text(
             sample_text,
             department="grow_enablement",
-            doc_type="guide",
+            doc_type="Operation",
             title="Growth Playbook",
             url="https://example.com/grow",
+            source="67890",
             section="Onboarding",
+            anchor="onboarding",
+            space="GROW",
+            labels=["playbook", "growth"],
             last_modified="2025-02-01T12:00:00Z",
+            author="grow.owner@example.com",
             lifecycle_state="active",
             source_type="confluence",
             page=None,
@@ -73,11 +79,17 @@ class TestChunkText:
         assert chunks
         for chunk in chunks:
             assert chunk["department"] == "grow_enablement"
-            assert chunk["doc_type"] == "guide"
+            assert chunk["doc_type"] == "Operation"
             assert chunk["title"] == "Growth Playbook"
             assert chunk["url"] == "https://example.com/grow"
+            assert chunk["source"] == "67890"
             assert chunk["section"] == "Onboarding"
+            assert chunk["anchor"] == "onboarding"
+            assert chunk["space"] == "GROW"
+            assert parse_labels(chunk["labels"]) == ["growth", "playbook"]
             assert chunk["last_modified"] == "2025-02-01T12:00:00Z"
+            assert chunk["author"] == "grow.owner@example.com"
+            assert parse_acl(chunk["acl"]) == ["all-employees"]
             assert chunk["lifecycle_state"] == "active"
             assert chunk["source_type"] == "confluence"
             assert chunk["page"] is None

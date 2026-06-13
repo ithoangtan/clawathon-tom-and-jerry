@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.config import Settings
+from app.ingestion.metadata import REQUIRED_CHUNK_METADATA_FIELDS
 from app.ingestion.orchestrator import SyncService, _chunk_urls
 from app.store.meta import MetaStore
 
@@ -105,6 +106,59 @@ class TestSyncServiceConfluence:
         assert confluence["state"] == "idle"
         assert confluence["doc_count"] == 2
         assert confluence["chunk_count"] >= 2
+
+    def test_confluence_sync_persists_required_metadata_fields(
+        self,
+        sync_service: SyncService,
+        sync_settings: Settings,
+        mock_encode_passages,
+        sample_text: str,
+    ):
+        """Checklist §4: sync → index path retains the full chunk metadata contract."""
+        pages = [
+            {"id": "1", "title": "Q1 Product PRD"},
+            {"id": "2", "title": "Settlement runbook"},
+        ]
+
+        def fetch_body(page_id: str):
+            return sample_text, {
+                "title": next(p["title"] for p in pages if p["id"] == page_id),
+                "url": f"https://acme.atlassian.net/wiki/pages/{page_id}",
+                "last_modified": "2025-01-15T10:00:00Z",
+                "author": "owner@example.com",
+                "labels": ["policy"],
+            }
+
+        with (
+            patch.object(sync_service._confluence, "configured", return_value=True),
+            patch.object(sync_service._confluence, "list_pages", return_value=pages),
+            patch.object(sync_service._confluence, "fetch_page_body", side_effect=fetch_body),
+            patch.object(
+                sync_service._indexer._embedder,
+                "encode_passages",
+                side_effect=mock_encode_passages,
+            ),
+            patch.object(sync_service._indexer, "reload_retriever"),
+        ):
+            sync_service._run_confluence()
+
+        meta = MetaStore(Path(sync_settings.index_dir) / "meta.db")
+        rows = meta.fetch_by_positions("risk", list(range(meta.count("risk"))))
+        assert rows
+
+        doc_types = set()
+        for row in rows.values():
+            for field in REQUIRED_CHUNK_METADATA_FIELDS:
+                assert field in row, f"missing {field} on indexed chunk"
+            assert row["source"] in {"1", "2"}
+            assert row["space"] == "RISK"
+            assert row["author"] == "owner@example.com"
+            assert row["last_modified"] == "2025-01-15T10:00:00Z"
+            assert row["acl"]  # JSON placeholder present even when unused in MVP
+            doc_types.add(row["doc_type"])
+
+        assert "PRD" in doc_types
+        assert "Operation" in doc_types
 
     def test_confluence_sync_tombstones_removed_urls_before_rebuild(
         self,
@@ -208,6 +262,52 @@ class TestSyncServiceConfluence:
         }
         assert meta.doc_count("risk") == 1
 
+    def test_confluence_sync_skips_unchanged_pages_on_rerun(
+        self,
+        sync_service: SyncService,
+        sync_settings: Settings,
+        mock_encode_passages,
+        sample_text: str,
+    ):
+        """G4: second sync with identical bodies reuses chunks (hash-skip)."""
+        pages = [{"id": "1", "title": "Stable page"}]
+        page_url = "https://acme.atlassian.net/wiki/pages/1"
+
+        def fetch_body(page_id: str):
+            return sample_text, {
+                "title": "Stable page",
+                "url": page_url,
+                "last_modified": "2025-01-15T10:00:00Z",
+            }
+
+        with (
+            patch.object(sync_service._confluence, "configured", return_value=True),
+            patch.object(sync_service._confluence, "list_pages", return_value=pages),
+            patch.object(sync_service._confluence, "fetch_page_body", side_effect=fetch_body),
+            patch.object(
+                sync_service._indexer._embedder,
+                "encode_passages",
+                side_effect=mock_encode_passages,
+            ),
+            patch.object(sync_service._indexer, "reload_retriever"),
+        ):
+            sync_service._run_confluence()
+
+        with (
+            patch.object(sync_service._confluence, "configured", return_value=True),
+            patch.object(sync_service._confluence, "list_pages", return_value=pages),
+            patch.object(sync_service._confluence, "fetch_page_body", side_effect=fetch_body),
+            patch.object(
+                sync_service._indexer._embedder,
+                "encode_passages",
+                side_effect=mock_encode_passages,
+            ),
+            patch.object(sync_service._indexer, "reload_retriever"),
+            patch("app.ingestion.orchestrator.chunk_text") as mock_chunk_text,
+        ):
+            sync_service._run_confluence()
+            assert mock_chunk_text.call_count == 0
+
     def test_confluence_not_configured_sets_error(self, sync_service: SyncService):
         with patch.object(sync_service._confluence, "configured", return_value=False):
             sync_service._run_confluence()
@@ -236,3 +336,80 @@ class TestSyncServiceTriggers:
     def test_trigger_confluence_conflict_when_running(self, sync_service: SyncService):
         sync_service.orchestrator.start("confluence")
         assert sync_service.trigger_confluence() is False
+
+    def test_confluence_sync_is_idempotent(
+        self,
+        sync_service: SyncService,
+        sync_settings: Settings,
+        mock_encode_passages,
+        sample_text: str,
+    ):
+        """Re-running sync with the same corpus yields stable index state."""
+        pages = [{"id": "1", "title": "Risk PRD"}]
+
+        def fetch_body(page_id: str):
+            return sample_text, {
+                "title": f"Page {page_id}",
+                "url": f"https://acme.atlassian.net/wiki/pages/{page_id}",
+                "last_modified": "2025-01-15T10:00:00Z",
+            }
+
+        patches = (
+            patch.object(sync_service._confluence, "configured", return_value=True),
+            patch.object(sync_service._confluence, "list_pages", return_value=pages),
+            patch.object(sync_service._confluence, "fetch_page_body", side_effect=fetch_body),
+            patch.object(
+                sync_service._indexer._embedder,
+                "encode_passages",
+                side_effect=mock_encode_passages,
+            ),
+            patch.object(sync_service._indexer, "reload_retriever"),
+        )
+
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
+            sync_service._run_confluence()
+        meta = MetaStore(Path(sync_settings.index_dir) / "meta.db")
+        first_count = meta.count("risk")
+        first_urls = meta.distinct_urls("risk")
+
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
+            sync_service._run_confluence()
+
+        assert meta.count("risk") == first_count
+        assert meta.distinct_urls("risk") == first_urls
+
+    def test_confluence_sync_never_calls_llm(
+        self,
+        sync_service: SyncService,
+        mock_encode_passages,
+        sample_text: str,
+    ):
+        """G4: ingestion uses local embeddings only — zero MaaS tokens on sync."""
+        pages = [{"id": "1", "title": "Risk PRD"}]
+
+        def fetch_body(page_id: str):
+            return sample_text, {
+                "title": f"Page {page_id}",
+                "url": f"https://acme.atlassian.net/wiki/pages/{page_id}",
+                "last_modified": "2025-01-15T10:00:00Z",
+            }
+
+        mock_llm = MagicMock()
+        mock_llm.complete = MagicMock(side_effect=AssertionError("LLM must not run during sync"))
+
+        with (
+            patch.object(sync_service._confluence, "configured", return_value=True),
+            patch.object(sync_service._confluence, "list_pages", return_value=pages),
+            patch.object(sync_service._confluence, "fetch_page_body", side_effect=fetch_body),
+            patch.object(
+                sync_service._indexer._embedder,
+                "encode_passages",
+                side_effect=mock_encode_passages,
+            ),
+            patch.object(sync_service._indexer, "reload_retriever"),
+            patch("app.adapters.deps.get_deps") as mock_get_deps,
+        ):
+            mock_get_deps.return_value.llm = mock_llm
+            sync_service._run_confluence()
+
+        mock_llm.complete.assert_not_called()

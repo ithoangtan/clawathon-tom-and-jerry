@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
@@ -14,6 +15,7 @@ from app.graph.build import (
     DEPT_SUBGRAPH,
     GraphDeps,
     _branch_deadline,
+    _make_dept_branch,
     _make_route_after_router,
     _route_after_ingest,
     build_dept_subgraph,
@@ -209,3 +211,28 @@ def test_dept_subgraph_refuses_when_branch_budget_exceeded(
     assert graph_deps.retriever.search_calls == []
     assert result["dept_results"][0]["status"] == "refused"
     assert result["dept_results"][0]["citations"] == []
+
+
+def test_dept_branch_degrades_when_subgraph_raises(graph_deps: GraphDeps):
+    """G5: one department branch failure must not kill the whole graph run."""
+    subgraph = build_dept_subgraph(graph_deps)
+    branch = _make_dept_branch(subgraph)
+
+    with (
+        patch("app.graph.build.get_stream_writer", return_value=MagicMock()),
+        patch.object(subgraph, "stream", side_effect=RuntimeError("branch boom")),
+    ):
+        result = branch(
+            {
+                "department": "risk",
+                "question": "What is KYC?",
+                "role": "engineer",
+                "request_language": "en",
+                "deadline_ts": time.time() + 60,
+            }
+        )
+
+    dept_result = result["dept_results"][0]
+    assert dept_result["department"] == "risk"
+    assert dept_result["status"] == "timeout"
+    assert "branch_error" in dept_result["warnings"]

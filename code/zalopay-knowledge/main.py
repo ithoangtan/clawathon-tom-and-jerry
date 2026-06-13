@@ -18,17 +18,31 @@ if get_settings().is_agentbase:
 
         from app.api.context import parse_context_from_headers
         from app.api.schemas import ChatRequest
-        from app.api.service import record_chat_outcome, run_chat
+        from app.api.service import run_chat
+        from app.common.security import AgentDisabledError, apply_gateway_trust_headers
 
         agentbase_app = GreenNodeAgentBaseApp()
+        cfg = get_settings()
 
         @agentbase_app.entrypoint
         def agentbase_handler(payload: dict, context: RequestContext) -> dict:
+            if not cfg.agent_enabled:
+                return {
+                    "status": "error",
+                    "error": "Knowledge agent is temporarily disabled",
+                }
             headers = dict(context.request_headers or {})
             if context.user_id:
                 headers["X-GreenNode-AgentBase-User-Id"] = context.user_id
             if context.session_id:
                 headers["X-GreenNode-AgentBase-Session-Id"] = context.session_id
+            if context.user_id and context.session_id:
+                apply_gateway_trust_headers(
+                    headers,
+                    user_id=context.user_id,
+                    session_id=context.session_id,
+                    trust_secret=cfg.gateway_trust_secret,
+                )
             try:
                 user_ctx = parse_context_from_headers(headers)
             except ValueError as exc:
@@ -38,27 +52,17 @@ if get_settings().is_agentbase:
                 question=question,
                 target_departments=payload.get("target_departments"),
             )
-            import time
-
-            started = time.perf_counter()
-            response = run_chat(user_ctx, req)
-            record_chat_outcome(
-                user_ctx,
-                req,
-                response,
-                latency_ms=int((time.perf_counter() - started) * 1000),
-            )
+            try:
+                response = run_chat(user_ctx, req)
+            except AgentDisabledError as exc:
+                return {"status": "error", "error": str(exc)}
             return response.model_dump()
 
         @agentbase_app.ping
         def agentbase_ping() -> PingStatus:
-            from app.adapters.deps import get_deps
+            from app.api.health import is_ready
 
-            return (
-                PingStatus.HEALTHY
-                if get_deps().retriever.is_ready()
-                else PingStatus.UNHEALTHY
-            )
+            return PingStatus.HEALTHY if is_ready() else PingStatus.UNHEALTHY
 
         logger.info("AgentBase SDK handlers registered")
     except ImportError:

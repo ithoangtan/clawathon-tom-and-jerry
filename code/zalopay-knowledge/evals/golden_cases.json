@@ -1,0 +1,549 @@
+[
+  {
+    "id": "R-01",
+    "department": "risk",
+    "question": "What is the risk alert escalation process?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["escalation", "alert"],
+      "citation_keywords": ["risk", "escalation"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-escalation-1", "risk-escalation-2"] }
+  },
+  {
+    "id": "R-02",
+    "department": "risk",
+    "question": "What is the fraud monitoring threshold for suspicious transactions?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["fraud", "threshold"],
+      "citation_keywords": ["fraud", "monitoring"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-fraud-threshold-1"] }
+  },
+  {
+    "id": "R-03",
+    "department": "risk",
+    "question": "How do we handle a KYC compliance exception?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["KYC", "exception"],
+      "citation_keywords": ["KYC", "compliance"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-kyc-exception-1"] }
+  },
+  {
+    "id": "R-04",
+    "department": "risk",
+    "question": "What are the incident response steps for a data breach?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["incident", "breach"],
+      "citation_keywords": ["incident", "response"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-incident-1", "risk-incident-2"] }
+  },
+  {
+    "id": "R-05",
+    "department": "risk",
+    "question": "What is the daily transaction limit policy for high-risk merchants?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["limit", "merchant"],
+      "citation_keywords": ["limit", "risk"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-merchant-limit-1"] }
+  },
+  {
+    "id": "R-06",
+    "department": "risk",
+    "question": "Who approves risk policy exceptions?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["approve", "exception"],
+      "citation_keywords": ["policy", "approval"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-policy-approval-1"] }
+  },
+  {
+    "id": "R-07",
+    "department": "risk",
+    "question": "What AML red flags should ops watch for during onboarding?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["AML", "red flag"],
+      "citation_keywords": ["AML", "onboarding"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-aml-1"] }
+  },
+  {
+    "id": "R-08",
+    "department": "risk",
+    "question": "How long do we retain fraud investigation evidence?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["retain", "evidence"],
+      "citation_keywords": ["fraud", "investigation"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-fraud-retention-1"] }
+  },
+  {
+    "id": "R-09",
+    "department": "risk",
+    "question": "What is the SLA for closing a critical risk ticket?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["SLA", "critical"],
+      "citation_keywords": ["SLA", "risk"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-sla-1"] }
+  },
+  {
+    "id": "R-10",
+    "department": "risk",
+    "question": "Which channel should I use to report a suspected fraud case?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["report", "fraud"],
+      "citation_keywords": ["channel", "fraud"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-report-channel-1"] }
+  },
+  {
+    "id": "R-11",
+    "department": "risk",
+    "question": "Quy trình leo thang cảnh báo rủi ro là gì?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["leo thang", "rủi ro"],
+      "citation_keywords": ["risk", "escalation"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-escalation-vi-1"] }
+  },
+  {
+    "id": "R-12",
+    "department": "risk",
+    "question": "What compliance checks run before a merchant goes live?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["compliance", "merchant"],
+      "citation_keywords": ["compliance", "merchant"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["risk-merchant-compliance-1"] }
+  },
+  {
+    "id": "G-01",
+    "department": "grow_enablement",
+    "question": "What is the merchant onboarding playbook for new partners?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["onboarding", "merchant"],
+      "citation_keywords": ["onboarding", "playbook"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-onboard-1", "grow-onboard-2"] }
+  },
+  {
+    "id": "G-02",
+    "department": "grow_enablement",
+    "question": "How do we enable a grow campaign for a merchant segment?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["campaign", "merchant"],
+      "citation_keywords": ["campaign", "enablement"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-campaign-1"] }
+  },
+  {
+    "id": "G-03",
+    "department": "grow_enablement",
+    "question": "What documents does a merchant need for grow enablement review?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["document", "merchant"],
+      "citation_keywords": ["document", "enablement"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-docs-1"] }
+  },
+  {
+    "id": "G-04",
+    "department": "grow_enablement",
+    "question": "What is the standard timeline for merchant activation?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["timeline", "activation"],
+      "citation_keywords": ["activation", "timeline"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-activation-1"] }
+  },
+  {
+    "id": "G-05",
+    "department": "grow_enablement",
+    "question": "How do we handle merchant training for a new product launch?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["training", "product"],
+      "citation_keywords": ["training", "launch"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-training-1"] }
+  },
+  {
+    "id": "G-06",
+    "department": "grow_enablement",
+    "question": "What are the eligibility criteria for the merchant growth program?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["eligibility", "growth"],
+      "citation_keywords": ["eligibility", "program"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-eligibility-1"] }
+  },
+  {
+    "id": "G-07",
+    "department": "grow_enablement",
+    "question": "Who owns the merchant enablement runbook updates?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["runbook", "owner"],
+      "citation_keywords": ["runbook", "owner"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-runbook-owner-1"] }
+  },
+  {
+    "id": "G-08",
+    "department": "grow_enablement",
+    "question": "What is the process to escalate a blocked merchant onboarding?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["escalate", "onboarding"],
+      "citation_keywords": ["escalation", "onboarding"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-escalation-1"] }
+  },
+  {
+    "id": "G-09",
+    "department": "grow_enablement",
+    "question": "How are merchant incentives configured in grow campaigns?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["incentive", "campaign"],
+      "citation_keywords": ["incentive", "campaign"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-incentive-1"] }
+  },
+  {
+    "id": "G-10",
+    "department": "grow_enablement",
+    "question": "What support channel should merchants use during onboarding?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["support", "channel"],
+      "citation_keywords": ["support", "onboarding"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-support-1"] }
+  },
+  {
+    "id": "G-11",
+    "department": "grow_enablement",
+    "question": "Playbook onboarding merchant mới cho đối tác?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["onboarding", "merchant"],
+      "citation_keywords": ["onboarding", "playbook"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-onboard-vi-1"] }
+  },
+  {
+    "id": "G-12",
+    "department": "grow_enablement",
+    "question": "What QA checks run before a grow campaign goes live?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["QA", "campaign"],
+      "citation_keywords": ["QA", "campaign"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["grow-qa-1"] }
+  },
+  {
+    "id": "B-01",
+    "department": "bank_partnerships",
+    "question": "What is the bank partner SLA for settlement reconciliation?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["SLA", "settlement"],
+      "citation_keywords": ["SLA", "reconciliation"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-sla-1", "bank-recon-1"] }
+  },
+  {
+    "id": "B-02",
+    "department": "bank_partnerships",
+    "question": "How do we onboard a new bank integration partner?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["onboard", "bank"],
+      "citation_keywords": ["integration", "bank"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-onboard-1"] }
+  },
+  {
+    "id": "B-03",
+    "department": "bank_partnerships",
+    "question": "What are the settlement cut-off times for partner banks?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["cut-off", "settlement"],
+      "citation_keywords": ["settlement", "cut"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-cutoff-1"] }
+  },
+  {
+    "id": "B-04",
+    "department": "bank_partnerships",
+    "question": "Who approves changes to bank partner fee schedules?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["approve", "fee"],
+      "citation_keywords": ["fee", "approval"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-fee-approval-1"] }
+  },
+  {
+    "id": "B-05",
+    "department": "bank_partnerships",
+    "question": "What is the escalation path for a settlement mismatch?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["escalation", "settlement"],
+      "citation_keywords": ["settlement", "mismatch"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-settlement-escalation-1"] }
+  },
+  {
+    "id": "B-06",
+    "department": "bank_partnerships",
+    "question": "What technical specs are required for a bank API integration?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["API", "integration"],
+      "citation_keywords": ["API", "technical"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-api-spec-1"] }
+  },
+  {
+    "id": "B-07",
+    "department": "bank_partnerships",
+    "question": "How do we handle a partner bank outage?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["outage", "bank"],
+      "citation_keywords": ["outage", "partner"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-outage-1"] }
+  },
+  {
+    "id": "B-08",
+    "department": "bank_partnerships",
+    "question": "What reconciliation reports are shared with bank partners?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["reconciliation", "report"],
+      "citation_keywords": ["reconciliation", "report"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-recon-report-1"] }
+  },
+  {
+    "id": "B-09",
+    "department": "bank_partnerships",
+    "question": "Which channel do we use for urgent bank partner issues?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["channel", "urgent"],
+      "citation_keywords": ["channel", "partner"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-channel-1"] }
+  },
+  {
+    "id": "B-10",
+    "department": "bank_partnerships",
+    "question": "What is the partner SLA for dispute resolution?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["SLA", "dispute"],
+      "citation_keywords": ["SLA", "dispute"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-dispute-sla-1"] }
+  },
+  {
+    "id": "B-11",
+    "department": "bank_partnerships",
+    "question": "SLA đối soát thanh toán với ngân hàng đối tác?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["SLA", "đối soát"],
+      "citation_keywords": ["SLA", "reconciliation"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-sla-vi-1"] }
+  },
+  {
+    "id": "B-12",
+    "department": "bank_partnerships",
+    "question": "What compliance documents must a new bank partner sign?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["compliance", "document"],
+      "citation_keywords": ["compliance", "partner"]
+    },
+    "retrieval": { "relevant_chunk_ids": ["bank-compliance-docs-1"] }
+  },
+  {
+    "id": "X-01",
+    "department": "risk",
+    "question": "How do grow campaigns interact with bank partner SLAs?",
+    "target_departments": ["risk", "grow_enablement", "bank_partnerships"],
+    "expect": {
+      "status": "partial",
+      "must_refuse": false,
+      "answer_keywords": ["campaign", "SLA"],
+      "citation_keywords": ["grow", "bank"]
+    },
+    "retrieval": {
+      "relevant_chunk_ids": ["grow-campaign-1", "bank-sla-1"]
+    }
+  },
+  {
+    "id": "OOS-01",
+    "question": "What is the stock price of Apple today?",
+    "expect": {
+      "status": "refused",
+      "must_refuse": true
+    }
+  },
+  {
+    "id": "OOS-02",
+    "question": "Create a Jira ticket for my onboarding issue",
+    "expect": {
+      "status": "refused",
+      "must_refuse": true
+    }
+  },
+  {
+    "id": "OOS-03",
+    "question": "What is Zalopay's HR parental leave policy?",
+    "expect": {
+      "status": "refused",
+      "must_refuse": true
+    }
+  },
+  {
+    "id": "OOS-04",
+    "question": "Search the internet for the latest PCI-DSS version",
+    "expect": {
+      "status": "refused",
+      "must_refuse": true
+    }
+  },
+  {
+    "id": "OOS-05",
+    "question": "How many transactions happened in the last hour?",
+    "expect": {
+      "status": "refused",
+      "must_refuse": true
+    }
+  },
+  {
+    "id": "OOS-06",
+    "question": "Write me a marketing email for our new wallet feature",
+    "expect": {
+      "status": "refused",
+      "must_refuse": true
+    }
+  },
+  {
+    "id": "OOS-07",
+    "question": "What is the weather in Ho Chi Minh City?",
+    "expect": {
+      "status": "refused",
+      "must_refuse": true
+    }
+  },
+  {
+    "id": "OOS-08",
+    "question": "Can you reset my Microsoft 365 password?",
+    "expect": {
+      "status": "refused",
+      "must_refuse": true
+    }
+  }
+]

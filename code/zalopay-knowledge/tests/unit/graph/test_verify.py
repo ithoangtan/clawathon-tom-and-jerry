@@ -127,6 +127,8 @@ def test_verify_partial_support_adds_warning(
     )
     result = out["dept_results"][0]
     assert result["status"] == "answered"
+    assert result["answer"] == "First claim [1]."
+    assert len(result["citations"]) == 1
     assert any("unverified_claims" in w for w in result["warnings"])
 
 

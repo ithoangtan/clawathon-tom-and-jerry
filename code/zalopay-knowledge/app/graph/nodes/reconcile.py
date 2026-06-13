@@ -21,6 +21,7 @@ import re
 from typing import Callable
 
 from app.common.departments import get_department
+from app.common.product_copy import refusal_body
 from app.config import Settings, get_settings
 from app.graph.nodes._helpers import budget_exceeded, parse_json_response
 from app.graph.state import (
@@ -59,7 +60,7 @@ def make_reconcile_node(
         # ── Fast path: nobody answered ────────────────────────────────────────
         if not answered:
             return {
-                "answer": _all_refused_message(lang),
+                "answer": refusal_body(lang, refusals or [r["department"] for r in results]),
                 "citations": [],
                 "conflicts": [],
                 "confidence": 0.0,
@@ -229,16 +230,3 @@ def _resolve_citation(cites: list[Citation], index) -> Citation:
     return Citation(title="", url="")
 
 
-def _all_refused_message(lang: str) -> str:
-    """FR-2.2 refusal copy when no department passes the grade/verify gate."""
-    if lang == "vi":
-        return (
-            "Không có thông tin trong tài liệu.\n\n"
-            "Tôi không tìm thấy nội dung liên quan trong tài liệu nội bộ. "
-            "Hãy thử hỏi cụ thể hơn hoặc liên hệ bộ phận sở hữu tài liệu."
-        )
-    return (
-        "Not covered in the docs.\n\n"
-        "I couldn't find relevant content in the internal documentation. "
-        "Try rephrasing your question or contact the document owner."
-    )

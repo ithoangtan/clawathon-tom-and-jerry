@@ -166,6 +166,7 @@ def chunk_to_citation(chunk: Chunk) -> Citation:
         title=chunk.get("title", "(untitled)"),
         url=chunk.get("url", ""),
         section=chunk.get("section"),
+        doc_type=chunk.get("doc_type"),
         last_modified=chunk.get("last_modified"),
         lifecycle_state=lifecycle,
         deprecated=lifecycle == "deprecated",
@@ -244,6 +245,55 @@ def render_claims(claims: list[dict]) -> str:
             f"Cited source text:\n{c['source_text'].strip()}"
         )
     return "\n\n".join(blocks)
+
+
+def cited_marker_indices(answer: str) -> set[int]:
+    """Return 1-based citation marker indices present in *answer*."""
+    return {int(m) for m in _CITATION_MARKER_RE.findall(answer or "")}
+
+
+def filter_citations_by_markers(
+    citations: list[Citation],
+    markers: set[int],
+) -> list[Citation]:
+    """Keep only citations whose 1-based index appears in *markers*."""
+    if not markers:
+        return []
+    return [citations[i - 1] for i in sorted(markers) if 1 <= i <= len(citations)]
+
+
+def prune_unsupported_claims(
+    answer: str,
+    claims: list[dict],
+    verdicts: dict[int, bool],
+) -> tuple[str, set[int], list[str]]:
+    """Drop unsupported claim sentences; return pruned answer + remaining markers.
+
+    Returns:
+        (pruned_answer, used_markers, dropped_claim_texts)
+    """
+    if not claims:
+        return answer, cited_marker_indices(answer), []
+
+    supported_texts: list[str] = []
+    dropped: list[str] = []
+    used_markers: set[int] = set()
+
+    for claim in claims:
+        cid = claim["id"]
+        if verdicts.get(cid, False):
+            supported_texts.append(claim["claim"])
+            used_markers.update(claim.get("cited", []))
+        else:
+            dropped.append(claim["claim"])
+
+    if not supported_texts:
+        return "", set(), dropped
+
+    pruned = " ".join(supported_texts).strip()
+    # Re-scan in case join dropped markers (shouldn't, but stay safe).
+    used_markers = cited_marker_indices(pruned) or used_markers
+    return pruned, used_markers, dropped
 
 
 # ── Language detection ──────────────────────────────────────────────────────────

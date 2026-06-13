@@ -11,13 +11,31 @@ interface RefusalPanelProps {
   reason?: RefusalReason | null;
 }
 
+function stripDuplicateLead(body: string, title: string): string {
+  const normalized = body.trim();
+  const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const stripped = normalized.replace(new RegExp(`^${escaped}\\.?\\s*`, "i"), "").trim();
+  return stripped || normalized;
+}
+
 /** Prominent UX when the grade gate, verify step, or access control refuses to answer. */
 export function RefusalPanel({ message, reason }: RefusalPanelProps) {
   const locale = useUserStore((s) => s.locale);
   const isAccessDenied = reason === "access_denied";
-  const title = t(isAccessDenied ? "accessDeniedTitle" : "refusalTitle", locale);
-  const hint = t(isAccessDenied ? "accessDeniedHint" : "refusalHint", locale);
-  const body = message?.trim();
+  const isOutOfScope = reason === "out_of_scope";
+  const title = t(
+    isAccessDenied ? "accessDeniedTitle" : isOutOfScope ? "outOfScopeTitle" : "refusalTitle",
+    locale,
+  );
+  const hint = t(
+    isAccessDenied ? "accessDeniedHint" : isOutOfScope ? "outOfScopeHint" : "refusalHint",
+    locale,
+  );
+  const rawBody = message?.trim();
+  const body =
+    rawBody && rawBody !== title && !isOutOfScope
+      ? stripDuplicateLead(rawBody, title)
+      : rawBody;
 
   return (
     <div

@@ -13,6 +13,38 @@ from app.ports.errors import LLMUnavailable
 from tests.unit.graph.conftest import StubLLM
 
 
+def test_router_out_of_scope_status_or_data(test_settings: Settings):
+    payload = json.dumps(
+        {"intent": "status_or_data", "target_departments": [], "confidence": 0.95}
+    )
+    node = make_router_node(StubLLM(payload), settings=test_settings)
+    out = node(
+        {
+            "question": "What is today's transaction volume?",
+            "allowed_departments": ["risk"],
+            "request_language": "en",
+        }
+    )
+    assert out["intent"] == "status_or_data"
+    assert out["target_departments"] == []
+
+
+def test_respond_out_of_scope_refusal(test_settings: Settings):
+    from app.graph.nodes.respond import make_respond_node
+
+    respond = make_respond_node(settings=test_settings)
+    out = respond(
+        {
+            "intent": "status_or_data",
+            "request_language": "en",
+            "dept_results": [],
+        }
+    )
+    assert out["status"] == "refused"
+    assert out["citations"] == []
+    assert "outside indexed documentation" in out["answer"].lower()
+
+
 def test_router_honours_pinned_departments(test_settings: Settings):
     node = make_router_node(StubLLM(), settings=test_settings)
     out = node(

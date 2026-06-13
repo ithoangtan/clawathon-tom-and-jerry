@@ -4,17 +4,23 @@ from __future__ import annotations
 
 Single ``create_app()`` used by tests, ``main.py``, and uvicorn. Production
 entrypoint (``main.py``) registers AgentBase handlers after calling this.
+
+Health probes (liveness vs readiness) are registered here — not on the main API
+router — so orchestrators can target ``/health/ready`` independently of chat.
 """
 
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.health import is_live, is_ready, probe_status
+from app.api.middleware import GatewayTrustMiddleware, KillSwitchMiddleware
 from app.api.routes import router
+from app.api.schemas import HealthInfo
 from app.common.logging_config import setup_logging
 from app.config import get_settings
 
@@ -36,6 +42,30 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down")
 
 
+def register_health_routes(app: FastAPI) -> None:
+    """Mount liveness/readiness probes (DevOps MUST §3 — separate from liveness)."""
+
+    @app.get("/health", response_model=HealthInfo, tags=["health"])
+    def health() -> HealthInfo:
+        """Process snapshot — always 200 while HTTP server is up."""
+        if not is_live():
+            raise HTTPException(status_code=503, detail="Process not live")
+        return HealthInfo(**probe_status())
+
+    @app.get("/health/live", response_model=HealthInfo, tags=["health"])
+    def health_live() -> HealthInfo:
+        """Liveness — always 200 while accepting requests (no index/MaaS gate)."""
+        return HealthInfo(**probe_status())
+
+    @app.get("/health/ready", response_model=HealthInfo, tags=["health"])
+    def health_ready(response: Response) -> HealthInfo:
+        """Readiness — FAISS loaded + MaaS ping; 503 until traffic-ready."""
+        payload = probe_status()
+        if not is_ready():
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return HealthInfo(**payload)
+
+
 def create_app() -> FastAPI:
     cfg = get_settings()
     app = FastAPI(
@@ -52,6 +82,11 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Security runs after CORS in the stack (executes before routes on ingress).
+    app.add_middleware(GatewayTrustMiddleware)
+    app.add_middleware(KillSwitchMiddleware)
+
+    register_health_routes(app)
     app.include_router(router)
 
     dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"

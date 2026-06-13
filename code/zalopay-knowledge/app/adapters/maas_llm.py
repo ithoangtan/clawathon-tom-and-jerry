@@ -73,6 +73,17 @@ class VngMaasLLM:
 
     # ── LLMPort ───────────────────────────────────────────────────────────────
 
+    def is_reachable(self, *, timeout_s: float = 3.0) -> bool:
+        """Lightweight readiness probe — must not raise."""
+        if not self._cfg.effective_llm_api_key:
+            return False
+        try:
+            self._client.models.list(timeout=timeout_s)
+            return True
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("MaaS ping failed: %s", exc)
+            return False
+
     def complete(
         self,
         *,
@@ -91,15 +102,17 @@ class VngMaasLLM:
             )
 
         want_json = response_format == "json"
+        effective_timeout = (
+            timeout_s if timeout_s is not None else self._cfg.llm_request_timeout_s
+        )
         base_kwargs: dict = {
             "model": model,
             "messages": messages,
             "temperature": temperature,
+            "timeout": effective_timeout,
         }
         if max_tokens is not None:
             base_kwargs["max_tokens"] = max_tokens
-        if timeout_s is not None:
-            base_kwargs["timeout"] = timeout_s
 
         # Try JSON mode first when requested; fall back to plain text if the
         # model rejects the response_format parameter.

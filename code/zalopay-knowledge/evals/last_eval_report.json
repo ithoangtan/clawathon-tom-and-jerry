@@ -1,0 +1,21 @@
+{
+  "cases": 45,
+  "generated_at": "2026-06-13T06:10:39.410652Z",
+  "total": 45,
+  "status_pass": 45,
+  "context_recall_at_k": {
+    "5": 1.0,
+    "8": 1.0
+  },
+  "context_precision_at_k": {
+    "5": 0.35585585585585583,
+    "8": 0.35585585585585583
+  },
+  "faithfulness": 0.7568,
+  "answer_relevance": 0.4865,
+  "refusal_precision": 1.0,
+  "refusal_recall": 1.0,
+  "over_refusal_rate": 0.0,
+  "hallucination_rate": 0.0,
+  "mode": "stub"
+}

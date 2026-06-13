@@ -83,6 +83,16 @@ class FaissRetriever:
                 continue
             try:
                 indexes[dept] = faiss.read_index(str(path))
+                meta_count = self._meta.count(dept)
+                if indexes[dept].ntotal != meta_count:
+                    logger.error(
+                        "Skipping inconsistent partition %s (faiss=%d meta=%d)",
+                        dept,
+                        indexes[dept].ntotal,
+                        meta_count,
+                    )
+                    del indexes[dept]
+                    continue
                 logger.info(
                     "Loaded FAISS partition %s (%d vectors)",
                     dept,
@@ -173,6 +183,12 @@ class FaissRetriever:
             title=row.get("title") or "",
             url=row.get("url") or "",
             section=row.get("section"),
+            source=row.get("source"),
+            anchor=row.get("anchor"),
+            space=row.get("space"),
+            labels=row.get("labels"),
+            author=row.get("author"),
+            acl=row.get("acl"),
             last_modified=row.get("last_modified"),
             lifecycle_state=row.get("lifecycle_state") or "active",
             source_type=row.get("source_type") or "confluence",

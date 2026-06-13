@@ -61,6 +61,8 @@ class Citation(TypedDict, total=False):
     """Chunk text snippet (~400 chars) for the Citation Evidence Inspector."""
     chunk_id: Optional[str]
     """Stable chunk id when sourced from retrieval."""
+    doc_type: Optional[str]
+    """Document type for high-stakes disclaimer heuristics."""
 
 
 class ConflictSide(TypedDict, total=False):

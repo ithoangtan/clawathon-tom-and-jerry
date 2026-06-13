@@ -94,3 +94,21 @@ class RetrievedChunk:
 
     score: float
     """Cosine similarity score in [0, 1] (higher = more relevant)."""
+
+    source: str | None = None
+    """Upstream document id (Confluence page id, Drive file id, etc.)."""
+
+    anchor: str | None = None
+    """Deep-link anchor slug for the chunk section, when available."""
+
+    space: str | None = None
+    """Confluence space key; ``None`` for PDF/SharePoint sources."""
+
+    labels: str | None = None
+    """JSON-encoded list of source labels (Confluence labels, file tags)."""
+
+    author: str | None = None
+    """Last-known author or owner display name from the source system."""
+
+    acl: str | None = None
+    """JSON-encoded ACL group list; MVP default ``["all-employees"]``."""

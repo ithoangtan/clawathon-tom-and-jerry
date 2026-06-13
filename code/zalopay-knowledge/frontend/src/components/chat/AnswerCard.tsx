@@ -6,6 +6,7 @@ import { ClarifyingQuestionCard } from "@/components/chat/ClarifyingQuestionCard
 import { ConflictPanel } from "@/components/chat/ConflictPanel";
 import { FeedbackBar } from "@/components/chat/FeedbackBar";
 import { MessageCopyButton } from "@/components/chat/MessageCopyButton";
+import { PartialGapBanner } from "@/components/chat/PartialGapBanner";
 import { RefusalPanel } from "@/components/chat/RefusalPanel";
 import { Card } from "@/components/ui/Card";
 import { classNames } from "@/lib/format";
@@ -36,6 +37,7 @@ export function AnswerCard({
     clarifying_question,
     feedback_id,
     refusal_reason,
+    refusals,
   } = response;
 
   const isMessage = variant === "message";
@@ -49,6 +51,8 @@ export function AnswerCard({
     }
     return [...depts];
   }, [conflicts, source_departments]);
+
+  const isClarifying = Boolean(clarifying_question && onClarifySelect);
 
   return (
     <Card
@@ -70,18 +74,20 @@ export function AnswerCard({
           confidence={confidence}
           status={status}
           refusalReason={refusal_reason}
+          clarifying={isClarifying}
         />
-        {status !== "refused" && answer.trim() && !streaming && (
+        {status !== "refused" && !isClarifying && answer.trim() && !streaming && (
           <MessageCopyButton text={answer} />
         )}
       </div>
 
-      {clarifying_question && onClarifySelect ? (
+      {isClarifying ? (
         <div className="mt-4">
           <ClarifyingQuestionCard
-            question={clarifying_question}
-            onSelect={onClarifySelect}
+            question={clarifying_question!}
+            onSelect={onClarifySelect!}
           />
+          {!streaming && feedback_id && <FeedbackBar feedbackId={feedback_id} />}
         </div>
       ) : status === "refused" ? (
         <>
@@ -90,6 +96,7 @@ export function AnswerCard({
         </>
       ) : (
         <>
+          {status === "partial" && <PartialGapBanner refusals={refusals} />}
           <div className="mt-4">
             <AnswerMarkdown
               answer={answer}

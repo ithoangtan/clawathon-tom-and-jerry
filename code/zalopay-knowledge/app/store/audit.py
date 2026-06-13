@@ -46,11 +46,20 @@ class AuditStore:
                     latency_ms INTEGER,
                     feedback_id TEXT,
                     citations_json TEXT,
+                    answer_preview TEXT,
                     tokens INTEGER DEFAULT 0
                 )
                 """
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_queries_ts ON queries (ts DESC)")
+            # Migrate older schemas created before answer_preview existed.
+            columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(queries)").fetchall()
+            }
+            if "answer_preview" not in columns:
+                conn.execute("ALTER TABLE queries ADD COLUMN answer_preview TEXT")
+            if "stage_trace_json" not in columns:
+                conn.execute("ALTER TABLE queries ADD COLUMN stage_trace_json TEXT")
             conn.commit()
         finally:
             conn.close()
@@ -68,18 +77,22 @@ class AuditStore:
         latency_ms: int,
         feedback_id: str,
         citations: list[dict] | None = None,
+        answer_preview: str = "",
         tokens: int = 0,
+        stage_trace: dict | None = None,
     ) -> str:
         """Record one query/answer event. Returns the audit row id."""
         row_id = str(uuid.uuid4())
+        preview = mask_pii(answer_preview[:500]) if answer_preview else ""
         conn = self._connect()
         try:
             conn.execute(
                 """
                 INSERT INTO queries (
                     id, ts, user_id, session_id, role, question, departments,
-                    status, confidence, latency_ms, feedback_id, citations_json, tokens
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    status, confidence, latency_ms, feedback_id, citations_json,
+                    answer_preview, tokens, stage_trace_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     row_id,
@@ -94,7 +107,9 @@ class AuditStore:
                     latency_ms,
                     feedback_id,
                     json.dumps(citations or []),
+                    preview,
                     tokens,
+                    json.dumps(stage_trace) if stage_trace else None,
                 ),
             )
             conn.commit()
@@ -110,6 +125,8 @@ class AuditStore:
             if total == 0:
                 return {
                     "query_count": 0,
+                    "deflection_rate": 0.0,
+                    "answered_wrong_rate": 0.0,
                     "refusal_rate": 0.0,
                     "partial_rate": 0.0,
                     "conflict_rate": 0.0,
@@ -126,6 +143,9 @@ class AuditStore:
             ).fetchone()["n"]
             partial = conn.execute(
                 "SELECT COUNT(*) AS n FROM queries WHERE status = 'partial'"
+            ).fetchone()["n"]
+            answered = conn.execute(
+                "SELECT COUNT(*) AS n FROM queries WHERE status = 'answered'"
             ).fetchone()["n"]
             latencies = [
                 r["latency_ms"]
@@ -164,6 +184,8 @@ class AuditStore:
 
             return {
                 "query_count": total,
+                "deflection_rate": (answered + partial) / total,
+                "answered_wrong_rate": 0.0,
                 "refusal_rate": refused / total,
                 "partial_rate": partial / total,
                 "conflict_rate": 0.0,  # filled by feedback store if needed

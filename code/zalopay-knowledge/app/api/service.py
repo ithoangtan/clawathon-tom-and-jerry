@@ -10,7 +10,10 @@ from typing import Any, Iterator
 
 from langchain_core.messages import HumanMessage
 
+from app.common.security import assert_agent_enabled
+from app.common.stage_trace import build_stage_trace
 from app.graph import get_compiled_graph
+from app.graph.nodes.router import OUT_OF_SCOPE_INTENTS
 from app.graph.pipeline import PipelineTracker, map_node_to_step_key
 from app.api.context import UserContext
 from app.api.schemas import (
@@ -63,12 +66,29 @@ def _graph_config(ctx: UserContext) -> dict[str, Any]:
     return {"configurable": {"thread_id": ctx.session_id, "actor_id": ctx.user_id}}
 
 
+def _to_citation_model(c: dict | CitationModel) -> CitationModel:
+    """Map graph citations to API model, dropping internal-only fields (e.g. doc_type)."""
+    if isinstance(c, CitationModel):
+        return c
+    allowed = CitationModel.model_fields.keys()
+    payload = {k: v for k, v in c.items() if k in allowed}
+    return CitationModel(**payload)
+
+
+def _refusal_reason(state: dict[str, Any]) -> str | None:
+    """Map terminal graph state to a structured refusal reason for the UI."""
+    errors = list(state.get("errors") or [])
+    if "access_denied" in errors:
+        return "access_denied"
+    intent = state.get("intent", "")
+    if intent in OUT_OF_SCOPE_INTENTS:
+        return "out_of_scope"
+    return None
+
+
 def state_to_response(state: dict[str, Any]) -> ChatResponse:
     """Map terminal :class:`GraphState` to :class:`ChatResponse`."""
-    citations = [
-        CitationModel(**c) if isinstance(c, dict) else CitationModel.model_validate(c)
-        for c in (state.get("citations") or [])
-    ]
+    citations = [_to_citation_model(c) for c in (state.get("citations") or [])]
     conflicts_raw = state.get("conflicts") or []
     conflicts: list[ConflictModel] | None = None
     if conflicts_raw:
@@ -78,7 +98,7 @@ def state_to_response(state: dict[str, Any]) -> ChatResponse:
                 ConflictSide(
                     department=s["department"],
                     statement=s.get("statement", ""),
-                    citation=CitationModel(**s.get("citation", {})),
+                    citation=_to_citation_model(s.get("citation", {})),
                 )
                 for s in c.get("sides", [])
             ]
@@ -89,8 +109,9 @@ def state_to_response(state: dict[str, Any]) -> ChatResponse:
     if clarify and isinstance(clarify, dict):
         clarifying = ClarifyingQuestion(**clarify)
 
-    errors = list(state.get("errors") or [])
-    refusal_reason = "access_denied" if "access_denied" in errors else None
+    refusal_reason = _refusal_reason(state)
+    refusals_raw = state.get("refusals") or []
+    refusals = list(refusals_raw) if refusals_raw else None
 
     return ChatResponse(
         answer=state.get("answer") or "",
@@ -103,6 +124,7 @@ def state_to_response(state: dict[str, Any]) -> ChatResponse:
         clarifying_question=clarifying,
         lang=state.get("request_language"),
         refusal_reason=refusal_reason,
+        refusals=refusals,
     )
 
 
@@ -112,8 +134,10 @@ def record_chat_outcome(
     response: ChatResponse,
     *,
     latency_ms: int,
+    graph_state: dict[str, Any] | None = None,
 ) -> None:
     """Persist feedback correlation + audit row for a completed chat."""
+    stage_trace = build_stage_trace(graph_state) if graph_state else None
     get_feedback_store().register_pending(response.feedback_id)
     get_audit_store().log_query(
         user_id=ctx.user_id,
@@ -126,12 +150,15 @@ def record_chat_outcome(
         latency_ms=latency_ms,
         feedback_id=response.feedback_id,
         citations=[c.model_dump() for c in response.citations],
+        answer_preview=response.answer,
+        stage_trace=stage_trace,
     )
 
 
 def run_chat(ctx: UserContext, request: ChatRequest) -> ChatResponse:
     """Execute the full graph synchronously with a hard deadline."""
     cfg = get_settings()
+    assert_agent_enabled(agent_enabled=cfg.agent_enabled)
     graph = get_compiled_graph()
     started = time.perf_counter()
 
@@ -151,7 +178,15 @@ def run_chat(ctx: UserContext, request: ChatRequest) -> ChatResponse:
         raise RuntimeError(str(exc)) from exc
 
     latency_ms = int((time.perf_counter() - started) * 1000)
-    return state_to_response(result)
+    response = state_to_response(result)
+    record_chat_outcome(
+        ctx,
+        request,
+        response,
+        latency_ms=latency_ms,
+        graph_state=result,
+    )
+    return response
 
 
 def _iter_stream_chunks(chunk: object) -> list[tuple[str, dict[str, Any]]]:
@@ -208,6 +243,7 @@ def _pipeline_events_for_node(
 def stream_chat(ctx: UserContext, request: ChatRequest) -> Iterator[dict[str, Any]]:
     """Stream LangGraph node updates as SSE-friendly event dicts."""
     cfg = get_settings()
+    assert_agent_enabled(agent_enabled=cfg.agent_enabled)
     graph = get_compiled_graph()
     started = time.perf_counter()
     tracker = PipelineTracker(started)
@@ -264,6 +300,12 @@ def stream_chat(ctx: UserContext, request: ChatRequest) -> Iterator[dict[str, An
 
     response = state_to_response(final_state)
     latency_ms = int((time.perf_counter() - started) * 1000)
-    record_chat_outcome(ctx, request, response, latency_ms=latency_ms)
+    record_chat_outcome(
+        ctx,
+        request,
+        response,
+        latency_ms=latency_ms,
+        graph_state=final_state,
+    )
 
     yield {"event": "done", "data": response.model_dump()}

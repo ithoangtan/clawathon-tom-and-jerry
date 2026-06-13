@@ -24,7 +24,7 @@ from pydantic import BaseModel as _Base
 Department = Literal["risk", "grow_enablement", "bank_partnerships"]
 Role = Literal["engineer", "pm", "ops", "risk", "business"]
 AnswerStatus = Literal["answered", "refused", "partial"]
-RefusalReason = Literal["access_denied"]
+RefusalReason = Literal["access_denied", "out_of_scope"]
 Lang = Literal["en", "vi"]
 
 
@@ -48,6 +48,8 @@ class CitationModel(_Base):
     """Chunk text snippet (~400 chars) for the Citation Evidence Inspector."""
     chunk_id: Optional[str] = None
     """Stable chunk id when sourced from retrieval."""
+    doc_type: Optional[str] = None
+    """Document type (PRD, Risk, Operation, …) for filtering and disclaimer heuristics."""
 
 
 class ConflictSide(_Base):
@@ -147,6 +149,9 @@ class ChatResponse(_Base):
     refusal_reason: Optional[RefusalReason] = None
     """Set when ``status`` is ``refused`` for a reason other than missing docs (e.g. access denied)."""
 
+    refusals: Optional[list[Department]] = None
+    """Departments that were queried but returned no usable answer (partial tier)."""
+
 
 class SyncStartResponse(_Base):
     """Body returned by ``POST /sync/confluence`` and ``POST /sync/gdrive``."""
@@ -218,6 +223,10 @@ class DashboardData(_Base):
     model_config = ConfigDict(extra="allow")
 
     query_count: int = 0
+    deflection_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    """North-star: share of queries answered (full or partial) without doc refusal."""
+    answered_wrong_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    """Guardrail: thumbs-down / total feedback (0 when no feedback yet)."""
     refusal_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     partial_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     conflict_rate: float = Field(default=0.0, ge=0.0, le=1.0)
@@ -227,15 +236,28 @@ class DashboardData(_Base):
     feedback_down: int = 0
     total_tokens: int = 0
     history: list[HistoryItem] = Field(default_factory=list)
+    eval_golden_total: int = 0
+    eval_faithfulness: float = Field(default=0.0, ge=0.0, le=1.0)
+    eval_answer_relevance: float = Field(default=0.0, ge=0.0, le=1.0)
+    eval_refusal_precision: float = Field(default=0.0, ge=0.0, le=1.0)
+    eval_refusal_recall: float = Field(default=0.0, ge=0.0, le=1.0)
+    eval_context_recall_at_5: float = Field(default=0.0, ge=0.0, le=1.0)
+    eval_context_precision_at_5: float = Field(default=0.0, ge=0.0, le=1.0)
+    eval_last_run_at: Optional[str] = None
+    eval_mode: Optional[str] = None
 
 
 class HealthInfo(_Base):
-    """Body of ``GET /health``."""
+    """Body of ``GET /health`` and related probe endpoints."""
 
     model_config = ConfigDict(extra="allow")
 
     status: Literal["healthy"] = "healthy"
     version: Optional[str] = None
     index_ready: bool = False
+    maas_ready: bool = False
+    """True when MaaS responds to a lightweight models-list ping."""
+    ready: bool = False
+    """True when both ``index_ready`` and ``maas_ready`` (readiness gate)."""
     config: Optional[dict] = None
     """Non-sensitive config snapshot (model names, thresholds) for the Settings ConfigPanel."""

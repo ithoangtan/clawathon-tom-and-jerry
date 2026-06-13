@@ -85,7 +85,7 @@ def make_ingest_context_node(
                     allowed,
                 )
                 out["status"] = "refused"
-                out["answer"] = access_denied_message(lang)
+                out["answer"] = access_denied_message(lang, list(allowed))
                 out["errors"] = [ACCESS_DENIED_ERROR]
                 return out
 

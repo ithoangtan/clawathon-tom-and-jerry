@@ -127,6 +127,35 @@ class TestMetaStoreTombstone:
         row = meta_store.fetch_by_positions("risk", [0])[0]
         assert row["lifecycle_state"] == "sunset"
 
+    def test_record_source_hashes_round_trip(self, meta_store: MetaStore) -> None:
+        meta_store.record_source_hashes(
+            "risk",
+            [
+                {
+                    "url": "https://example.com/a",
+                    "source_id": "1",
+                    "content_hash": "abc123",
+                    "last_modified": "2025-01-01",
+                }
+            ],
+        )
+        assert meta_store.get_source_hash("risk", "https://example.com/a") == "abc123"
+
+    def test_fetch_chunks_by_url_returns_active_rows(self, meta_store: MetaStore) -> None:
+        rows = [
+            make_chunk_row(chunk_id="c0", vec_pos=0, url="https://example.com/a"),
+            make_chunk_row(
+                chunk_id="c1",
+                vec_pos=1,
+                url="https://example.com/a",
+                lifecycle_state="sunset",
+            ),
+        ]
+        meta_store.upsert_chunks(rows)
+        active = meta_store.fetch_chunks_by_url("risk", "https://example.com/a", active_only=True)
+        assert len(active) == 1
+        assert active[0]["chunk_id"] == "c0"
+
     def test_tombstone_does_not_remove_row(self, meta_store: MetaStore) -> None:
         meta_store.upsert_chunks([make_chunk_row(chunk_id="active-1")])
         meta_store.upsert_chunks(

@@ -24,8 +24,9 @@ from typing import Callable
 
 from langchain_core.messages import AIMessage
 
+from app.common.product_copy import escalation_hint, maybe_append_high_stakes_disclaimer, out_of_scope_notice
 from app.config import Settings, get_settings
-from app.graph.nodes.router import SHORT_CIRCUIT_INTENTS
+from app.graph.nodes.router import OUT_OF_SCOPE_INTENTS, SHORT_CIRCUIT_INTENTS
 from app.graph.state import DeptResult, GraphState
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,17 @@ def make_respond_node(
 
         # ── Case 3: short-circuit intents (no retrieval happened) ─────────────
         intent = state.get("intent", "")
+        if intent in OUT_OF_SCOPE_INTENTS:
+            out.update(
+                status="refused",
+                answer=_out_of_scope_reply(lang),
+                citations=[],
+                confidence=0.0,
+                source_departments=[],
+            )
+            out["messages"] = [AIMessage(content=out["answer"])]
+            return out
+
         if intent in SHORT_CIRCUIT_INTENTS:
             out.update(
                 status="answered",
@@ -99,6 +111,14 @@ def make_respond_node(
         answer = state.get("answer") or _empty_message(lang)
         status = state.get("status") or ("answered" if source_departments else "refused")
 
+        if status in ("answered", "partial") and answer:
+            answer = maybe_append_high_stakes_disclaimer(
+                answer,
+                lang=lang,
+                citations=list(state.get("citations") or []),
+                departments=source_departments,
+            )
+
         out.update(
             status=status,
             answer=answer,
@@ -107,6 +127,9 @@ def make_respond_node(
             source_departments=source_departments,
             conflicts=list(state.get("conflicts") or []),
         )
+        refusals = state.get("refusals")
+        if refusals:
+            out["refusals"] = list(refusals)
         logger.info(
             "respond: status=%s depts=%s citations=%d feedback_id=%s",
             status,
@@ -134,15 +157,18 @@ def _canned_reply(intent: str, lang: str) -> str:
             "you find in the team documentation?"
         )
     if intent == "capability_query":
+        scope = out_of_scope_notice("vi" if vi else "en")
         return (
             "Tôi có thể trả lời câu hỏi dựa trên tài liệu nội bộ của các bộ phận "
             "Risk, Grow Enablement và Bank Partnerships — kèm trích dẫn nguồn. "
-            "Tôi không truy cập internet và sẽ từ chối nếu tài liệu không hỗ trợ câu trả lời."
+            "Tôi không truy cập internet và sẽ từ chối nếu tài liệu không hỗ trợ câu trả lời.\n\n"
+            f"{scope}"
             if vi
             else "I answer questions grounded in the internal documentation of the "
             "Risk, Grow Enablement, and Bank Partnerships teams — always with "
             "source citations. I never browse the internet and I'll refuse when "
-            "the documents don't support an answer."
+            "the documents don't support an answer.\n\n"
+            f"{scope}"
         )
     # action_request
     return (
@@ -152,6 +178,15 @@ def _canned_reply(intent: str, lang: str) -> str:
         else "I can only look up and answer information from the internal "
         "documentation — I can't perform actions or change any systems."
     )
+
+
+def _out_of_scope_reply(lang: str) -> str:
+    lead = (
+        "Câu hỏi này nằm ngoài phạm vi tài liệu đã lập chỉ mục (ví dụ: số liệu thời gian thực)."
+        if lang == "vi"
+        else "This question is outside indexed documentation (e.g. live or real-time data)."
+    )
+    return f"{lead}\n\n{escalation_hint(lang)}\n\n{out_of_scope_notice(lang)}"
 
 
 def _empty_message(lang: str) -> str:

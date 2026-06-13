@@ -33,13 +33,29 @@ CHUNK_COLUMNS: tuple[str, ...] = (
     "vec_pos",
     "doc_type",
     "title",
+    "source",
     "url",
+    "anchor",
     "section",
+    "space",
+    "labels",
     "last_modified",
+    "author",
+    "acl",
     "lifecycle_state",
     "source_type",
     "page",
     "text",
+)
+
+# Added after initial MVP schema; applied idempotently by :meth:`MetaStore.ensure_schema`.
+_SCHEMA_MIGRATIONS: tuple[tuple[str, str], ...] = (
+    ("source", "TEXT"),
+    ("anchor", "TEXT"),
+    ("space", "TEXT"),
+    ("labels", "TEXT"),
+    ("author", "TEXT"),
+    ("acl", "TEXT"),
 )
 
 _CREATE_TABLE = """
@@ -49,9 +65,15 @@ CREATE TABLE IF NOT EXISTS chunks (
     vec_pos         INTEGER NOT NULL,
     doc_type        TEXT,
     title           TEXT,
+    source          TEXT,
     url             TEXT,
+    anchor          TEXT,
     section         TEXT,
+    space           TEXT,
+    labels          TEXT,
     last_modified   TEXT,
+    author          TEXT,
+    acl             TEXT,
     lifecycle_state TEXT NOT NULL DEFAULT 'active',
     source_type     TEXT,
     page            INTEGER,
@@ -66,6 +88,18 @@ _CREATE_LIFECYCLE_INDEX = (
     "CREATE INDEX IF NOT EXISTS idx_chunks_dept_lifecycle "
     "ON chunks (department, lifecycle_state)"
 )
+
+_CREATE_SYNC_SOURCES = """
+CREATE TABLE IF NOT EXISTS sync_sources (
+    department      TEXT NOT NULL,
+    url             TEXT NOT NULL,
+    source_id       TEXT,
+    content_hash    TEXT NOT NULL,
+    last_modified   TEXT,
+    synced_at       TEXT,
+    PRIMARY KEY (department, url)
+)
+"""
 
 
 class MetaStore:
@@ -100,11 +134,23 @@ class MetaStore:
         conn = self._connect()
         try:
             conn.execute(_CREATE_TABLE)
+            self._apply_migrations(conn)
             conn.execute(_CREATE_POS_INDEX)
             conn.execute(_CREATE_LIFECYCLE_INDEX)
+            conn.execute(_CREATE_SYNC_SOURCES)
             conn.commit()
         finally:
             conn.close()
+
+    def _apply_migrations(self, conn: sqlite3.Connection) -> None:
+        """Add columns introduced after the initial schema (idempotent)."""
+        existing = {
+            row[1]
+            for row in conn.execute("PRAGMA table_info(chunks)").fetchall()
+        }
+        for column, typedef in _SCHEMA_MIGRATIONS:
+            if column not in existing:
+                conn.execute(f"ALTER TABLE chunks ADD COLUMN {column} {typedef}")
 
     # ── Reads (used by the retriever) ─────────────────────────────────────────
 
@@ -198,6 +244,49 @@ class MetaStore:
 
         return {int(r["vec_pos"]): dict(r) for r in rows}
 
+    def fetch_chunks_by_url(
+        self, department: str, url: str, *, active_only: bool = False
+    ) -> list[dict]:
+        """Return chunk rows for a single source URL within *department*."""
+        if not url or not self._path.exists():
+            return []
+        sql = (
+            f"SELECT {', '.join(CHUNK_COLUMNS)} FROM chunks "
+            "WHERE department = ? AND url = ?"
+        )
+        params: list[object] = [department, url]
+        if active_only:
+            sql += " AND lifecycle_state = 'active'"
+        sql += " ORDER BY vec_pos"
+        conn = self._connect()
+        try:
+            rows = conn.execute(sql, params).fetchall()
+            return [dict(r) for r in rows]
+        except sqlite3.Error as exc:
+            logger.warning(
+                "MetaStore.fetch_chunks_by_url(%s) failed: %s", department, exc
+            )
+            return []
+        finally:
+            conn.close()
+
+    def get_source_hash(self, department: str, url: str) -> str | None:
+        """Return the last indexed content hash for *url*, or None when unknown."""
+        if not url or not self._path.exists():
+            return None
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                "SELECT content_hash FROM sync_sources WHERE department = ? AND url = ?",
+                (department, url),
+            ).fetchone()
+            return str(row["content_hash"]) if row else None
+        except sqlite3.Error as exc:
+            logger.warning("MetaStore.get_source_hash(%s) failed: %s", department, exc)
+            return None
+        finally:
+            conn.close()
+
     # ── Writes (used by the ingestion job) ────────────────────────────────────
 
     def replace_department_chunks(self, department: str, rows: list[dict]) -> int:
@@ -288,6 +377,49 @@ class MetaStore:
         finally:
             conn.close()
 
+    def record_source_hashes(
+        self,
+        department: str,
+        sources: list[dict[str, str | None]],
+    ) -> None:
+        """Persist content hashes for successfully indexed source URLs."""
+        if not sources:
+            return
+        self.ensure_schema()
+        from datetime import datetime, timezone
+
+        synced_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        conn = self._connect()
+        try:
+            for row in sources:
+                url = row.get("url")
+                content_hash = row.get("content_hash")
+                if not url or not content_hash:
+                    continue
+                conn.execute(
+                    """
+                    INSERT INTO sync_sources (
+                        department, url, source_id, content_hash, last_modified, synced_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(department, url) DO UPDATE SET
+                        source_id = excluded.source_id,
+                        content_hash = excluded.content_hash,
+                        last_modified = excluded.last_modified,
+                        synced_at = excluded.synced_at
+                    """,
+                    (
+                        department,
+                        url,
+                        row.get("source_id"),
+                        content_hash,
+                        row.get("last_modified"),
+                        synced_at,
+                    ),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+
     def tombstone_urls(self, department: str, urls: set[str]) -> int:
         """Mark chunks for *urls* as ``sunset`` (soft delete, excluded from search)."""
         if not urls or not self._path.exists():
@@ -301,6 +433,10 @@ class MetaStore:
                 WHERE department = ? AND url IN ({placeholders})
                   AND lifecycle_state != 'sunset'
                 """,
+                (department, *sorted(urls)),
+            )
+            conn.execute(
+                f"DELETE FROM sync_sources WHERE department = ? AND url IN ({placeholders})",
                 (department, *sorted(urls)),
             )
             conn.commit()

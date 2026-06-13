@@ -47,11 +47,34 @@ describe("RefusalPanel", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides duplicate body when message equals the title", () => {
-    renderWithUser(<RefusalPanel message="Not covered in the docs" />);
+  it("renders out_of_scope refusal with distinct title and escalation body", () => {
+    renderWithUser(
+      <RefusalPanel
+        message={
+          "This question is outside indexed documentation (e.g. live or real-time data).\n\n" +
+          "**Next step — ask a human:**\n- **Risk**: Teams channel `teams-risk-knowledge`"
+        }
+        reason="out_of_scope"
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Outside indexed documentation" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/live or real-time data/i)).toBeInTheDocument();
+    expect(screen.getByText(/teams-risk-knowledge/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/I only answer from internal docs/i),
+    ).toBeInTheDocument();
+  });
+
+  it("strips duplicate lead line when body repeats the refusal title", () => {
+    renderWithUser(
+      <RefusalPanel message="Not covered in the docs.\n\nNo relevant content found for this topic." />,
+    );
 
     expect(screen.getByRole("heading", { name: "Not covered in the docs" })).toBeInTheDocument();
-    expect(screen.queryByText(/^Not covered in the docs$/)).toBeInTheDocument();
+    expect(screen.getByText(/No relevant content found/)).toBeInTheDocument();
     expect(screen.getAllByText("Not covered in the docs")).toHaveLength(1);
   });
 });

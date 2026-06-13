@@ -100,16 +100,19 @@ class TestCitationModel:
             page=3,
             excerpt="Policy excerpt text.",
             chunk_id="risk-abc123",
+            doc_type="Risk",
         )
         assert cite.page == 3
         assert cite.deprecated is True
         assert cite.excerpt == "Policy excerpt text."
         assert cite.chunk_id == "risk-abc123"
+        assert cite.doc_type == "Risk"
 
     def test_excerpt_and_chunk_id_optional(self) -> None:
         cite = CitationModel(title="Doc", url="https://example.com")
         assert cite.excerpt is None
         assert cite.chunk_id is None
+        assert cite.doc_type is None
 
 
 class TestConflictAndClarifying:
@@ -192,10 +195,13 @@ class TestSyncAndDashboardSchemas:
     def test_dashboard_data_rates_bounded(self) -> None:
         dash = DashboardData(
             query_count=10,
+            deflection_rate=0.82,
+            answered_wrong_rate=0.05,
             refusal_rate=0.08,
             partial_rate=0.12,
             conflict_rate=0.04,
         )
+        assert dash.deflection_rate == 0.82
         assert dash.query_count == 10
 
         with pytest.raises(ValidationError):
@@ -218,6 +224,8 @@ class TestHealthInfo:
         health = HealthInfo()
         assert health.status == "healthy"
         assert health.index_ready is False
+        assert health.maas_ready is False
+        assert health.ready is False
         assert health.version is None
         assert health.config is None
 
@@ -225,7 +233,9 @@ class TestHealthInfo:
         health = HealthInfo(
             version="0.1.0",
             index_ready=True,
+            maas_ready=True,
+            ready=True,
             config={"topk": 8, "grade_threshold": 0.5},
         )
-        assert health.index_ready is True
+        assert health.ready is True
         assert health.config["topk"] == 8

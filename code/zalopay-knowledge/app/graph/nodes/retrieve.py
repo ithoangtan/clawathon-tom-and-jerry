@@ -19,6 +19,7 @@ from app.graph.nodes._helpers import budget_exceeded
 from app.graph.state import Chunk, DeptState
 from app.ports.errors import RetrieverUnavailable
 from app.ports.retriever import RetrieverPort
+from app.retrieval.pipeline import refine_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +39,22 @@ def make_retrieve_node(
             logger.warning("retrieve[%s]: budget exhausted, skipping", department)
             return {"chunks": []}
 
+        query = state.get("retrieval_query") or state.get("question", "")
+        pool_k = cfg.retrieve_pool if cfg.hybrid_search_enabled or cfg.reranker_enabled else cfg.topk
+
         try:
             results = retriever.search(
                 department=department,
-                query=state.get("retrieval_query") or state.get("question", ""),
-                k=cfg.topk,
+                query=query,
+                k=pool_k,
                 language=state.get("request_language", "en"),
             )
         except RetrieverUnavailable as exc:
             logger.warning("retrieve[%s]: index unavailable: %s", department, exc)
             return {"chunks": []}
+
+        if cfg.hybrid_search_enabled or cfg.reranker_enabled:
+            results = refine_candidates(query, results, settings=cfg)
 
         chunks: list[Chunk] = [_to_chunk(r, department) for r in results]
         logger.info("retrieve[%s]: %d chunks", department, len(chunks))

@@ -440,6 +440,39 @@ describe("useChat", () => {
     );
   });
 
+  it("shows refused answers immediately without progressive reveal", async () => {
+    const refusedResponse: ChatResponse = {
+      answer:
+        "Not covered in the docs.\n\nI couldn't find relevant content.\n\n**Next step — ask a human:**",
+      citations: [],
+      source_departments: [],
+      confidence: 0,
+      feedback_id: "fb-refused",
+      status: "refused",
+    };
+
+    chatStreamMock.mockReturnValue(
+      streamOf([
+        { event: "done", data: refusedResponse as unknown as Record<string, unknown> },
+      ]),
+    );
+
+    const { result } = renderHook(() => useChat());
+
+    await act(async () => {
+      await result.current.sendMessage("Unknown topic?");
+    });
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    const assistant = result.current.messages[1];
+    expect(assistant.content).toBe(refusedResponse.answer);
+    expect(assistant.streaming).toBe(false);
+    expect(assistant.response?.answer).toBe(refusedResponse.answer);
+  });
+
   it("clears input after sending", async () => {
     chatStreamMock.mockReturnValue(
       streamOf([

@@ -1,44 +1,13 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
-from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import faiss
-import pytest
 
 from app.config import Settings
+from app.ingestion.metadata import REQUIRED_CHUNK_METADATA_FIELDS
 from app.store.meta import MetaStore
-
-
-@pytest.fixture
-def index_builder_cls():
-    """Import IndexBuilder while avoiding the adapters↔graph circular import."""
-    saved = {
-        key: sys.modules.get(key)
-        for key in ("app.graph", "app.graph.build", "app.adapters", "app.adapters.deps")
-    }
-    graph_build = ModuleType("app.graph.build")
-    graph_build.GraphDeps = type("GraphDeps", (), {})
-    graph_pkg = ModuleType("app.graph")
-    graph_pkg.__path__ = []  # type: ignore[attr-defined]
-    sys.modules["app.graph"] = graph_pkg
-    sys.modules["app.graph.build"] = graph_build
-
-    # Drop partially-initialized adapters so indexer can reload cleanly.
-    for key in ("app.adapters.deps", "app.adapters", "app.ingestion.indexer"):
-        sys.modules.pop(key, None)
-
-    from app.ingestion.indexer import IndexBuilder
-
-    yield IndexBuilder
-
-    for key, module in saved.items():
-        if module is None:
-            sys.modules.pop(key, None)
-        else:
-            sys.modules[key] = module
 
 
 class TestIndexBuilder:
@@ -58,11 +27,17 @@ class TestIndexBuilder:
                         "chunk_id": "risk-old-1",
                         "department": "risk",
                         "vec_pos": 0,
-                        "doc_type": "policy",
+                        "doc_type": "Risk",
                         "title": "Old",
+                        "source": "1",
                         "url": "u",
+                        "anchor": None,
                         "section": None,
+                        "space": "RISK",
+                        "labels": "[]",
                         "last_modified": None,
+                        "author": None,
+                        "acl": '["all-employees"]',
                         "lifecycle_state": "active",
                         "source_type": "confluence",
                         "page": None,
@@ -109,6 +84,27 @@ class TestIndexBuilder:
         assert by_pos[1]["text"] == sample_chunks[1]["text"]
         assert by_pos[0]["vec_pos"] == 0
         assert by_pos[1]["vec_pos"] == 1
+
+    def test_rebuild_preserves_required_metadata_fields(
+        self,
+        faiss_index_dir: Path,
+        sample_chunks: list[dict],
+        mock_encode_passages,
+        index_builder_cls,
+    ):
+        """Indexed rows must expose every checklist §4 metadata field."""
+        IndexBuilder = index_builder_cls
+        settings = Settings(index_dir=str(faiss_index_dir))
+        builder = IndexBuilder(settings)
+
+        with patch.object(builder._embedder, "encode_passages", side_effect=mock_encode_passages):
+            builder.rebuild_department("risk", [dict(c) for c in sample_chunks])
+
+        meta = MetaStore(faiss_index_dir / "meta.db")
+        rows = meta.fetch_by_positions("risk", [0, 1])
+        for row in rows.values():
+            for field in REQUIRED_CHUNK_METADATA_FIELDS:
+                assert field in row
 
     def test_vec_pos_assigned_sequentially(
         self,
@@ -168,11 +164,17 @@ class TestIndexBuilder:
                 "chunk_id": f"risk-{hash(text)}",
                 "department": "risk",
                 "vec_pos": 0,
-                "doc_type": "policy",
+                "doc_type": "Risk",
                 "title": "T",
+                "source": "1",
                 "url": "u",
+                "anchor": None,
                 "section": None,
+                "space": "RISK",
+                "labels": "[]",
                 "last_modified": None,
+                "author": None,
+                "acl": '["all-employees"]',
                 "lifecycle_state": "active",
                 "source_type": "confluence",
                 "page": None,

@@ -37,6 +37,9 @@ SHORT_CIRCUIT_INTENTS = frozenset(
     {"greeting", "capability_query", "action_request"}
 )
 
+# Out-of-scope intents — refusal with escalation pointer (no retrieval).
+OUT_OF_SCOPE_INTENTS = frozenset({"status_or_data"})
+
 _VALID_DEPARTMENTS = frozenset(iter_keys())
 
 
@@ -113,10 +116,19 @@ def make_router_node(
                 raw_targets,
                 sorted(allowed),
             )
-            return _access_denied_route(lang)
+            return _access_denied_route(lang, allowed)
 
         # ── Path 2: short-circuit intents (no retrieval needed) ───────────────
         if intent in SHORT_CIRCUIT_INTENTS:
+            return {
+                "intent": intent,
+                "target_departments": [],
+                "routing_confidence": confidence,
+                "clarify_question": None,
+            }
+
+        # ── Path 2b: out-of-scope (live data / not in corpus) ─────────────────
+        if intent in OUT_OF_SCOPE_INTENTS:
             return {
                 "intent": intent,
                 "target_departments": [],
@@ -172,15 +184,16 @@ def _build_messages(
     ]
 
 
-def _access_denied_route(lang: str) -> dict:
+def _access_denied_route(lang: str, allowed: set[str] | None = None) -> dict:
     """Terminal refusal when routing targets departments outside the allowlist."""
+    dept_keys = list(allowed) if allowed else None
     return {
         "intent": "access_denied",
         "target_departments": [],
         "routing_confidence": 0.0,
         "clarify_question": None,
         "status": "refused",
-        "answer": access_denied_message(lang),
+        "answer": access_denied_message(lang, dept_keys),
         "errors": [ACCESS_DENIED_ERROR],
     }
 
@@ -188,7 +201,7 @@ def _access_denied_route(lang: str) -> dict:
 def _fallback_route(allowed: set[str], *, reason: str, lang: str = "en") -> dict:
     """Fan out to every allowed department when the router cannot classify."""
     if not allowed:
-        return _access_denied_route(lang)
+        return _access_denied_route(lang, allowed)
     return {
         "intent": "unclear",
         "target_departments": list(allowed),

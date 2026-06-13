@@ -51,6 +51,43 @@ def test_state_to_response_maps_conflicts() -> None:
     assert conflict.sides[0].citation.url == "https://example.com/risk"
 
 
+def test_state_to_response_preserves_citation_doc_type() -> None:
+    response = state_to_response(
+        {
+            "answer": "Policy detail [1].",
+            "status": "answered",
+            "confidence": 0.9,
+            "feedback_id": "fb-doc-type",
+            "source_departments": ["risk"],
+            "citations": [
+                {
+                    "title": "Risk Policy",
+                    "url": "https://example.com/risk",
+                    "doc_type": "Risk",
+                    "last_modified": "2024-06-01T00:00:00Z",
+                }
+            ],
+            "request_language": "en",
+        }
+    )
+    assert response.citations[0].doc_type == "Risk"
+
+
+def test_state_to_response_maps_out_of_scope_refusal_reason() -> None:
+    response = state_to_response(
+        {
+            "status": "refused",
+            "answer": "This question is outside indexed documentation.",
+            "intent": "status_or_data",
+            "citations": [],
+            "source_departments": [],
+            "confidence": 0.0,
+            "feedback_id": "fb-oos",
+        }
+    )
+    assert response.refusal_reason == "out_of_scope"
+
+
 def test_state_to_response_maps_access_denied_refusal_reason() -> None:
     response = state_to_response(
         {
@@ -66,6 +103,23 @@ def test_state_to_response_maps_access_denied_refusal_reason() -> None:
     )
     assert response.refusal_reason == "access_denied"
     assert response.status == "refused"
+
+
+def test_state_to_response_maps_partial_refusals() -> None:
+    response = state_to_response(
+        {
+            "answer": "Grow path only [1].",
+            "status": "partial",
+            "confidence": 0.7,
+            "feedback_id": "fb-partial",
+            "source_departments": ["grow_enablement"],
+            "citations": [{"title": "Grow Doc", "url": "https://example.com/grow"}],
+            "refusals": ["risk"],
+            "request_language": "en",
+        }
+    )
+    assert response.status == "partial"
+    assert response.refusals == ["risk"]
 
 
 def test_stream_chat_emits_sse_friendly_events() -> None:

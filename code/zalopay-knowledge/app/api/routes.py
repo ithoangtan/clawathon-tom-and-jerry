@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-"""FastAPI route definitions."""
+"""FastAPI route definitions (chat, sync, dashboard).
+
+Health probes live in ``app.api.app.register_health_routes`` — not here.
+"""
 
 import json
 import logging
-import time
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -16,20 +18,18 @@ from app.api.schemas import (
     ChatResponse,
     DashboardData,
     FeedbackRequest,
-    HealthInfo,
+    SourceStatus,
     SyncStartResponse,
     SyncStatusResponse,
-    SourceStatus,
 )
 from app.api.service import (
     get_audit_store,
     get_feedback_store,
-    record_chat_outcome,
     run_chat,
     stream_chat,
 )
-from app.config import get_settings
 from app.ingestion.orchestrator import SyncService
+from app.metrics import load_eval_snapshot, merge_dashboard_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -45,42 +45,15 @@ def get_sync_service() -> SyncService:
     return _sync_service
 
 
-@router.get("/health", response_model=HealthInfo)
-def health() -> HealthInfo:
-    cfg = get_settings()
-    retriever = get_deps().retriever
-    return HealthInfo(
-        status="healthy",
-        version=cfg.app_version,
-        index_ready=retriever.is_ready(),
-        config={
-            "small_model": cfg.small_model,
-            "main_model": cfg.main_model,
-            "embedding_model": cfg.embedding_model,
-            "grade_threshold": cfg.grade_threshold,
-            "topk": cfg.topk,
-            "route_confidence_min": cfg.route_confidence_min,
-        },
-    )
-
-
 @router.post("/chat", response_model=ChatResponse)
 def chat(body: ChatRequest, ctx: UserContext = Depends(require_user_context)) -> ChatResponse:
     deps = get_deps()
     if not deps.retriever.is_ready():
         raise HTTPException(status_code=503, detail="Knowledge base not ready — please sync first")
-    started = time.perf_counter()
     try:
-        response = run_chat(ctx, body)
+        return run_chat(ctx, body)
     except TimeoutError:
         raise HTTPException(status_code=408, detail="Request timeout") from None
-    record_chat_outcome(
-        ctx,
-        body,
-        response,
-        latency_ms=int((time.perf_counter() - started) * 1000),
-    )
-    return response
 
 
 @router.post("/invocations", response_model=ChatResponse)
@@ -163,8 +136,12 @@ def sync_status() -> SyncStatusResponse:
 
 @router.get("/api/dashboard", response_model=DashboardData)
 def dashboard() -> DashboardData:
-    metrics = get_audit_store().dashboard_metrics()
+    audit = get_audit_store().dashboard_metrics()
     up, down = get_feedback_store().counts()
-    metrics["feedback_up"] = up
-    metrics["feedback_down"] = down
+    metrics = merge_dashboard_metrics(
+        audit,
+        feedback_up=up,
+        feedback_down=down,
+        eval_snapshot=load_eval_snapshot(),
+    )
     return DashboardData(**metrics)

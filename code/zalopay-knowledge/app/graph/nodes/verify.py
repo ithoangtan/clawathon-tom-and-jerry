@@ -27,7 +27,9 @@ from typing import Callable
 from app.graph.nodes._helpers import (
     budget_exceeded,
     extract_claims,
+    filter_citations_by_markers,
     parse_json_response,
+    prune_unsupported_claims,
     render_claims,
 )
 from app.graph.nodes.synthesize import CANNOT_ANSWER
@@ -122,17 +124,36 @@ def make_verify_node(
             logger.warning("verify[%s]: 0/%d claims supported, refusing", department, total)
             return _emit(_refused(department, state.get("request_language", "en")))
 
+        pruned_answer, used_markers, dropped = prune_unsupported_claims(
+            answer, claims, verdicts
+        )
+        if not pruned_answer.strip():
+            logger.warning("verify[%s]: all claims pruned, refusing", department)
+            return _emit(_refused(department, state.get("request_language", "en")))
+
+        filtered_citations = filter_citations_by_markers(citations, used_markers)
+        if not filtered_citations:
+            logger.warning("verify[%s]: no citations after prune, refusing", department)
+            return _emit(_refused(department, state.get("request_language", "en")))
+
         if supported < total:
             warnings.append(f"unverified_claims:{total - supported}/{total}")
 
         confidence = round(base_conf * support_ratio, 3)
-        logger.info("verify[%s]: %d/%d claims supported (conf=%.2f)", department, supported, total, confidence)
+        logger.info(
+            "verify[%s]: %d/%d claims supported (conf=%.2f), pruned %d",
+            department,
+            supported,
+            total,
+            confidence,
+            len(dropped),
+        )
         return _emit(
             DeptResult(
                 department=department,
                 status="answered",
-                answer=answer,
-                citations=citations,
+                answer=pruned_answer,
+                citations=filtered_citations,
                 confidence=confidence,
                 warnings=warnings,
             )

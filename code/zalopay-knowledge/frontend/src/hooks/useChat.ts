@@ -26,6 +26,11 @@ export interface ChatMessage {
 
 const REVEAL_CHUNK_CHARS = 24;
 
+/** Refusals and clarifications should render instantly — not typewriter-animated. */
+function shouldRevealAnswerProgressively(response: ChatResponse): boolean {
+  return response.status === "answered" || response.status === "partial";
+}
+
 function isTransportError(err: unknown): boolean {
   if (err instanceof ApiError) return false;
   if (err instanceof DOMException && err.name === "AbortError") return false;
@@ -305,7 +310,11 @@ export function useChat() {
           );
           setLoading(false);
           setStreamingStatus(null);
-          await appendAssistant(finalResponse, assistantId, true);
+          await appendAssistant(
+            finalResponse,
+            assistantId,
+            shouldRevealAnswerProgressively(finalResponse),
+          );
           return;
         }
 

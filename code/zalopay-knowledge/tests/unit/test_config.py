@@ -34,6 +34,8 @@ class TestSettingsDefaults:
         settings = self._isolated_settings(monkeypatch)
         assert settings.graph_budget_s == 30.0
         assert settings.branch_timeout_s == 20.0
+        assert settings.llm_request_timeout_s == 60.0
+        assert settings.health_ping_timeout_s == 3.0
 
     def test_default_index_dir(self, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = self._isolated_settings(monkeypatch)

@@ -10,12 +10,14 @@ def test_access_denied_error_constant():
 
 
 def test_access_denied_message_english():
-    msg = access_denied_message("en")
+    msg = access_denied_message("en", ["grow_enablement"])
     assert "permission" in msg.lower()
     assert "administrator" in msg.lower()
+    assert "teams-grow-enablement-knowledge" in msg
 
 
 def test_access_denied_message_vietnamese():
-    msg = access_denied_message("vi")
+    msg = access_denied_message("vi", ["risk"])
     assert "quyền" in msg.lower()
     assert "quản trị" in msg.lower()
+    assert "teams-risk-knowledge" in msg

@@ -13,7 +13,7 @@
 export type Department = "risk" | "grow_enablement" | "bank_partnerships";
 export type Role = "engineer" | "pm" | "ops" | "risk" | "business";
 export type AnswerStatus = "answered" | "refused" | "partial";
-export type RefusalReason = "access_denied";
+export type RefusalReason = "access_denied" | "out_of_scope";
 export type Lang = "en" | "vi";
 
 // ── Citation ─────────────────────────────────────────────────────────────────
@@ -34,6 +34,8 @@ export interface Citation {
   excerpt?: string | null;
   /** Stable chunk identifier from the vector store. */
   chunk_id?: string | null;
+  /** Document type (PRD, Risk, Operation, …) from chunk metadata. */
+  doc_type?: string | null;
 }
 
 // ── Conflict ─────────────────────────────────────────────────────────────────
@@ -123,6 +125,8 @@ export interface ChatResponse {
   lang?: Lang | null;
   /** Present when refused due to department access control (FR-7.2). */
   refusal_reason?: RefusalReason | null;
+  /** Departments queried but with no usable answer (partial tier). */
+  refusals?: Department[] | null;
 }
 
 // ── Feedback ─────────────────────────────────────────────────────────────────
@@ -183,6 +187,8 @@ export interface HistoryItem {
 /** Body of GET /api/dashboard */
 export interface DashboardData {
   query_count: number;
+  deflection_rate: number;
+  answered_wrong_rate: number;
   refusal_rate: number;
   partial_rate: number;
   conflict_rate: number;
@@ -192,6 +198,15 @@ export interface DashboardData {
   feedback_down: number;
   total_tokens: number;
   history: HistoryItem[];
+  eval_golden_total?: number;
+  eval_faithfulness?: number;
+  eval_answer_relevance?: number;
+  eval_refusal_precision?: number;
+  eval_refusal_recall?: number;
+  eval_context_recall_at_5?: number;
+  eval_context_precision_at_5?: number;
+  eval_last_run_at?: string | null;
+  eval_mode?: string | null;
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────

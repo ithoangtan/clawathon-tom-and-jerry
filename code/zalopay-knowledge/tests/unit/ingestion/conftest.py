@@ -16,6 +16,8 @@ if "pypdf" not in sys.modules:
     sys.modules["pypdf"] = _pypdf
 
 from app.config import Settings
+from app.ingestion.metadata import serialize_acl, serialize_labels
+from app.store.meta import MetaStore
 
 # ── Sample content fixtures ───────────────────────────────────────────────────
 
@@ -43,6 +45,34 @@ LONG_PARAGRAPH = (
     "This paragraph describes operational procedures for incident response. "
     * 80
 ).strip()
+
+
+@pytest.fixture
+def index_builder_cls():
+    """Import IndexBuilder while avoiding the adapters↔graph circular import."""
+    saved = {
+        key: sys.modules.get(key)
+        for key in ("app.graph", "app.graph.build", "app.adapters", "app.adapters.deps")
+    }
+    graph_build = ModuleType("app.graph.build")
+    graph_build.GraphDeps = type("GraphDeps", (), {})
+    graph_pkg = ModuleType("app.graph")
+    graph_pkg.__path__ = []  # type: ignore[attr-defined]
+    sys.modules["app.graph"] = graph_pkg
+    sys.modules["app.graph.build"] = graph_build
+
+    for key in ("app.adapters.deps", "app.adapters", "app.ingestion.indexer"):
+        sys.modules.pop(key, None)
+
+    from app.ingestion.indexer import IndexBuilder
+
+    yield IndexBuilder
+
+    for key, module in saved.items():
+        if module is None:
+            sys.modules.pop(key, None)
+        else:
+            sys.modules[key] = module
 
 
 @pytest.fixture
@@ -87,17 +117,28 @@ def faiss_index_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+def meta_store(tmp_path: Path) -> MetaStore:
+    return MetaStore(tmp_path / "meta.db")
+
+
+@pytest.fixture
 def sample_chunks() -> list[dict]:
     return [
         {
             "chunk_id": "risk-abc12345-deadbeef",
             "department": "risk",
             "vec_pos": 0,
-            "doc_type": "policy",
+            "doc_type": "Risk",
             "title": "Escalation Policy",
+            "source": "12345",
             "url": "https://acme.atlassian.net/wiki/spaces/RISK/pages/1",
-            "section": None,
+            "anchor": "severity-levels",
+            "section": "Severity levels",
+            "space": "RISK",
+            "labels": serialize_labels(["policy", "risk"]),
             "last_modified": "2025-01-15T10:00:00Z",
+            "author": "risk.owner@example.com",
+            "acl": serialize_acl(None),
             "lifecycle_state": "active",
             "source_type": "confluence",
             "page": None,
@@ -107,11 +148,17 @@ def sample_chunks() -> list[dict]:
             "chunk_id": "risk-fedcba98-cafebabe",
             "department": "risk",
             "vec_pos": 1,
-            "doc_type": "policy",
+            "doc_type": "Risk",
             "title": "Escalation Policy",
+            "source": "12345",
             "url": "https://acme.atlassian.net/wiki/spaces/RISK/pages/1",
-            "section": None,
+            "anchor": "severity-levels",
+            "section": "Severity levels",
+            "space": "RISK",
+            "labels": serialize_labels(["policy", "risk"]),
             "last_modified": "2025-01-15T10:00:00Z",
+            "author": "risk.owner@example.com",
+            "acl": serialize_acl(None),
             "lifecycle_state": "active",
             "source_type": "confluence",
             "page": None,

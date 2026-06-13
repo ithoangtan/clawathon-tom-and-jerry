@@ -12,6 +12,7 @@ from app.ingestion.chunker import chunk_text, classify_doc_type
 from app.ingestion.confluence import ConfluenceClient
 from app.ingestion.gdrive import GDriveClient
 from app.ingestion.indexer import IndexBuilder
+from app.ingestion.sync_hash import page_content_hash, resolve_document_chunks
 from app.store.meta import MetaStore
 from app.store.sync_state import SyncOrchestrator
 
@@ -20,6 +21,15 @@ logger = logging.getLogger(__name__)
 
 def _chunk_urls(chunks: list[dict]) -> set[str]:
     return {c["url"] for c in chunks if c.get("url")}
+
+
+def _gdrive_author(file_meta: dict) -> str | None:
+    owners = file_meta.get("owners")
+    if isinstance(owners, list) and owners:
+        owner = owners[0]
+        if isinstance(owner, dict):
+            return owner.get("displayName") or owner.get("emailAddress")
+    return None
 
 
 class SyncService:
@@ -73,6 +83,7 @@ class SyncService:
                 )
                 pages = self._confluence.list_pages(space_key)
                 dept_chunks: list[dict] = []
+                source_records: list[dict[str, str | None]] = []
                 for i, page in enumerate(pages):
                     page_id = str(page.get("id", ""))
                     if not page_id:
@@ -84,21 +95,50 @@ class SyncService:
                         continue
                     page_title = meta.get("title") or page.get("title", "")
                     page_url = meta.get("url", "")
-                    dept_chunks.extend(
-                        chunk_text(
-                            text,
+                    page_labels = meta.get("labels") or []
+
+                    def _build_page_chunks(
+                        _text: str = text,
+                        _title: str = page_title,
+                        _url: str = page_url,
+                        _labels: list[str] = page_labels,
+                    ) -> list[dict]:
+                        return chunk_text(
+                            _text,
                             department=dept,
                             doc_type=classify_doc_type(
-                                title=page_title,
-                                url=page_url,
+                                title=_title,
+                                url=_url,
                                 department=dept,
+                                labels=_labels,
                             ),
-                            title=page_title,
-                            url=page_url,
+                            title=_title,
+                            url=_url,
+                            source=page_id,
+                            space=space_key,
+                            labels=_labels,
+                            author=meta.get("author"),
                             last_modified=meta.get("last_modified"),
                             source_type="confluence",
                         )
+
+                    page_chunks, _skipped = resolve_document_chunks(
+                        department=dept,
+                        url=page_url,
+                        text=text,
+                        meta=self._indexer._meta,
+                        chunk_builder=_build_page_chunks,
                     )
+                    dept_chunks.extend(page_chunks)
+                    if page_url:
+                        source_records.append(
+                            {
+                                "url": page_url,
+                                "source_id": page_id,
+                                "content_hash": page_content_hash(text),
+                                "last_modified": meta.get("last_modified"),
+                            }
+                        )
                     self._orchestrator.update_progress(
                         "confluence",
                         {
@@ -117,6 +157,7 @@ class SyncService:
                         dept,
                     )
                 count = self._indexer.rebuild_department(dept, dept_chunks)
+                self._indexer._meta.record_source_hashes(dept, source_records)
                 total_docs += len(pages)
                 total_chunks += count
 
@@ -138,30 +179,69 @@ class SyncService:
         try:
             files: list[dict] = []
             all_chunks: list[dict] = []
+            source_records: list[dict[str, str | None]] = []
             department = "bank_partnerships"
 
             if self._gdrive.configured():
                 files = self._gdrive.list_pdfs()
                 for i, f in enumerate(files):
                     pdf_bytes = self._gdrive.download_pdf(f["id"])
-                    for page_num, text in self._gdrive.extract_text(pdf_bytes):
-                        file_name = f.get("name", "document.pdf")
-                        file_url = f.get("webViewLink", "")
-                        all_chunks.extend(
-                            chunk_text(
-                                text,
-                                department=department,
-                                doc_type=classify_doc_type(
-                                    title=file_name,
-                                    url=file_url,
+                    file_name = f.get("name", "document.pdf")
+                    file_url = f.get("webViewLink", "")
+                    file_labels: list[str] = []
+                    if isinstance(f.get("properties"), dict):
+                        for prop in f["properties"].get("tags", []) or []:
+                            if isinstance(prop, str):
+                                file_labels.append(prop)
+                    pages = list(self._gdrive.extract_text(pdf_bytes))
+                    combined_text = "\n".join(text for _, text in pages)
+
+                    def _build_pdf_chunks(
+                        _pages: list[tuple[int, str]] = pages,
+                        _name: str = file_name,
+                        _url: str = file_url,
+                        _labels: list[str] = file_labels,
+                    ) -> list[dict]:
+                        chunks: list[dict] = []
+                        for page_num, text in _pages:
+                            chunks.extend(
+                                chunk_text(
+                                    text,
                                     department=department,
-                                ),
-                                title=file_name,
-                                url=file_url,
-                                last_modified=f.get("modifiedTime"),
-                                source_type="pdf",
-                                page=page_num,
+                                    doc_type=classify_doc_type(
+                                        title=_name,
+                                        url=_url,
+                                        department=department,
+                                        labels=_labels,
+                                    ),
+                                    title=_name,
+                                    url=_url,
+                                    source=str(f.get("id", "")),
+                                    labels=_labels,
+                                    author=_gdrive_author(f),
+                                    last_modified=f.get("modifiedTime"),
+                                    source_type="pdf",
+                                    page=page_num,
+                                )
                             )
+                        return chunks
+
+                    file_chunks, _skipped = resolve_document_chunks(
+                        department=department,
+                        url=file_url,
+                        text=combined_text,
+                        meta=self._indexer._meta,
+                        chunk_builder=_build_pdf_chunks,
+                    )
+                    all_chunks.extend(file_chunks)
+                    if file_url:
+                        source_records.append(
+                            {
+                                "url": file_url,
+                                "source_id": str(f.get("id", "")),
+                                "content_hash": page_content_hash(combined_text),
+                                "last_modified": f.get("modifiedTime"),
+                            }
                         )
                     self._orchestrator.update_progress(
                         "gdrive",
@@ -179,25 +259,53 @@ class SyncService:
                         pdfs = sorted(pdf_dir.glob("*.pdf"))
                         files = [{"name": p.name} for p in pdfs]
                         for i, pdf_path in enumerate(pdfs):
-                            for page_num, text in self._gdrive.extract_text(
-                                pdf_path.read_bytes()
-                            ):
-                                pdf_url = f"file://{pdf_path.resolve()}"
-                                all_chunks.extend(
-                                    chunk_text(
-                                        text,
-                                        department=department,
-                                        doc_type=classify_doc_type(
-                                            title=pdf_path.name,
-                                            url=pdf_url,
+                            pdf_url = f"file://{pdf_path.resolve()}"
+                            pages = list(
+                                self._gdrive.extract_text(pdf_path.read_bytes())
+                            )
+                            combined_text = "\n".join(text for _, text in pages)
+
+                            def _build_local_pdf_chunks(
+                                _pages: list[tuple[int, str]] = pages,
+                                _path: Path = pdf_path,
+                                _url: str = pdf_url,
+                            ) -> list[dict]:
+                                chunks: list[dict] = []
+                                for page_num, text in _pages:
+                                    chunks.extend(
+                                        chunk_text(
+                                            text,
                                             department=department,
-                                        ),
-                                        title=pdf_path.name,
-                                        url=pdf_url,
-                                        source_type="pdf",
-                                        page=page_num,
+                                            doc_type=classify_doc_type(
+                                                title=_path.name,
+                                                url=_url,
+                                                department=department,
+                                            ),
+                                            title=_path.name,
+                                            url=_url,
+                                            source=str(_path.resolve()),
+                                            source_type="pdf",
+                                            page=page_num,
+                                        )
                                     )
-                                )
+                                return chunks
+
+                            pdf_chunks, _skipped = resolve_document_chunks(
+                                department=department,
+                                url=pdf_url,
+                                text=combined_text,
+                                meta=self._indexer._meta,
+                                chunk_builder=_build_local_pdf_chunks,
+                            )
+                            all_chunks.extend(pdf_chunks)
+                            source_records.append(
+                                {
+                                    "url": pdf_url,
+                                    "source_id": str(pdf_path.resolve()),
+                                    "content_hash": page_content_hash(combined_text),
+                                    "last_modified": None,
+                                }
+                            )
                             self._orchestrator.update_progress(
                                 "gdrive",
                                 {"files_processed": i + 1, "files_total": len(pdfs)},
@@ -217,6 +325,7 @@ class SyncService:
                     len(removed),
                 )
             chunk_count = self._indexer.rebuild_department(department, all_chunks)
+            self._indexer._meta.record_source_hashes(department, source_records)
             self._indexer.reload_retriever()
             self._orchestrator.finish(
                 "gdrive",

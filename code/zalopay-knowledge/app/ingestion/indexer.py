@@ -3,6 +3,8 @@ from __future__ import annotations
 """FAISS partition builder — embeds chunks and writes index + meta rows."""
 
 import logging
+import os
+import tempfile
 from pathlib import Path
 
 import faiss
@@ -37,6 +39,7 @@ class IndexBuilder:
         """
         if not chunks:
             self._meta.replace_department_chunks(department, [])
+            self._remove_partition_file(department)
             return 0
 
         texts = [c["text"] for c in chunks]
@@ -49,10 +52,38 @@ class IndexBuilder:
         for pos, chunk in enumerate(chunks):
             chunk["vec_pos"] = pos
 
+        # Build offline, then swap atomically so reload never reads a half-written
+        # FAISS file.  Meta commit follows the on-disk vector swap.
+        self._atomic_write_faiss(department, index)
         self._meta.replace_department_chunks(department, chunks)
-        faiss.write_index(index, str(self._faiss_dir / f"{department}.faiss"))
         logger.info("Indexed %d chunks for %s (dim=%d)", len(chunks), department, dim)
         return len(chunks)
+
+    def _partition_path(self, department: str) -> Path:
+        return self._faiss_dir / f"{department}.faiss"
+
+    def _remove_partition_file(self, department: str) -> None:
+        path = self._partition_path(department)
+        if path.exists():
+            path.unlink()
+
+    def _atomic_write_faiss(self, department: str, index: faiss.Index) -> None:
+        """Write *index* via a temp file and ``os.replace`` (POSIX atomic swap)."""
+        self._faiss_dir.mkdir(parents=True, exist_ok=True)
+        final_path = self._partition_path(department)
+        fd, tmp_path = tempfile.mkstemp(
+            suffix=".faiss.tmp",
+            dir=self._faiss_dir,
+            prefix=f"{department}.",
+        )
+        os.close(fd)
+        try:
+            faiss.write_index(index, tmp_path)
+            os.replace(tmp_path, str(final_path))
+        except Exception:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            raise
 
     def tombstone_removed_urls(
         self, department: str, active_urls: set[str]

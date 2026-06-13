@@ -30,6 +30,21 @@ describe("ConfidenceBadge", () => {
     expect(screen.getByText("Partial answer")).toBeInTheDocument();
   });
 
+  it("renders out_of_scope status label", () => {
+    renderWithUser(
+      <ConfidenceBadge confidence={0} status="refused" refusalReason="out_of_scope" />,
+    );
+    expect(screen.getByText("Outside scope")).toBeInTheDocument();
+  });
+
+  it("renders clarification badge instead of refusal label", () => {
+    renderWithUser(
+      <ConfidenceBadge confidence={0.3} status="refused" clarifying />,
+    );
+    expect(screen.getByText("Clarification needed")).toBeInTheDocument();
+    expect(screen.queryByText("Not covered in the docs")).not.toBeInTheDocument();
+  });
+
   it("renders refused status in Vietnamese", () => {
     renderWithUser(<ConfidenceBadge confidence={0.1} status="refused" />, { locale: "vi" });
     expect(screen.getByText("Không có thông tin trong tài liệu")).toBeInTheDocument();
@@ -194,5 +209,69 @@ describe("AnswerCard", () => {
     expect(screen.getByText(/No relevant content found/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Copy response" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Sources" })).not.toBeInTheDocument();
+  });
+
+  it("shows partial gap banner and answer body for partial status", () => {
+    renderWithUser(
+      <AnswerCard
+        response={{
+          ...answeredResponse,
+          answer: "Grow onboarding requires KYC [1].",
+          source_departments: ["grow_enablement"],
+          status: "partial",
+          refusals: ["risk"],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Partial answer")).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent(/Some targeted departments had no relevant documentation/);
+    expect(screen.getByText(/No docs found for: Risk/)).toBeInTheDocument();
+    expect(screen.getByText(/Grow onboarding requires KYC/)).toBeInTheDocument();
+  });
+
+  it("shows out-of-scope refusal with escalation copy", () => {
+    renderWithUser(
+      <AnswerCard
+        response={{
+          answer:
+            "This question is outside indexed documentation (e.g. live or real-time data).\n\n**Next step — ask a human:**\n- **Risk**: Teams channel `teams-risk-knowledge`",
+          citations: [],
+          source_departments: [],
+          confidence: 0,
+          feedback_id: "fb-oos",
+          status: "refused",
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText(/outside indexed documentation/i)).toBeInTheDocument();
+    expect(screen.getByText(/teams-risk-knowledge/)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Sources" })).not.toBeInTheDocument();
+  });
+
+  it("shows clarification badge and department picker", () => {
+    renderWithUser(
+      <AnswerCard
+        response={{
+          answer: "Which department are you asking about?",
+          citations: [],
+          source_departments: [],
+          confidence: 0.3,
+          feedback_id: "fb-clarify",
+          status: "refused",
+          clarifying_question: {
+            prompt: "Which department are you asking about?",
+            options: ["risk", "grow_enablement"],
+          },
+        }}
+        onClarifySelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Clarification needed")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Clarification needed" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
