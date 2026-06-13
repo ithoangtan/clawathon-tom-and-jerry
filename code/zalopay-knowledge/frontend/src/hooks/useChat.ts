@@ -119,6 +119,14 @@ export function useChat() {
   const [lastQuestion, setLastQuestion] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const hydratedSessionRef = useRef<string | null>(null);
+  const suppressThreadSaveRef = useRef(false);
+  const messagesRef = useRef(messages);
+  const targetDepartmentsRef = useRef(targetDepartments);
+  const targetAutoRouteRef = useRef(targetAutoRoute);
+
+  messagesRef.current = messages;
+  targetDepartmentsRef.current = targetDepartments;
+  targetAutoRouteRef.current = targetAutoRoute;
 
   useEffect(() => {
     return () => {
@@ -154,10 +162,20 @@ export function useChat() {
 
     abortRef.current?.abort();
     const { setSessionId, newSession } = useUserStore.getState();
+    const currentSessionId = useUserStore.getState().sessionId;
+    const currentMessages = messagesRef.current;
+    const currentDepartments = targetDepartmentsRef.current;
+    const currentAutoRoute = targetAutoRouteRef.current;
+
+    suppressThreadSaveRef.current = true;
+    saveThread(
+      currentSessionId,
+      currentMessages,
+      currentDepartments,
+      currentAutoRoute,
+    );
 
     if (sessionAction.type === "new") {
-      saveThread(sessionId, messages, targetDepartments, targetAutoRoute);
-      newSession();
       resetChatState(
         setMessages,
         setTargetDepartmentsState,
@@ -167,9 +185,9 @@ export function useChat() {
         setInput,
         setPipelineProgress,
       );
+      newSession();
       hydratedSessionRef.current = useUserStore.getState().sessionId;
     } else {
-      saveThread(sessionId, messages, targetDepartments, targetAutoRoute);
       const thread = getThread(sessionAction.sessionId);
       setSessionId(sessionAction.sessionId);
       setMessages(thread?.messages ?? []);
@@ -180,22 +198,20 @@ export function useChat() {
       setInput("");
       setPipelineProgress(null);
       hydratedSessionRef.current = sessionAction.sessionId;
+      suppressThreadSaveRef.current = false;
     }
 
     clearSessionAction();
-  }, [
-    sessionAction,
-    sessionId,
-    messages,
-    targetDepartments,
-    targetAutoRoute,
-    saveThread,
-    getThread,
-    clearSessionAction,
-  ]);
+  }, [sessionAction, saveThread, getThread, clearSessionAction]);
 
   useEffect(() => {
-    if (messages.length === 0) return;
+    if (messages.length === 0) {
+      if (suppressThreadSaveRef.current) {
+        suppressThreadSaveRef.current = false;
+      }
+      return;
+    }
+    if (suppressThreadSaveRef.current) return;
     saveThread(sessionId, messages, targetDepartments, targetAutoRoute);
   }, [messages, targetDepartments, targetAutoRoute, sessionId, saveThread]);
 

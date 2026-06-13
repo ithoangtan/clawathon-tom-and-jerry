@@ -2,7 +2,8 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useChat } from "./useChat";
 import { ApiError } from "@/lib/apiClient";
-import { getUserContext } from "@/store/userStore";
+import { getUserContext, useUserStore } from "@/store/userStore";
+import { useSessionStore } from "@/store/sessionStore";
 import type { ChatResponse } from "@/lib/types";
 import { resetUserStore, resetSessionStore } from "@/test/test-utils";
 
@@ -491,5 +492,44 @@ describe("useChat", () => {
     });
 
     expect(result.current.input).toBe("");
+  });
+
+  it("does not duplicate session history when starting a new chat", async () => {
+    chatStreamMock.mockReturnValue(
+      streamOf([
+        { event: "done", data: answeredResponse as unknown as Record<string, unknown> },
+      ]),
+    );
+
+    const { result } = renderHook(() => useChat());
+    const originalSessionId = useUserStore.getState().sessionId;
+
+    await act(async () => {
+      await result.current.sendMessage("What are the KYC re-verification thresholds?");
+    });
+
+    await waitFor(() => {
+      expect(useSessionStore.getState().listThreads()).toHaveLength(1);
+    });
+
+    act(() => {
+      useSessionStore.getState().requestNewSession();
+    });
+
+    await waitFor(() => {
+      expect(useUserStore.getState().sessionId).not.toBe(originalSessionId);
+      expect(result.current.messages).toHaveLength(0);
+    });
+
+    act(() => {
+      useSessionStore.getState().requestNewSession();
+    });
+
+    await waitFor(() => {
+      expect(useSessionStore.getState().listThreads()).toHaveLength(1);
+      expect(useSessionStore.getState().listThreads()[0]?.sessionId).toBe(
+        originalSessionId,
+      );
+    });
   });
 });

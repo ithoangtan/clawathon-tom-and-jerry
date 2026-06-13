@@ -7,12 +7,11 @@ import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { classNames, formatDate } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import {
-  firstUserQuestion,
   matchesSearch,
-  previewText,
   sortThreads,
   threadDepartments,
   threadStatus,
+  threadTitle,
   type ThreadStatus,
 } from "@/lib/sessionThread";
 import { useSessionStore } from "@/store/sessionStore";
@@ -148,7 +147,7 @@ function SessionSidebarPanel({ onCloseMobile }: SessionSidebarPanelProps) {
         ) : (
           <ul className="space-y-1">
             {filtered.map((thread) => {
-              const preview = firstUserQuestion(thread.messages);
+              const title = threadTitle(thread);
               const status = threadStatus(thread);
               const departments = threadDepartments(thread);
               const isActive = thread.sessionId === activeSessionId;
@@ -194,7 +193,7 @@ function SessionSidebarPanel({ onCloseMobile }: SessionSidebarPanelProps) {
                         aria-current={isActive ? "true" : undefined}
                       >
                         <p className="line-clamp-2 text-sm font-medium text-content-primary">
-                          {preview ? previewText(preview) : t("noHistory", locale)}
+                          {title ?? t("noHistory", locale)}
                         </p>
                         <p className="mt-1 text-[11px] text-content-muted">
                           {formatDate(thread.updatedAt, locale)}
