@@ -13,6 +13,7 @@ from app.api.schemas import (
     AdminSyncStartResponse,
     AdminSyncStatusResponse,
 )
+from app.common.departments import get_department
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -46,7 +47,8 @@ def admin_sync(
     if started:
         message = f"{body.source} sync started in background"
         if body.department:
-            message = f"Confluence sync for {body.department} started in background"
+            dept_name = get_department(body.department).display_name()
+            message = f"Confluence sync for {dept_name} started in background"
         code = status.HTTP_202_ACCEPTED
     else:
         message = f"{body.source} sync already running"

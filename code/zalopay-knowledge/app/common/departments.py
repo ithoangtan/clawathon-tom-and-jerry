@@ -85,7 +85,7 @@ class Department:
 _REGISTRY: dict[str, Department] = {
     DepartmentKey.RISK.value: Department(
         key=DepartmentKey.RISK.value,
-        name_en="Risk",
+        name_en="Risk Management",
         name_vi="Quản lý Rủi ro",
         space_env_var="CONFLUENCE_SPACE_RISK",
         accent_color="#E63946",
@@ -98,7 +98,7 @@ _REGISTRY: dict[str, Department] = {
     ),
     DepartmentKey.GROW_ENABLEMENT.value: Department(
         key=DepartmentKey.GROW_ENABLEMENT.value,
-        name_en="Grow Enablement",
+        name_en="Growth Enablement",
         name_vi="Phát triển Kinh doanh",
         space_env_var="CONFLUENCE_SPACE_GROW",
         accent_color="#2A9D8F",
