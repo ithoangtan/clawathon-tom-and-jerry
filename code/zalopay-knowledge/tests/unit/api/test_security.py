@@ -17,6 +17,7 @@ from app.common.security import (
     build_gateway_trust_token,
 )
 from tests.unit.api.conftest import AUTH_HEADERS, ready_retriever
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 GATEWAY_HEADERS = {
     **AUTH_HEADERS,
@@ -305,7 +306,7 @@ def _sample_response() -> ChatResponse:
                 "page": None,
             }
         ],
-        source_departments=["risk"],
+        source_departments=[RISK],
         confidence=0.87,
         feedback_id="fb-security-test",
         status="answered",

@@ -8,6 +8,7 @@ from app.ports.errors import RetrieverUnavailable
 from app.ports.types import RetrievedChunk
 
 from tests.unit.graph.conftest import StubRetriever
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_retrieve_requests_candidate_pool_when_pipeline_enabled(
@@ -37,7 +38,7 @@ def test_retrieve_requests_candidate_pool_when_pipeline_enabled(
     node = make_retrieve_node(retriever, settings=settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "escalation policy",
             "request_language": "en",
         }
@@ -59,14 +60,14 @@ def test_retrieve_returns_top_k_chunks(
     node = make_retrieve_node(retriever, settings=test_settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "escalation policy",
             "request_language": "en",
         }
     )
     assert len(out["chunks"]) == 5
     assert retriever.search_calls[0]["k"] == test_settings.topk
-    assert retriever.search_calls[0]["department"] == "risk"
+    assert retriever.search_calls[0]["department"] == RISK
     assert retriever.search_calls[0]["query"] == "escalation policy"
 
 
@@ -77,7 +78,7 @@ def test_retrieve_maps_retrieved_chunk_fields(
     node = make_retrieve_node(retriever, settings=test_settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "q",
             "request_language": "en",
         }
@@ -87,7 +88,7 @@ def test_retrieve_maps_retrieved_chunk_fields(
     assert chunk["title"] == sample_retrieved_chunk.title
     assert chunk["text"] == sample_retrieved_chunk.text
     assert chunk["score"] == sample_retrieved_chunk.score
-    assert chunk["department"] == "risk"
+    assert chunk["department"] == RISK
 
 
 def test_retrieve_empty_on_retriever_unavailable(test_settings: Settings):
@@ -95,7 +96,7 @@ def test_retrieve_empty_on_retriever_unavailable(test_settings: Settings):
     node = make_retrieve_node(retriever, settings=test_settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "q",
             "request_language": "en",
         }
@@ -115,7 +116,7 @@ def test_retrieve_prefers_retrieval_query_over_question(
     )
     node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "And what's the SLA for that?",
             "retrieval_query": follow_up_query,
             "request_language": "en",
@@ -129,7 +130,7 @@ def test_retrieve_empty_on_budget_exceeded(test_settings: Settings, past_deadlin
         chunks=[
             RetrievedChunk(
                 chunk_id="c1",
-                department="risk",
+                department=RISK,
                 doc_type="policy",
                 title="T",
                 url="u",
@@ -146,7 +147,7 @@ def test_retrieve_empty_on_budget_exceeded(test_settings: Settings, past_deadlin
     node = make_retrieve_node(retriever, settings=test_settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "q",
             "request_language": "en",
             "deadline_ts": past_deadline,

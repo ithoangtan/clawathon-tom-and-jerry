@@ -6,6 +6,7 @@ import sqlite3
 import pytest
 
 from app.store.audit import AuditStore, _percentile
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class TestAuditStoreLogging:
@@ -15,7 +16,7 @@ class TestAuditStoreLogging:
             session_id="s1",
             role="engineer",
             question="What is the escalation policy?",
-            departments=["risk"],
+            departments=[RISK],
             status="answered",
             confidence=0.92,
             latency_ms=450,
@@ -32,7 +33,7 @@ class TestAuditStoreLogging:
             session_id="s1",
             role="engineer",
             question="Email me at alice@example.com",
-            departments=["risk"],
+            departments=[RISK],
             status="answered",
             confidence=0.5,
             latency_ms=100,
@@ -56,9 +57,9 @@ class TestAuditStoreLogging:
         audit_store.log_query(
             user_id="user-42",
             session_id="sess-99",
-            role="risk",
+            role=RISK,
             question="Threshold policy?",
-            departments=["risk", "grow_enablement"],
+            departments=[RISK, GROW],
             status="answered",
             confidence=0.88,
             latency_ms=512,
@@ -75,8 +76,8 @@ class TestAuditStoreLogging:
             ).fetchone()
             assert row["user_id"] == "user-42"
             assert row["session_id"] == "sess-99"
-            assert row["role"] == "risk"
-            assert json.loads(row["departments"]) == ["risk", "grow_enablement"]
+            assert row["role"] == RISK
+            assert json.loads(row["departments"]) == [RISK, GROW]
             assert row["latency_ms"] == 512
             assert row["tokens"] == 42
         finally:
@@ -122,7 +123,7 @@ class TestAuditStoreRetrieval:
             session_id="s1",
             role="engineer",
             question="Q1",
-            departments=["risk"],
+            departments=[RISK],
             status="answered",
             confidence=0.9,
             latency_ms=100,
@@ -134,7 +135,7 @@ class TestAuditStoreRetrieval:
             session_id="s1",
             role="engineer",
             question="Q2",
-            departments=["risk", "legal"],
+            departments=[RISK, "legal"],
             status="refused",
             confidence=0.0,
             latency_ms=200,
@@ -171,7 +172,7 @@ class TestAuditStoreRetrieval:
             session_id="s1",
             role="engineer",
             question="Dept test",
-            departments=["risk", "compliance"],
+            departments=[RISK, "compliance"],
             status="answered",
             confidence=0.8,
             latency_ms=150,
@@ -187,7 +188,7 @@ class TestAuditStoreRetrieval:
             session_id="s1",
             role="engineer",
             question="Correlate?",
-            departments=["risk"],
+            departments=[RISK],
             status="answered",
             confidence=0.7,
             latency_ms=120,

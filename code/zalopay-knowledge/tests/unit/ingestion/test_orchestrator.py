@@ -11,6 +11,7 @@ from app.config import Settings
 from app.ingestion.metadata import REQUIRED_CHUNK_METADATA_FIELDS
 from app.ingestion.orchestrator import SyncService, _chunk_urls
 from app.store.meta import MetaStore
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 @pytest.fixture
@@ -19,9 +20,7 @@ def sync_settings(tmp_path: Path) -> Settings:
         confluence_base_url="https://acme.atlassian.net",
         confluence_email="bot@example.com",
         confluence_api_token="secret-token",
-        confluence_space_risk="RISK",
-        confluence_space_grow="",
-        confluence_space_bank="",
+        confluence_spaces={RISK:  "RISK"},
         index_dir=str(tmp_path / "index"),
     )
 
@@ -100,8 +99,8 @@ class TestSyncServiceConfluence:
             sync_service._run_confluence()
 
         meta = MetaStore(Path(sync_settings.index_dir) / "meta.db")
-        assert meta.count("risk") >= 2
-        assert meta.doc_count("risk") == 2
+        assert meta.count(RISK) >= 2
+        assert meta.doc_count(RISK) == 2
 
         snapshot = sync_service.orchestrator.status_snapshot()
         confluence = next(s for s in snapshot if s["source"] == "confluence")
@@ -145,7 +144,7 @@ class TestSyncServiceConfluence:
             sync_service._run_confluence()
 
         meta = MetaStore(Path(sync_settings.index_dir) / "meta.db")
-        rows = meta.fetch_by_positions("risk", list(range(meta.count("risk"))))
+        rows = meta.fetch_by_positions(RISK, list(range(meta.count(RISK))))
         assert rows
 
         doc_types = set()
@@ -237,7 +236,7 @@ class TestSyncServiceConfluence:
             sync_service._run_confluence()
 
         meta = MetaStore(Path(sync_settings.index_dir) / "meta.db")
-        assert meta.distinct_urls("risk") == {
+        assert meta.distinct_urls(RISK) == {
             "https://acme.atlassian.net/wiki/pages/1",
             "https://acme.atlassian.net/wiki/pages/2",
         }
@@ -259,10 +258,10 @@ class TestSyncServiceConfluence:
         ):
             sync_service._run_confluence()
 
-        assert meta.distinct_urls("risk") == {
+        assert meta.distinct_urls(RISK) == {
             "https://acme.atlassian.net/wiki/pages/1",
         }
-        assert meta.doc_count("risk") == 1
+        assert meta.doc_count(RISK) == 1
 
     def test_confluence_sync_skips_unchanged_pages_on_rerun(
         self,
@@ -321,6 +320,68 @@ class TestSyncServiceConfluence:
 
 
 class TestSyncServiceTriggers:
+    def test_trigger_confluence_rejects_unconfigured_department(
+        self,
+        sync_service: SyncService,
+    ):
+        with pytest.raises(ValueError, match="CONFLUENCE_SPACES"):
+            sync_service.trigger_confluence(department=GROW)
+
+    def test_trigger_confluence_accepts_configured_department(
+        self,
+        sync_settings: Settings,
+    ):
+        settings = sync_settings.model_copy(
+            update={"confluence_spaces": {RISK:  "RISK", GROW: "GROW"}},
+        )
+        svc = SyncService(settings)
+        with patch.object(svc, "_run_confluence"):
+            assert svc.trigger_confluence(department=GROW) is True
+
+    def test_confluence_sync_only_target_department_space(
+        self,
+        sync_settings: Settings,
+        mock_encode_passages,
+        sample_text: str,
+    ):
+        """Department-scoped sync must not list or rebuild other departments."""
+        settings = sync_settings.model_copy(
+            update={
+                "confluence_spaces": {
+                    RISK: "RISK",
+                    GROW: "GROW",
+                    BANK: "BANK",
+                },
+            },
+        )
+        svc = SyncService(settings)
+        pages = [{"id": "g1", "title": "Grow playbook"}]
+
+        def fetch_body(page_id: str):
+            return sample_text, {
+                "title": "Grow playbook",
+                "url": f"https://acme.atlassian.net/wiki/pages/{page_id}",
+                "last_modified": "2025-01-15T10:00:00Z",
+            }
+
+        with (
+            patch.object(svc._confluence, "configured", return_value=True),
+            patch.object(svc._confluence, "list_pages", return_value=pages) as mock_list,
+            patch.object(svc._confluence, "fetch_page_body", side_effect=fetch_body),
+            patch.object(
+                svc._indexer._embedder,
+                "encode_passages",
+                side_effect=mock_encode_passages,
+            ),
+            patch.object(svc._indexer, "reload_retriever"),
+            patch.object(svc._indexer, "rebuild_department") as mock_rebuild,
+        ):
+            svc._run_confluence(department=GROW)
+
+        mock_list.assert_called_once_with("GROW")
+        mock_rebuild.assert_called_once()
+        assert mock_rebuild.call_args[0][0] == GROW
+
     def test_trigger_confluence_starts_background_thread(self, sync_service: SyncService):
         with patch.object(sync_service, "_run_confluence") as mock_run:
             started = sync_service.trigger_confluence()
@@ -371,14 +432,14 @@ class TestSyncServiceTriggers:
         with patches[0], patches[1], patches[2], patches[3], patches[4]:
             sync_service._run_confluence()
         meta = MetaStore(Path(sync_settings.index_dir) / "meta.db")
-        first_count = meta.count("risk")
-        first_urls = meta.distinct_urls("risk")
+        first_count = meta.count(RISK)
+        first_urls = meta.distinct_urls(RISK)
 
         with patches[0], patches[1], patches[2], patches[3], patches[4]:
             sync_service._run_confluence()
 
-        assert meta.count("risk") == first_count
-        assert meta.distinct_urls("risk") == first_urls
+        assert meta.count(RISK) == first_count
+        assert meta.distinct_urls(RISK) == first_urls
 
     def test_confluence_sync_never_calls_llm(
         self,

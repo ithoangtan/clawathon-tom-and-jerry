@@ -10,6 +10,7 @@ from app.config import Settings
 from app.graph.build import GraphDeps, build_graph
 
 from tests.unit.graph.conftest import StubLLM, StubRetriever
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def _business_settings() -> Settings:
@@ -18,7 +19,7 @@ def _business_settings() -> Settings:
         route_confidence_min=0.55,
         branch_timeout_s=20.0,
         role_dept_access_json=json.dumps(
-            {"business": ["grow_enablement", "bank_partnerships"]}
+            {"business": [GROW, BANK]}
         ),
         _env_file=None,
     )
@@ -37,8 +38,8 @@ def test_graph_pinned_risk_denied_for_business_role():
             "user_id": "u1",
             "session_id": "s1",
             "role": "business",
-            "home_department": "grow_enablement",
-            "pinned": ["risk"],
+            "home_department": GROW,
+            "pinned": [RISK],
         }
     )
     assert result["status"] == "refused"
@@ -53,7 +54,7 @@ def test_graph_router_denied_department_without_pin():
     llm_payload = json.dumps(
         {
             "intent": "policy_lookup",
-            "target_departments": ["risk"],
+            "target_departments": [RISK],
             "confidence": 0.92,
         }
     )
@@ -68,7 +69,7 @@ def test_graph_router_denied_department_without_pin():
             "user_id": "u1",
             "session_id": "s1",
             "role": "business",
-            "home_department": "grow_enablement",
+            "home_department": GROW,
             "pinned": [],
         }
     )

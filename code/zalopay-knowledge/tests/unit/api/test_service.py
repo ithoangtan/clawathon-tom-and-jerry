@@ -6,6 +6,7 @@ from app.api.context import UserContext
 from app.api.schemas import ChatRequest, ChatResponse, CitationModel
 from app.api.service import record_chat_outcome, state_to_response, stream_chat
 from app.graph.state import Citation, Conflict, ConflictSide
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_state_to_response_maps_conflicts() -> None:
@@ -14,7 +15,7 @@ def test_state_to_response_maps_conflicts() -> None:
         "status": "partial",
         "confidence": 0.6,
         "feedback_id": "fb-123",
-        "source_departments": ["risk", "bank_partnerships"],
+        "source_departments": [RISK, BANK],
         "citations": [
             CitationModel(title="Risk Policy", url="https://example.com/risk"),
             CitationModel(title="Bank Policy", url="https://example.com/bank"),
@@ -24,12 +25,12 @@ def test_state_to_response_maps_conflicts() -> None:
                 "topic": "transaction limit",
                 "sides": [
                     {
-                        "department": "risk",
+                        "department": RISK,
                         "statement": "Limit is 10M VND",
                         "citation": {"title": "Risk Policy", "url": "https://example.com/risk"},
                     },
                     {
-                        "department": "bank_partnerships",
+                        "department": BANK,
                         "statement": "Limit is 5M VND",
                         "citation": {"title": "Bank Policy", "url": "https://example.com/bank"},
                     },
@@ -47,7 +48,7 @@ def test_state_to_response_maps_conflicts() -> None:
     conflict = response.conflicts[0]
     assert conflict.topic == "transaction limit"
     assert len(conflict.sides) == 2
-    assert conflict.sides[0].department == "risk"
+    assert conflict.sides[0].department == RISK
     assert conflict.sides[0].citation.url == "https://example.com/risk"
 
 
@@ -58,7 +59,7 @@ def test_state_to_response_preserves_citation_doc_type() -> None:
             "status": "answered",
             "confidence": 0.9,
             "feedback_id": "fb-doc-type",
-            "source_departments": ["risk"],
+            "source_departments": [RISK],
             "citations": [
                 {
                     "title": "Risk Policy",
@@ -95,14 +96,14 @@ def test_state_to_response_maps_partial_refusals() -> None:
             "status": "partial",
             "confidence": 0.7,
             "feedback_id": "fb-partial",
-            "source_departments": ["grow_enablement"],
+            "source_departments": [GROW],
             "citations": [{"title": "Grow Doc", "url": "https://example.com/grow"}],
-            "refusals": ["risk"],
+            "refusals": [RISK],
             "request_language": "en",
         }
     )
     assert response.status == "partial"
-    assert response.refusals == ["risk"]
+    assert response.refusals == [RISK]
 
 
 def test_stream_chat_emits_sse_friendly_events() -> None:
@@ -111,13 +112,13 @@ def test_stream_chat_emits_sse_friendly_events() -> None:
         user_id="u1",
         session_id="s1",
         role="engineer",
-        home_department="risk",
+        home_department=RISK,
     )
     request = ChatRequest(question="What is escalation?")
     sample = ChatResponse(
         answer="Escalation starts at level 1 [1].",
         citations=[],
-        source_departments=["risk"],
+        source_departments=[RISK],
         confidence=0.8,
         feedback_id="fb-stream",
         status="answered",
@@ -128,7 +129,7 @@ def test_stream_chat_emits_sse_friendly_events() -> None:
         assert modes == ["updates", "custom"]
         yield (
             "updates",
-            {"router": {"intent": "policy_lookup", "target_departments": ["risk"]}},
+            {"router": {"intent": "policy_lookup", "target_departments": [RISK]}},
         )
         yield (
             "updates",
@@ -162,13 +163,13 @@ def test_record_chat_outcome_registers_feedback_and_audit() -> None:
         user_id="audit-user",
         session_id="audit-session",
         role="engineer",
-        home_department="risk",
+        home_department=RISK,
     )
     request = ChatRequest(question="What is the refund policy?")
     response = ChatResponse(
         answer="Refunds take 7 days [1].",
         citations=[{"title": "Refund Policy", "url": "https://example.com/refund"}],
-        source_departments=["risk"],
+        source_departments=[RISK],
         confidence=0.75,
         feedback_id="fb-audit-record",
         status="answered",

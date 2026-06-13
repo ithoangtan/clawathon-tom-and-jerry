@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.common.stage_trace import build_stage_trace
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_build_stage_trace_maps_pipeline_stages() -> None:
@@ -8,10 +9,10 @@ def test_build_stage_trace_maps_pipeline_stages() -> None:
         "question": "What is KYC?",
         "retrieval_query": "KYC know your customer policy",
         "intent": "policy_lookup",
-        "target_departments": ["risk"],
+        "target_departments": [RISK],
         "routing_confidence": 0.82,
         "evidence": {
-            "risk": [
+            RISK: [
                 {
                     "chunk_id": "risk-1",
                     "score": 0.91,
@@ -24,7 +25,7 @@ def test_build_stage_trace_maps_pipeline_stages() -> None:
         },
         "dept_results": [
             {
-                "department": "risk",
+                "department": RISK,
                 "status": "answered",
                 "confidence": 0.88,
                 "warnings": [],
@@ -48,10 +49,10 @@ def test_build_stage_trace_maps_pipeline_stages() -> None:
     assert trace["query"] == "What is KYC?"
     assert trace["rewrite"] == "KYC know your customer policy"
     assert trace["routing"]["intent"] == "policy_lookup"
-    assert trace["chunks"]["risk"][0]["chunk_id"] == "risk-1"
-    assert trace["chunks"]["risk"][0]["score"] == 0.91
-    assert trace["grades"]["risk"]["status"] == "answered"
-    assert trace["verify"]["risk"]["citation_count"] == 1
+    assert trace["chunks"][RISK][0]["chunk_id"] == "risk-1"
+    assert trace["chunks"][RISK][0]["score"] == 0.91
+    assert trace["grades"][RISK]["status"] == "answered"
+    assert trace["verify"][RISK]["citation_count"] == 1
     assert trace["citations"][0]["chunk_id"] == "risk-1"
     assert trace["answer"] == state["answer"]
     assert trace["answer_chars"] == len(state["answer"])

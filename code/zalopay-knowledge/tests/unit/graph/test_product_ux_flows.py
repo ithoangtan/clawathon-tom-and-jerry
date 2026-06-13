@@ -11,6 +11,7 @@ from app.graph.nodes.respond import make_respond_node
 from app.graph.nodes.router import make_router_node
 from app.ports.types import LLMResult, RetrievedChunk
 from tests.unit.graph.conftest import StubLLM, StubRetriever
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class QueueLLM(StubLLM):
@@ -29,7 +30,7 @@ class QueueLLM(StubLLM):
 def test_partial_multi_dept_exposes_refusals_on_api(test_settings):
     grow_chunk = RetrievedChunk(
         chunk_id="c-grow-1",
-        department="grow_enablement",
+        department=GROW,
         doc_type="Operation",
         title="Merchant Onboarding",
         url="https://confluence.example.com/grow/onboard",
@@ -45,7 +46,7 @@ def test_partial_multi_dept_exposes_refusals_on_api(test_settings):
     class DeptAwareRetriever(StubRetriever):
         def search(self, **kwargs):
             self.search_calls.append(kwargs)
-            if kwargs.get("department") == "grow_enablement":
+            if kwargs.get("department") == GROW:
                 return [grow_chunk]
             return []
 
@@ -54,7 +55,7 @@ def test_partial_multi_dept_exposes_refusals_on_api(test_settings):
             json.dumps(
                 {
                     "intent": "policy_lookup",
-                    "target_departments": ["risk", "grow_enablement"],
+                    "target_departments": [RISK, GROW],
                     "confidence": 0.88,
                 }
             ),
@@ -75,7 +76,7 @@ def test_partial_multi_dept_exposes_refusals_on_api(test_settings):
             "user_id": "ux-user",
             "session_id": "ux-session",
             "role": "engineer",
-            "home_department": "risk",
+            "home_department": RISK,
             "pinned": [],
             "deadline_ts": time.time() + 120,
         }
@@ -83,8 +84,8 @@ def test_partial_multi_dept_exposes_refusals_on_api(test_settings):
 
     api = state_to_response(result)
     assert api.status == "partial"
-    assert api.refusals == ["risk"]
-    assert api.source_departments == ["grow_enablement"]
+    assert api.refusals == [RISK]
+    assert api.source_departments == [GROW]
     assert len(api.citations) == 1
 
 
@@ -108,7 +109,7 @@ def test_out_of_scope_short_circuit_includes_escalation(test_settings):
             "user_id": "ux-user",
             "session_id": "ux-session",
             "role": "engineer",
-            "home_department": "risk",
+            "home_department": RISK,
             "pinned": [],
             "deadline_ts": time.time() + 120,
         }

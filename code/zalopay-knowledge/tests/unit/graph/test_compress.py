@@ -11,12 +11,13 @@ from app.graph.state import Chunk
 from app.ports.errors import LLMUnavailable
 from app.ports.types import LLMResult, ModelTier
 from app.ports.types import RetrievedChunk
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def _make_chunk(text: str, compressed_text: str | None = None, title: str = "Doc") -> Chunk:
     c = Chunk(
         chunk_id="c1",
-        department="risk",
+        department=RISK,
         doc_type="policy",
         title=title,
         url="https://example.com",
@@ -90,7 +91,7 @@ def test_compress_node_adds_compressed_text_to_long_chunks():
     llm = _stub_llm("The KYC process requires three steps.")
     node = make_compress_node(llm, settings=_settings())
     state = {
-        "department": "risk",
+        "department": RISK,
         "question": "How many steps does KYC have?",
         "retrieval_query": "KYC steps",
         "graded_chunks": [_long_chunk()],
@@ -109,7 +110,7 @@ def test_compress_node_skips_short_chunks():
     node = make_compress_node(llm, settings=_settings())
     short_text = "Short chunk."
     state = {
-        "department": "risk",
+        "department": RISK,
         "question": "anything",
         "retrieval_query": "anything",
         "graded_chunks": [_make_chunk(text=short_text)],
@@ -126,7 +127,7 @@ def test_compress_node_disabled_returns_empty_dict():
     llm = _stub_llm("compressed")
     node = make_compress_node(llm, settings=_settings(compress_enabled=False))
     state = {
-        "department": "risk",
+        "department": RISK,
         "question": "anything",
         "retrieval_query": "anything",
         "graded_chunks": [_long_chunk()],
@@ -142,7 +143,7 @@ def test_compress_node_returns_empty_dict_on_budget_exceeded():
     llm = _stub_llm("compressed")
     node = make_compress_node(llm, settings=_settings())
     state = {
-        "department": "risk",
+        "department": RISK,
         "question": "anything",
         "retrieval_query": "anything",
         "graded_chunks": [_long_chunk()],
@@ -160,7 +161,7 @@ def test_compress_node_falls_back_to_original_on_llm_error():
     node = make_compress_node(llm, settings=_settings())
     original_text = _long_chunk()["text"]
     state = {
-        "department": "risk",
+        "department": RISK,
         "question": "KYC steps",
         "retrieval_query": "KYC steps",
         "graded_chunks": [_long_chunk()],
@@ -178,7 +179,7 @@ def test_compress_node_does_not_store_if_compressed_longer_than_original():
     llm = _stub_llm(long_response)
     node = make_compress_node(llm, settings=_settings())
     state = {
-        "department": "risk",
+        "department": RISK,
         "question": "KYC",
         "retrieval_query": "KYC",
         "graded_chunks": [_long_chunk()],
@@ -262,7 +263,7 @@ class _StubRetriever:
         return [
             RetrievedChunk(
                 chunk_id="smoke-c1",
-                department="risk",
+                department=RISK,
                 doc_type="policy",
                 title="KYC Policy",
                 url="https://example.com/kyc",
@@ -305,12 +306,12 @@ def test_smoke_dept_subgraph_end_to_end_with_compress_enabled():
 
     result = subgraph.invoke(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "How many steps does KYC have?",
             "retrieval_query": "KYC steps",
             "role": "engineer",
             "request_language": "en",
-            "home_department": "risk",
+            "home_department": RISK,
             "deadline_ts": time.time() + 60.0,
         }
     )

@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.unit.api.conftest import AUTH_HEADERS
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class TestAdminSyncRoutes:
@@ -47,13 +48,35 @@ class TestAdminSyncRoutes:
 
         resp = client.post(
             "/api/admin/sync",
-            json={"source": "confluence", "department": "risk"},
+            json={"source": "confluence", "department": RISK},
             headers=AUTH_HEADERS,
         )
         assert resp.status_code == 202
         body = resp.json()
-        assert body["department"] == "risk"
-        mock_svc.trigger_confluence.assert_called_once_with(department="risk")
+        assert body["department"] == RISK
+        mock_svc.trigger_confluence.assert_called_once_with(department=RISK)
+
+    def test_admin_sync_confluence_rejects_unconfigured_department(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        mock_svc = MagicMock()
+        mock_svc.trigger_confluence.side_effect = ValueError(
+            "Department GROW has no Confluence space configured. "
+            "Set CONFLUENCE_SPACES JSON (key GROW) or "
+            "CONFLUENCE_SPACE_GROW=<space-key> in your environment to enable sync "
+            "for this department."
+        )
+        monkeypatch.setattr("app.api.admin_routes.get_sync_service", lambda: mock_svc)
+
+        resp = client.post(
+            "/api/admin/sync",
+            json={"source": "confluence", "department": GROW},
+            headers=AUTH_HEADERS,
+        )
+        assert resp.status_code == 400
+        assert "CONFLUENCE_SPACES" in resp.json()["detail"]
 
     def test_admin_sync_conflict_when_running(
         self,
@@ -82,7 +105,7 @@ class TestAdminSyncRoutes:
 
         resp = client.post(
             "/api/admin/sync",
-            json={"source": "gdrive", "department": "risk"},
+            json={"source": "gdrive", "department": RISK},
             headers=AUTH_HEADERS,
         )
         assert resp.status_code == 400
@@ -111,9 +134,9 @@ class TestAdminSyncRoutes:
                 }
             },
             "departments_indexed": {
-                "risk": {"chunk_count": 0, "doc_count": 0, "has_data": False},
-                "grow_enablement": {"chunk_count": 0, "doc_count": 0, "has_data": False},
-                "bank_partnerships": {
+                RISK: {"chunk_count": 0, "doc_count": 0, "has_data": False},
+                GROW: {"chunk_count": 0, "doc_count": 0, "has_data": False},
+                BANK: {
                     "chunk_count": 0,
                     "doc_count": 0,
                     "has_data": False,
@@ -126,7 +149,7 @@ class TestAdminSyncRoutes:
         assert resp.status_code == 200
         body = resp.json()
         assert body["jobs"]["confluence"]["status"] == "pending"
-        assert "risk" in body["departments_indexed"]
+        assert RISK in body["departments_indexed"]
 
     def test_admin_sync_history(
         self,

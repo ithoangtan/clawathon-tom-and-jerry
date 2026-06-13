@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.api.schemas import ChatResponse
 from tests.unit.api.conftest import AUTH_HEADERS, HEADER_SESSION, HEADER_USER
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class TestHealthRoute:
@@ -66,7 +67,7 @@ class TestChatRoute:
                 "/chat",
                 json={
                     "question": "What is the escalation process?",
-                    "target_departments": ["risk"],
+                    "target_departments": [RISK],
                 },
                 headers=AUTH_HEADERS,
             )
@@ -75,7 +76,7 @@ class TestChatRoute:
         assert body["status"] == "answered"
         assert body["confidence"] == 0.87
         assert body["feedback_id"] == sample_chat_response.feedback_id
-        assert body["source_departments"] == ["risk"]
+        assert body["source_departments"] == [RISK]
         assert len(body["citations"]) == 1
         assert body["citations"][0]["title"] == "Risk Alert Escalation Policy"
 
@@ -340,7 +341,7 @@ class TestDashboardRoute:
             session_id="test-session",
             role="engineer",
             question="What is the escalation process?",
-            departments=["risk"],
+            departments=[RISK],
             status="answered",
             confidence=0.87,
             latency_ms=1523,

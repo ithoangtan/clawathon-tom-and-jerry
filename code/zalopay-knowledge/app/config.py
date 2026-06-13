@@ -9,12 +9,18 @@ directly in application code.
 
 import logging
 from functools import lru_cache
-from typing import Any
 
-from pydantic import Field, computed_field, model_validator
+from pydantic import Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.common.departments import DepartmentKey
+from app.common.departments import (
+    all_departments,
+    confluence_space_key as lookup_confluence_space_key,
+    confluence_space_map as build_confluence_space_map,
+    merge_legacy_confluence_env,
+    parse_confluence_spaces,
+    validate_confluence_space_keys,
+)
 
 
 class Settings(BaseSettings):
@@ -36,7 +42,7 @@ class Settings(BaseSettings):
 
     app_env: str = Field(default="local", description="Runtime environment: local | agentbase")
     log_level: str = Field(default="info", description="Log verbosity: debug|info|warning|error")
-    app_version: str = Field(default="0.1.0", description="Semantic version string")
+    app_version: str = Field(default="1.0.0", description="Semantic version string")
 
     # ── VNG MaaS LLM ─────────────────────────────────────────────────────────
 
@@ -70,13 +76,14 @@ class Settings(BaseSettings):
         description="AgentBase Identity apikey provider for Confluence token on APP_ENV=agentbase",
     )
 
-    # Space keys — one per department
-    confluence_space_risk: str = Field(default="", description="Space key for Risk department")
-    confluence_space_grow: str = Field(
-        default="", description="Space key for Grow Enablement department"
-    )
-    confluence_space_bank: str = Field(
-        default="", description="Space key for Bank Partnerships department"
+    # Space keys — JSON map department_key → Confluence space key (see departments registry)
+    confluence_spaces: dict[str, str] = Field(
+        default_factory=dict,
+        validation_alias="CONFLUENCE_SPACES",
+        description=(
+            "JSON map of department key → Confluence space key. "
+            "Legacy per-department CONFLUENCE_SPACE_* vars are merged at startup."
+        ),
     )
 
     # ── Google Drive ──────────────────────────────────────────────────────────
@@ -166,7 +173,7 @@ class Settings(BaseSettings):
     # ── Graph timeouts ────────────────────────────────────────────────────────
 
     branch_timeout_s: float = Field(
-        default=20.0,
+        default=15.0,
         gt=0,
         description="Per-department subgraph timeout in seconds",
     )
@@ -239,26 +246,15 @@ class Settings(BaseSettings):
     def confluence_space_map(self) -> dict[str, str]:
         """Map of department key → Confluence space key, derived from the department registry.
 
-        Iterates all_departments() and resolves each department's ``space_env_var``
-        against the loaded settings fields.  Only departments with a non-empty
-        space key are included — callers use ``dept_key in settings.confluence_space_map``
-        to check whether a department is sync-ready.
-
-        Adding a new department to the registry automatically picks it up here
-        as long as the corresponding env var and settings field exist.
+        Only departments with a non-empty space key are included — callers use
+        ``dept_key in settings.confluence_space_map`` to check whether a department
+        is sync-ready, or ``settings.confluence_space_key(dept_key)`` for a single lookup.
         """
-        from app.common.departments import all_departments
+        return build_confluence_space_map(self)
 
-        _env_to_value: dict[str, str] = {
-            "CONFLUENCE_SPACE_RISK": self.confluence_space_risk,
-            "CONFLUENCE_SPACE_GROW": self.confluence_space_grow,
-            "CONFLUENCE_SPACE_BANK": self.confluence_space_bank,
-        }
-        return {
-            dept.key: space_key
-            for dept in all_departments()
-            if (space_key := _env_to_value.get(dept.space_env_var, ""))
-        }
+    def confluence_space_key(self, department: str) -> str | None:
+        """Return the Confluence space key for *department*, or ``None`` when unset."""
+        return lookup_confluence_space_key(self, department)
 
     @computed_field  # type: ignore[misc]
     @property
@@ -283,6 +279,21 @@ class Settings(BaseSettings):
         return ""
 
     # ── Validators ────────────────────────────────────────────────────────────
+
+    @field_validator("confluence_spaces", mode="before")
+    @classmethod
+    def _parse_confluence_spaces(cls, value: object) -> dict[str, str]:
+        """Accept JSON string, dict, or empty for CONFLUENCE_SPACES."""
+        return parse_confluence_spaces(value)
+
+    @model_validator(mode="after")
+    def _merge_legacy_confluence_env(self) -> "Settings":
+        """Merge legacy CONFLUENCE_SPACE_* env vars when absent from CONFLUENCE_SPACES."""
+        merged = merge_legacy_confluence_env(self.confluence_spaces)
+        if merged != self.confluence_spaces:
+            object.__setattr__(self, "confluence_spaces", merged)
+        validate_confluence_space_keys(self.confluence_spaces)
+        return self
 
     @model_validator(mode="after")
     def _apply_agentbase_security_defaults(self) -> "Settings":
@@ -324,13 +335,13 @@ class Settings(BaseSettings):
                 "GATEWAY_TRUST_SECRET is not set — production should use HMAC "
                 "gateway trust instead of Gateway-Verified marker alone"
             )
-        for env_var, value in (
-            ("CONFLUENCE_SPACE_RISK", self.confluence_space_risk),
-            ("CONFLUENCE_SPACE_GROW", self.confluence_space_grow),
-            ("CONFLUENCE_SPACE_BANK", self.confluence_space_bank),
-        ):
-            if not value:
-                logger.warning("%s is not set — Confluence sync for that department will be skipped", env_var)
+        for dept in all_departments():
+            if not self.confluence_space_key(dept.key):
+                logger.warning(
+                    "No Confluence space for department %r — set CONFLUENCE_SPACES or %s",
+                    dept.key,
+                    dept.space_env_var,
+                )
         return self
 
 

@@ -16,6 +16,7 @@ from app.ingestion.metadata import (
 )
 from app.store.meta import CHUNK_COLUMNS, MetaStore
 from tests.unit.store.helpers import make_chunk_row
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class TestRequiredMetadataFields:
@@ -25,7 +26,7 @@ class TestRequiredMetadataFields:
     def test_chunk_text_includes_required_field(self, field: str, sample_text: str) -> None:
         chunks = chunk_text(
             sample_text,
-            department="risk",
+            department=RISK,
             doc_type="Risk",
             title="Escalation Policy",
             url="https://example.com/policy",
@@ -42,7 +43,7 @@ class TestRequiredMetadataFields:
     def test_chunk_text_keys_match_meta_store_columns(self, sample_text: str) -> None:
         chunks = chunk_text(
             sample_text,
-            department="risk",
+            department=RISK,
             doc_type="Risk",
             title="T",
             url="https://example.com/t",
@@ -53,7 +54,7 @@ class TestRequiredMetadataFields:
     def test_acl_defaults_to_all_employees_when_omitted(self, sample_text: str) -> None:
         chunks = chunk_text(
             sample_text,
-            department="risk",
+            department=RISK,
             doc_type="Risk",
             title="T",
             url="https://example.com/t",
@@ -64,7 +65,7 @@ class TestRequiredMetadataFields:
     def test_labels_default_to_empty_json_array(self, sample_text: str) -> None:
         chunks = chunk_text(
             sample_text,
-            department="risk",
+            department=RISK,
             doc_type="Risk",
             title="T",
             url="https://example.com/t",
@@ -76,7 +77,7 @@ class TestRequiredMetadataFields:
         text = "# Severity levels\n\nDefine P1 through P4."
         chunks = chunk_text(
             text,
-            department="risk",
+            department=RISK,
             doc_type="Risk",
             title="Policy",
             url="https://example.com/p",
@@ -87,7 +88,7 @@ class TestRequiredMetadataFields:
     def test_meta_store_round_trips_all_columns(self, meta_store: MetaStore) -> None:
         row = make_chunk_row()
         meta_store.upsert_chunks([row])
-        stored = meta_store.fetch_by_positions("risk", [0])[0]
+        stored = meta_store.fetch_by_positions(RISK, [0])[0]
         for column in CHUNK_COLUMNS:
             assert column in stored
             assert stored[column] == row[column]
@@ -161,7 +162,7 @@ class TestDocTypeClassification:
     def test_title_keyword_rules(
         self, title: str, labels: list[str] | None, expected: str
     ) -> None:
-        result = classify_doc_type(title=title, department="grow_enablement", labels=labels)
+        result = classify_doc_type(title=title, department=GROW, labels=labels)
         assert result == expected
         assert result in DOC_TYPES
 
@@ -169,7 +170,7 @@ class TestDocTypeClassification:
         assert (
             classify_doc_type(
                 title="Weekly checklist",
-                department="grow_enablement",
+                department=GROW,
                 labels=["ops-guidance"],
             )
             == "Ops-guidance"
@@ -180,16 +181,16 @@ class TestDocTypeClassification:
             classify_doc_type(
                 title="Review",
                 url="https://wiki/spaces/RISK/pages/security-audit",
-                department="risk",
+                department=RISK,
             )
             == "Security"
         )
 
     def test_department_defaults(self) -> None:
-        assert classify_doc_type(title="General notes", department="risk") == "Risk"
-        assert classify_doc_type(title="Notes", department="grow_enablement") == "Operation"
+        assert classify_doc_type(title="General notes", department=RISK) == "Risk"
+        assert classify_doc_type(title="Notes", department=GROW) == "Operation"
         assert (
-            classify_doc_type(title="Notes", department="bank_partnerships") == "Technical"
+            classify_doc_type(title="Notes", department=BANK) == "Technical"
         )
 
     def test_all_doc_types_are_classifiable_via_rules_or_defaults(self) -> None:
@@ -197,7 +198,7 @@ class TestDocTypeClassification:
             "PRD": classify_doc_type(title="Feature PRD"),
             "RCA": classify_doc_type(title="Incident RCA"),
             "Security": classify_doc_type(title="Security review"),
-            "Risk": classify_doc_type(title="Risk memo", department="risk"),
+            "Risk": classify_doc_type(title="Risk memo", department=RISK),
             "Operation": classify_doc_type(title="Settlement runbook"),
             "Technical": classify_doc_type(title="System architecture"),
             "Org-structure": classify_doc_type(title="Team org structure"),

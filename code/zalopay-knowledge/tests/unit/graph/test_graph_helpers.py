@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.graph.nodes._helpers import chunk_to_citation, extract_claims
 from app.graph.state import Chunk
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_chunk_to_citation_maps_fr2_fields(sample_chunk: Chunk):
@@ -26,7 +27,7 @@ def test_chunk_to_citation_truncates_long_excerpt():
     long_text = "word " * 200
     chunk = Chunk(
         chunk_id="long-1",
-        department="risk",
+        department=RISK,
         title="Policy",
         url="https://example.com/policy",
         text=long_text,
@@ -42,7 +43,7 @@ def test_chunk_to_citation_truncates_long_excerpt():
 def test_chunk_to_citation_flags_deprecated_lifecycle():
     chunk = Chunk(
         chunk_id="d1",
-        department="risk",
+        department=RISK,
         doc_type="policy",
         title="Old Policy",
         url="https://example.com/old",

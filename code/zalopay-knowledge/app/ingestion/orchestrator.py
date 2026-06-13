@@ -7,6 +7,11 @@ import threading
 from pathlib import Path
 from typing import Callable
 
+from app.common.departments import (
+    confluence_space_config_hint,
+    format_valid_department_keys,
+    get_department,
+)
 from app.config import Settings, get_settings
 from app.ingestion.chunker import chunk_text, classify_doc_type
 from app.ingestion.confluence import ConfluenceClient
@@ -47,6 +52,29 @@ class SyncService:
     def orchestrator(self) -> SyncOrchestrator:
         return self._orchestrator
 
+    def _confluence_space_map(self, department: str | None = None) -> dict[str, str]:
+        """Departments to sync and their Confluence space keys.
+
+        When *department* is set, returns exactly that department (caller must
+        have validated configuration). Otherwise returns all configured spaces.
+        """
+        if department:
+            space_key = self._cfg.confluence_space_key(department)
+            if not space_key:
+                raise ValueError(
+                    f"Department {department!r} has no Confluence space configured. "
+                    f"{confluence_space_config_hint(department)}"
+                )
+            return {department: space_key}
+
+        space_map = self._cfg.confluence_space_map
+        if not space_map:
+            raise ValueError(
+                "No Confluence spaces configured. "
+                f"{confluence_space_config_hint()}"
+            )
+        return space_map
+
     def trigger_confluence(
         self,
         on_complete: Callable[[], None] | None = None,
@@ -54,17 +82,14 @@ class SyncService:
         department: str | None = None,
     ) -> bool:
         if department:
-            space_map = self._cfg.confluence_space_map
-            if department not in space_map:
-                from app.common.departments import space_env_var as dept_env_var
-                try:
-                    env_var = dept_env_var(department)
-                except KeyError:
-                    env_var = f"CONFLUENCE_SPACE_{department.upper()}"
+            try:
+                get_department(department)
+            except KeyError as exc:
                 raise ValueError(
-                    f"Department {department!r} has no Confluence space configured. "
-                    f"Set {env_var}=<space-key> in your environment to enable sync for this department."
-                )
+                    f"Unknown department {department!r}. "
+                    f"Valid keys: {format_valid_department_keys()}."
+                ) from exc
+            self._confluence_space_map(department)
         if not self._orchestrator.start("confluence", department=department):
             return False
         threading.Thread(
@@ -96,9 +121,7 @@ class SyncService:
 
             total_docs = 0
             total_chunks = 0
-            space_map = self._cfg.confluence_space_map
-            if department:
-                space_map = {department: space_map[department]}
+            space_map = self._confluence_space_map(department)
 
             for dept, space_key in space_map.items():
                 dept_result = DepartmentSyncResult(
@@ -232,7 +255,9 @@ class SyncService:
             files: list[dict] = []
             all_chunks: list[dict] = []
             source_records: list[dict[str, str | None]] = []
-            department = "bank_partnerships"
+            from app.common.departments import gdrive_department_key
+
+            department = gdrive_department_key()
 
             if self._gdrive.configured():
                 files = self._gdrive.list_pdfs()

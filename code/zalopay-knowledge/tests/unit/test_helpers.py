@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.api.context import parse_context_from_headers, require_user_context
 from app.common.pii import mask_pii
 from app.ingestion.chunker import chunk_text
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_mask_pii_email():
@@ -12,13 +13,13 @@ def test_mask_pii_email():
 def test_chunk_text_produces_rows():
     chunks = chunk_text(
         "Introduction\n\nThis is a policy document about risk escalation.",
-        department="risk",
+        department=RISK,
         doc_type="policy",
         title="Escalation Policy",
         url="https://example.com/policy",
     )
     assert len(chunks) >= 1
-    assert chunks[0]["department"] == "risk"
+    assert chunks[0]["department"] == RISK
     assert chunks[0]["text"]
 
 

@@ -12,6 +12,7 @@ from app.api.app import create_app
 from app.api.schemas import ChatResponse
 
 from tests.contract.test_chat_contract import AUTH_HEADERS, ready_index
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 @pytest.fixture()
@@ -27,7 +28,7 @@ class TestChatStreamContract:
         response = ChatResponse(
             answer="Answer [1].",
             citations=[],
-            source_departments=["risk"],
+            source_departments=[RISK],
             confidence=0.7,
             feedback_id="fb-stream-contract",
             status="answered",

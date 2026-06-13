@@ -8,6 +8,7 @@ import faiss
 from app.config import Settings
 from app.ingestion.metadata import REQUIRED_CHUNK_METADATA_FIELDS
 from app.store.meta import MetaStore
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class TestIndexBuilder:
@@ -21,11 +22,11 @@ class TestIndexBuilder:
 
         with patch.object(builder._embedder, "encode_passages", side_effect=mock_encode_passages):
             builder.rebuild_department(
-                "risk",
+                RISK,
                 [
                     {
                         "chunk_id": "risk-old-1",
-                        "department": "risk",
+                        "department": RISK,
                         "vec_pos": 0,
                         "doc_type": "Risk",
                         "title": "Old",
@@ -45,11 +46,11 @@ class TestIndexBuilder:
                     }
                 ],
             )
-        assert meta.count("risk") == 1
+        assert meta.count(RISK) == 1
 
-        count = builder.rebuild_department("risk", [])
+        count = builder.rebuild_department(RISK, [])
         assert count == 0
-        assert meta.count("risk") == 0
+        assert meta.count(RISK) == 0
 
     def test_faiss_write_read_round_trip(
         self,
@@ -64,7 +65,7 @@ class TestIndexBuilder:
         builder = IndexBuilder(settings)
 
         with patch.object(builder._embedder, "encode_passages", side_effect=mock_encode_passages):
-            count = builder.rebuild_department("risk", [dict(c) for c in sample_chunks])
+            count = builder.rebuild_department(RISK, [dict(c) for c in sample_chunks])
 
         assert count == 2
         faiss_path = faiss_index_dir / "faiss" / "risk.faiss"
@@ -78,8 +79,8 @@ class TestIndexBuilder:
         assert vectors.shape == (2, mock_embedding_dim)
 
         meta = MetaStore(faiss_index_dir / "meta.db")
-        assert meta.count("risk") == 2
-        by_pos = meta.fetch_by_positions("risk", [0, 1])
+        assert meta.count(RISK) == 2
+        by_pos = meta.fetch_by_positions(RISK, [0, 1])
         assert by_pos[0]["chunk_id"] == sample_chunks[0]["chunk_id"]
         assert by_pos[1]["text"] == sample_chunks[1]["text"]
         assert by_pos[0]["vec_pos"] == 0
@@ -98,10 +99,10 @@ class TestIndexBuilder:
         builder = IndexBuilder(settings)
 
         with patch.object(builder._embedder, "encode_passages", side_effect=mock_encode_passages):
-            builder.rebuild_department("risk", [dict(c) for c in sample_chunks])
+            builder.rebuild_department(RISK, [dict(c) for c in sample_chunks])
 
         meta = MetaStore(faiss_index_dir / "meta.db")
-        rows = meta.fetch_by_positions("risk", [0, 1])
+        rows = meta.fetch_by_positions(RISK, [0, 1])
         for row in rows.values():
             for field in REQUIRED_CHUNK_METADATA_FIELDS:
                 assert field in row
@@ -119,10 +120,10 @@ class TestIndexBuilder:
         chunks = [dict(c) for c in sample_chunks]
 
         with patch.object(builder._embedder, "encode_passages", side_effect=mock_encode_passages):
-            builder.rebuild_department("risk", chunks)
+            builder.rebuild_department(RISK, chunks)
 
         meta = MetaStore(faiss_index_dir / "meta.db")
-        rows = meta.fetch_by_positions("risk", [0, 1])
+        rows = meta.fetch_by_positions(RISK, [0, 1])
         assert rows[0]["vec_pos"] == 0
         assert rows[1]["vec_pos"] == 1
 
@@ -162,7 +163,7 @@ class TestIndexBuilder:
         def one_chunk(text: str) -> dict:
             return {
                 "chunk_id": f"risk-{hash(text)}",
-                "department": "risk",
+                "department": RISK,
                 "vec_pos": 0,
                 "doc_type": "Risk",
                 "title": "T",
@@ -182,13 +183,13 @@ class TestIndexBuilder:
             }
 
         with patch.object(builder._embedder, "encode_passages", side_effect=mock_encode_passages):
-            builder.rebuild_department("risk", [one_chunk("first")])
-            builder.rebuild_department("risk", [one_chunk("second"), one_chunk("third")])
+            builder.rebuild_department(RISK, [one_chunk("first")])
+            builder.rebuild_department(RISK, [one_chunk("second"), one_chunk("third")])
 
         index = faiss.read_index(str(faiss_index_dir / "faiss" / "risk.faiss"))
         assert index.ntotal == 2
         meta = MetaStore(faiss_index_dir / "meta.db")
-        assert meta.count("risk") == 2
+        assert meta.count(RISK) == 2
 
     def test_tombstone_removed_urls_marks_absent_urls(
         self,
@@ -202,16 +203,16 @@ class TestIndexBuilder:
         builder = IndexBuilder(settings)
 
         with patch.object(builder._embedder, "encode_passages", side_effect=mock_encode_passages):
-            builder.rebuild_department("risk", [dict(c) for c in sample_chunks])
+            builder.rebuild_department(RISK, [dict(c) for c in sample_chunks])
 
         removed = builder.tombstone_removed_urls(
-            "risk", {"https://acme.atlassian.net/wiki/spaces/RISK/pages/1"}
+            RISK, {"https://acme.atlassian.net/wiki/spaces/RISK/pages/1"}
         )
         assert removed == set()
 
-        removed = builder.tombstone_removed_urls("risk", set())
+        removed = builder.tombstone_removed_urls(RISK, set())
         assert removed == {"https://acme.atlassian.net/wiki/spaces/RISK/pages/1"}
 
         meta = MetaStore(faiss_index_dir / "meta.db")
-        rows = meta.fetch_by_positions("risk", [0, 1])
+        rows = meta.fetch_by_positions(RISK, [0, 1])
         assert all(r["lifecycle_state"] == "sunset" for r in rows.values())

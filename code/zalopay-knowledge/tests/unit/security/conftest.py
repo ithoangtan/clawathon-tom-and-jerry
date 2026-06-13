@@ -6,6 +6,7 @@ import pytest
 
 from app.config import Settings
 from app.graph.state import Chunk
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 @pytest.fixture
@@ -29,7 +30,7 @@ def future_deadline() -> float:
 def sample_chunk() -> Chunk:
     return Chunk(
         chunk_id="c-inject-1",
-        department="risk",
+        department=RISK,
         doc_type="policy",
         title="Risk Policy",
         url="https://example.com/policy",

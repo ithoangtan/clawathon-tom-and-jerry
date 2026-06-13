@@ -8,9 +8,12 @@
  * See docs/API-CONTRACT.md for endpoint documentation and header requirements.
  */
 
+import catalog from "./departments.data.json";
+
 // ── Primitive literals ───────────────────────────────────────────────────────
 
-export type Department = "risk" | "grow_enablement" | "bank_partnerships";
+/** Department keys — derived from app/common/departments.py via departments.data.json */
+export type Department = (typeof catalog.departments)[number]["key"];
 export type Role = "engineer" | "pm" | "ops" | "risk" | "business";
 export type AnswerStatus = "answered" | "refused" | "partial";
 export type RefusalReason = "access_denied" | "out_of_scope";

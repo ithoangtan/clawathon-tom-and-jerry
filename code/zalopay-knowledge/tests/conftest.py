@@ -7,6 +7,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app.common.departments import DepartmentKey, all_departments, iter_keys
+from tests.department_fixtures import ALL_KEYS, BANK, GROW, RISK
+
 # Stub optional runtime deps so API/ingestion tests collect without a full image.
 if "pypdf" not in sys.modules:
     _pypdf = ModuleType("pypdf")
@@ -47,3 +50,37 @@ def test_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     get_compiled_graph.cache_clear()
     api_service.get_audit_store.cache_clear()
     api_service.get_feedback_store.cache_clear()
+
+
+@pytest.fixture
+def dept_risk() -> str:
+    return RISK
+
+
+@pytest.fixture
+def dept_grow() -> str:
+    return GROW
+
+
+@pytest.fixture
+def dept_bank() -> str:
+    return BANK
+
+
+@pytest.fixture
+def all_dept_keys() -> list[str]:
+    return list(ALL_KEYS)
+
+
+@pytest.fixture
+def sample_confluence_spaces() -> dict[str, str]:
+    return {
+        DepartmentKey.RISK.value: "RISK",
+        DepartmentKey.GROW_ENABLEMENT.value: "GROW",
+        DepartmentKey.BANK_PARTNERSHIPS.value: "BANK",
+    }
+
+
+@pytest.fixture
+def all_departments_list():
+    return all_departments()

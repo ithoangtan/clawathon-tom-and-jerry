@@ -8,6 +8,7 @@ from app.graph.nodes.verify import make_verify_node
 from app.graph.state import Chunk, Citation
 
 from tests.unit.graph.conftest import StubLLM
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def _verify(
@@ -22,7 +23,7 @@ def _verify(
     node = make_verify_node(StubLLM(verdicts_json), settings=settings)
     return node(
         {
-            "department": "risk",
+            "department": RISK,
             "draft_answer": answer,
             "draft_citations": citations,
             "graded_chunks": graded,
@@ -137,7 +138,7 @@ def test_verify_deprecation_warning_for_deprecated_chunk(
 ):
     deprecated = Chunk(
         chunk_id="d1",
-        department="risk",
+        department=RISK,
         doc_type="policy",
         title="Old Policy",
         url="https://example.com/old",
@@ -169,7 +170,7 @@ def test_verify_citation_list_matches_graded_chunks(
     )
     synth_out = synth(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "How do we escalate?",
             "role": "engineer",
             "request_language": "en",

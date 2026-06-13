@@ -17,6 +17,7 @@ from evals.metrics import (
     refusal_counts,
 )
 from tests.eval.run_golden import DEFAULT_YAML, load_golden_yaml, run_stub, yaml_to_eval_cases
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -30,9 +31,9 @@ def test_golden_yaml_size_and_departments(yaml_cases: list[dict]) -> None:
     assert len(yaml_cases) >= 35
     dept_cases = [c for c in yaml_cases if c.get("department")]
     assert len(dept_cases) >= 36
-    risk = sum(1 for c in dept_cases if c["department"] == "risk")
-    grow = sum(1 for c in dept_cases if c["department"] == "grow_enablement")
-    bank = sum(1 for c in dept_cases if c["department"] == "bank_partnerships")
+    risk = sum(1 for c in dept_cases if c["department"] == RISK)
+    grow = sum(1 for c in dept_cases if c["department"] == GROW)
+    bank = sum(1 for c in dept_cases if c["department"] == BANK)
     assert risk >= 10
     assert grow >= 10
     assert bank >= 10

@@ -20,7 +20,7 @@ import logging
 import re
 from typing import Callable
 
-from app.common.departments import get_department
+from app.common.departments import format_department_keys_for_prompt, get_department
 from app.common.product_copy import refusal_body
 from app.config import Settings, get_settings
 from app.graph.nodes._helpers import budget_exceeded, parse_json_response
@@ -106,7 +106,10 @@ def make_reconcile_node(
             }
 
         # ── MAIN-tier merge ───────────────────────────────────────────────────
-        rendered = prompt.render(dept_answers="\n\n".join(shifted_blocks))
+        rendered = prompt.render(
+            dept_answers="\n\n".join(shifted_blocks),
+            department_keys=format_department_keys_for_prompt(),
+        )
         messages = [
             {"role": "system", "content": rendered["system"]},
             {"role": "user", "content": rendered["user"]},

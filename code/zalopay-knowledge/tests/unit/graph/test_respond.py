@@ -9,6 +9,7 @@ from app.graph.nodes.respond import make_respond_node
 from app.graph.state import Citation, DeptResult
 
 from tests.unit.graph.conftest import answered_dept_result
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_respond_issues_feedback_id(test_settings: Settings):
@@ -35,7 +36,7 @@ def test_respond_passthrough_ingest_refusal(test_settings: Settings):
 
 def test_respond_clarify_question(test_settings: Settings):
     node = make_respond_node(settings=test_settings)
-    clarify = {"prompt": "Which department?", "options": ["risk"]}
+    clarify = {"prompt": "Which department?", "options": [RISK]}
     out = node(
         {
             "clarify_question": clarify,
@@ -93,7 +94,7 @@ def test_respond_normal_answer_from_reconcile(
     assert answered_dept_result["answer"] in out["answer"]
     assert "Verify with" in out["answer"]
     assert out["citations"] == [cite]
-    assert out["source_departments"] == ["risk"]
+    assert out["source_departments"] == [RISK]
     assert "feedback_id" in out
     assert out["messages"]
     assert answered_dept_result["answer"] in getattr(out["messages"][0], "content", "")
@@ -104,7 +105,7 @@ def test_respond_includes_conflicts(test_settings: Settings):
     conflict = {
         "topic": "limit",
         "sides": [
-            {"department": "risk", "statement": "10M", "citation": Citation(title="R", url="u")}
+            {"department": RISK, "statement": "10M", "citation": Citation(title="R", url="u")}
         ],
     }
     out = node(
@@ -116,7 +117,7 @@ def test_respond_includes_conflicts(test_settings: Settings):
             "conflicts": [conflict],
             "dept_results": [
                 DeptResult(
-                    department="risk",
+                    department=RISK,
                     status="answered",
                     answer="10M",
                     citations=[],
@@ -128,7 +129,7 @@ def test_respond_includes_conflicts(test_settings: Settings):
         }
     )
     assert out["conflicts"] == [conflict]
-    assert out["source_departments"] == ["risk"]
+    assert out["source_departments"] == [RISK]
 
 
 def test_respond_passes_through_partial_refusals(test_settings: Settings):
@@ -139,10 +140,10 @@ def test_respond_passes_through_partial_refusals(test_settings: Settings):
             "status": "partial",
             "confidence": 0.6,
             "citations": [],
-            "refusals": ["risk"],
+            "refusals": [RISK],
             "dept_results": [
                 DeptResult(
-                    department="grow_enablement",
+                    department=GROW,
                     status="answered",
                     answer="Grow only [1].",
                     citations=[],
@@ -154,4 +155,4 @@ def test_respond_passes_through_partial_refusals(test_settings: Settings):
         }
     )
     assert out["status"] == "partial"
-    assert out["refusals"] == ["risk"]
+    assert out["refusals"] == [RISK]

@@ -89,6 +89,8 @@ def make_grade_node(
                 graded.append(scored)  # type: ignore[arg-type]
         graded.sort(key=lambda c: c.get("score", 0.0), reverse=True)
 
+        if not graded:
+            logger.info("grade[%s]: all %d chunks failed threshold — no relevant content", department, len(chunks))
         logger.info("grade[%s]: %d/%d chunks passed", department, len(graded), len(chunks))
         return {"graded_chunks": graded, "evidence": {department: graded}}
 

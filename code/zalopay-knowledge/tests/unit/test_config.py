@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
-from app.common.departments import DepartmentKey
 from app.config import Settings, get_settings
+from tests.department_fixtures import BANK, GROW, RISK
 
 
 class TestSettingsDefaults:
@@ -95,14 +97,27 @@ class TestSettingsFromEnv:
         assert settings.main_model == "test-main"
 
     def test_confluence_space_map_excludes_empty(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("CONFLUENCE_SPACE_RISK", "RISK")
-        monkeypatch.setenv("CONFLUENCE_SPACE_GROW", "")
-        monkeypatch.setenv("CONFLUENCE_SPACE_BANK", "BANK")
+        monkeypatch.setenv(
+            "CONFLUENCE_SPACES",
+            json.dumps({RISK: "RISK", GROW: "", BANK: "BANK"}),
+        )
         settings = Settings(_env_file=None)
         assert settings.confluence_space_map == {
-            DepartmentKey.RISK: "RISK",
-            DepartmentKey.BANK_PARTNERSHIPS: "BANK",
+            RISK: "RISK",
+            BANK: "BANK",
         }
+
+    def test_confluence_space_key_per_department(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("CONFLUENCE_SPACES", json.dumps({GROW: "GROW-KB"}))
+        settings = Settings(_env_file=None)
+        assert settings.confluence_space_key(GROW) == "GROW-KB"
+        assert settings.confluence_space_key(RISK) is None
+
+    def test_legacy_confluence_space_env_merged(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("CONFLUENCE_SPACES", raising=False)
+        monkeypatch.setenv("CONFLUENCE_SPACE_RISK", "LEGACY-RISK")
+        settings = Settings(_env_file=None)
+        assert settings.confluence_space_key(RISK) == "LEGACY-RISK"
 
     def test_graph_budget_positive(self) -> None:
         with pytest.raises(Exception):

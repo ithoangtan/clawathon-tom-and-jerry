@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 from fastapi import Header, HTTPException
 
+from app.common.departments import DEFAULT_HOME_DEPARTMENT
+
 _HEADER_USER = "X-GreenNode-AgentBase-User-Id"
 _HEADER_SESSION = "X-GreenNode-AgentBase-Session-Id"
 _HEADER_ROLE = "X-GreenNode-AgentBase-Role"
@@ -17,7 +19,7 @@ class UserContext:
     user_id: str
     session_id: str
     role: str = "business"
-    home_department: str = "risk"
+    home_department: str = DEFAULT_HOME_DEPARTMENT.value
 
 
 def _required_header(value: str | None, header_name: str) -> str:
@@ -48,7 +50,10 @@ def require_user_context(
         user_id=user_id,
         session_id=session_id,
         role=(x_greennode_agentbase_role or "business").strip() or "business",
-        home_department=(x_greennode_agentbase_home_department or "risk").strip() or "risk",
+        home_department=(
+            x_greennode_agentbase_home_department or DEFAULT_HOME_DEPARTMENT.value
+        ).strip()
+        or DEFAULT_HOME_DEPARTMENT.value,
     )
 
 
@@ -65,5 +70,6 @@ def parse_context_from_headers(headers: dict[str, str]) -> UserContext:
         user_id=uid,
         session_id=sid,
         role=(get(_HEADER_ROLE) or "business").strip() or "business",
-        home_department=(get(_HEADER_HOME) or "risk").strip() or "risk",
+        home_department=(get(_HEADER_HOME) or DEFAULT_HOME_DEPARTMENT.value).strip()
+        or DEFAULT_HOME_DEPARTMENT.value,
     )

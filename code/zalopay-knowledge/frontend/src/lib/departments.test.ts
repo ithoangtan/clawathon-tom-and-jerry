@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEPARTMENT_KEYS,
   DEPARTMENTS,
   departmentHeadManager,
   departmentLabel,
@@ -12,18 +13,18 @@ import {
 } from "./departments";
 import type { Department } from "./types";
 
+const RISK = DEPARTMENT_KEYS[0];
+const GROW = DEPARTMENT_KEYS[1];
+const BANK = DEPARTMENT_KEYS[2];
+
 describe("departments", () => {
-  it("exports all three departments", () => {
-    expect(DEPARTMENTS).toHaveLength(3);
-    expect(DEPARTMENTS.map((d) => d.key)).toEqual([
-      "risk",
-      "grow_enablement",
-      "bank_partnerships",
-    ]);
+  it("exports all registered departments", () => {
+    expect(DEPARTMENTS).toHaveLength(DEPARTMENT_KEYS.length);
+    expect(DEPARTMENTS.map((d) => d.key)).toEqual([...DEPARTMENT_KEYS]);
   });
 
   it("includes head manager and description metadata", () => {
-    const risk = getDepartment("risk");
+    const risk = getDepartment(RISK);
     expect(risk.head_manager_en).toBeTruthy();
     expect(risk.head_manager_vi).toBeTruthy();
     expect(risk.description_en).toBeTruthy();
@@ -31,20 +32,20 @@ describe("departments", () => {
   });
 
   it("returns Vietnamese label", () => {
-    expect(departmentLabel("risk", "vi")).toBe("Quản lý Rủi ro");
+    expect(departmentLabel(RISK, "vi")).toBe("Quản lý Rủi ro");
   });
 
   it("returns English label", () => {
-    expect(departmentLabel("grow_enablement", "en")).toBe("Grow Enablement");
+    expect(departmentLabel(GROW, "en")).toBe("Grow Enablement");
   });
 
   it("returns accent color from getDepartment", () => {
-    expect(getDepartment("bank_partnerships").accent_color).toBe("#457B9D");
-    expect(getDepartment("risk").channel_hint).toBe("teams-risk-knowledge");
+    expect(getDepartment(BANK).accent_color).toBe("#457B9D");
+    expect(getDepartment(RISK).channel_hint).toBe("teams-risk-knowledge");
   });
 
   it("throws for unknown department", () => {
-    expect(() => getDepartment("unknown" as "risk")).toThrow("Unknown department");
+    expect(() => getDepartment("unknown" as Department)).toThrow("Unknown department");
   });
 
   it("returns role labels in both locales", () => {
@@ -70,17 +71,17 @@ describe("departments", () => {
 
   it("filters by department name", () => {
     const results = filterDepartments(DEPARTMENTS, "bank", "en");
-    expect(results.map((d) => d.key)).toEqual(["bank_partnerships"]);
+    expect(results.map((d) => d.key)).toEqual([BANK]);
   });
 
   it("filters by head manager name", () => {
     const results = filterDepartments(DEPARTMENTS, "Nguyễn Thị Lan", "vi");
-    expect(results.map((d) => d.key)).toEqual(["risk"]);
+    expect(results.map((d) => d.key)).toEqual([RISK]);
   });
 
   it("filters by description text", () => {
     const results = filterDepartments(DEPARTMENTS, "settlement", "en");
-    expect(results.map((d) => d.key)).toEqual(["bank_partnerships"]);
+    expect(results.map((d) => d.key)).toEqual([BANK]);
   });
 
   it("returns all departments for empty query", () => {

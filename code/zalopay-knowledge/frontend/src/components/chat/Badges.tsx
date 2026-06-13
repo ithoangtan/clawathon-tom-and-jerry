@@ -46,9 +46,15 @@ export function ConfidenceBadge({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Badge tone={statusTone}>{statusLabel}</Badge>
-      <span className="text-xs text-content-secondary">
-        {t("confidence", locale)}: {formatConfidence(confidence)}
-      </span>
+      {(() => {
+        const tierTone = confidence >= 0.80 ? "success" : confidence >= 0.55 ? "warning" : "danger";
+        const tierKey = confidence >= 0.80 ? "confidenceHigh" : confidence >= 0.55 ? "confidenceMedium" : "confidenceLow";
+        return (
+          <Badge tone={tierTone}>
+            {t(tierKey as Parameters<typeof t>[0], locale)} · {formatConfidence(confidence)}
+          </Badge>
+        );
+      })()}
     </div>
   );
 }

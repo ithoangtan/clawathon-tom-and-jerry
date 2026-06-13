@@ -414,6 +414,10 @@ def format_conversation_history(
     if not messages:
         return ""
 
+    # Keep only the last 4 turns (8 messages) to avoid context window inflation
+    if len(messages) > 8:
+        messages = messages[-8:]
+
     items = list(messages)
     if exclude_last and items:
         items = items[:-1]

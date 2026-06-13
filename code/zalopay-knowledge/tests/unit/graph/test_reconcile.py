@@ -10,6 +10,7 @@ from app.graph.nodes.respond import make_respond_node
 from app.graph.state import Citation, DeptResult
 
 from tests.unit.graph.conftest import StubLLM
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_reconcile_all_refused_fast_path(test_settings: Settings):
@@ -18,7 +19,7 @@ def test_reconcile_all_refused_fast_path(test_settings: Settings):
         {
             "dept_results": [
                 DeptResult(
-                    department="risk",
+                    department=RISK,
                     status="refused",
                     answer="",
                     citations=[],
@@ -43,7 +44,7 @@ def test_reconcile_all_refused_vietnamese_message(test_settings: Settings):
         {
             "dept_results": [
                 DeptResult(
-                    department="risk",
+                    department=RISK,
                     status="refused",
                     answer="",
                     citations=[],
@@ -84,7 +85,7 @@ def test_reconcile_partial_when_some_departments_refused(
             "dept_results": [
                 answered_dept_result,
                 DeptResult(
-                    department="grow_enablement",
+                    department=GROW,
                     status="refused",
                     answer="",
                     citations=[],
@@ -96,7 +97,7 @@ def test_reconcile_partial_when_some_departments_refused(
         }
     )
     assert out["status"] == "partial"
-    assert out["refusals"] == ["grow_enablement"]
+    assert out["refusals"] == [GROW]
 
 
 def test_reconcile_detects_conflicts_from_llm_merge(test_settings: Settings):
@@ -104,7 +105,7 @@ def test_reconcile_detects_conflicts_from_llm_merge(test_settings: Settings):
     grow_cite = Citation(title="Grow Policy", url="https://example.com/grow")
     results = [
         DeptResult(
-            department="risk",
+            department=RISK,
             status="answered",
             answer="Limit is 10M VND [1].",
             citations=[risk_cite],
@@ -112,7 +113,7 @@ def test_reconcile_detects_conflicts_from_llm_merge(test_settings: Settings):
             warnings=[],
         ),
         DeptResult(
-            department="grow_enablement",
+            department=GROW,
             status="answered",
             answer="Limit is 5M VND [1].",
             citations=[grow_cite],
@@ -128,12 +129,12 @@ def test_reconcile_detects_conflicts_from_llm_merge(test_settings: Settings):
                     "topic": "transaction limit",
                     "sides": [
                         {
-                            "department": "risk",
+                            "department": RISK,
                             "statement": "Limit is 10M VND",
                             "citation_index": 1,
                         },
                         {
-                            "department": "grow_enablement",
+                            "department": GROW,
                             "statement": "Limit is 5M VND",
                             "citation_index": 1,
                         },
@@ -150,7 +151,7 @@ def test_reconcile_detects_conflicts_from_llm_merge(test_settings: Settings):
     assert conflict["topic"] == "transaction limit"
     assert len(conflict["sides"]) == 2
     depts = {s["department"] for s in conflict["sides"]}
-    assert depts == {"risk", "grow_enablement"}
+    assert depts == {RISK, GROW}
     assert out["status"] == "partial"
     assert out["confidence"] < 0.8
 
@@ -158,7 +159,7 @@ def test_reconcile_detects_conflicts_from_llm_merge(test_settings: Settings):
 def test_reconcile_concatenates_on_llm_failure(test_settings: Settings):
     results = [
         DeptResult(
-            department="risk",
+            department=RISK,
             status="answered",
             answer="Risk answer [1].",
             citations=[Citation(title="R", url="https://r")],
@@ -166,7 +167,7 @@ def test_reconcile_concatenates_on_llm_failure(test_settings: Settings):
             warnings=[],
         ),
         DeptResult(
-            department="grow_enablement",
+            department=GROW,
             status="answered",
             answer="Grow answer [1].",
             citations=[Citation(title="G", url="https://g")],
@@ -190,7 +191,7 @@ def test_reconcile_concatenates_on_llm_failure(test_settings: Settings):
 def test_reconcile_shifts_citation_markers_for_merge(test_settings: Settings):
     results = [
         DeptResult(
-            department="risk",
+            department=RISK,
             status="answered",
             answer="Risk limit is 10M [1].",
             citations=[Citation(title="Risk Policy", url="https://example.com/risk")],
@@ -198,7 +199,7 @@ def test_reconcile_shifts_citation_markers_for_merge(test_settings: Settings):
             warnings=[],
         ),
         DeptResult(
-            department="bank_partnerships",
+            department=BANK,
             status="answered",
             answer="Partner limit is 5M [1].",
             citations=[Citation(title="Bank Policy", url="https://example.com/bank")],
@@ -226,7 +227,7 @@ def test_reconcile_conflict_surfaces_through_respond(test_settings: Settings):
     bank_cite = Citation(title="Bank Policy", url="https://example.com/bank")
     results = [
         DeptResult(
-            department="risk",
+            department=RISK,
             status="answered",
             answer="Limit is 10M VND [1].",
             citations=[risk_cite],
@@ -234,7 +235,7 @@ def test_reconcile_conflict_surfaces_through_respond(test_settings: Settings):
             warnings=[],
         ),
         DeptResult(
-            department="bank_partnerships",
+            department=BANK,
             status="answered",
             answer="Limit is 5M VND [1].",
             citations=[bank_cite],
@@ -250,12 +251,12 @@ def test_reconcile_conflict_surfaces_through_respond(test_settings: Settings):
                     "topic": "transaction limit",
                     "sides": [
                         {
-                            "department": "risk",
+                            "department": RISK,
                             "statement": "Limit is 10M VND",
                             "citation_index": 1,
                         },
                         {
-                            "department": "bank_partnerships",
+                            "department": BANK,
                             "statement": "Limit is 5M VND",
                             "citation_index": 1,
                         },
@@ -279,5 +280,5 @@ def test_reconcile_conflict_surfaces_through_respond(test_settings: Settings):
     assert final["status"] == "partial"
     assert len(final["conflicts"]) == 1
     assert final["conflicts"][0]["topic"] == "transaction limit"
-    assert set(final["source_departments"]) == {"risk", "bank_partnerships"}
+    assert set(final["source_departments"]) == {RISK, BANK}
     assert len(final["citations"]) == 2

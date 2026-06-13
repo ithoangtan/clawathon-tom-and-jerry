@@ -413,6 +413,9 @@ const strings: Strings = {
   tutorialBack: { en: "Back", vi: "Quay lại" },
   tutorialDone: { en: "Done", vi: "Xong" },
   tutorialProgress: { en: "{current} / {total}", vi: "{current} / {total}" },
+  confidenceHigh: { en: "High", vi: "Cao" },
+  confidenceMedium: { en: "Medium", vi: "Trung bình" },
+  confidenceLow: { en: "Low", vi: "Thấp" },
 };
 
 export function syncStateLabel(state: string, locale: Lang): string {

@@ -22,14 +22,14 @@ import { Link } from "react-router-dom";
 
 const EXAMPLE_QUESTIONS = {
   en: [
-    "How does settlement reconciliation work with partner banks?",
-    "What is the escalation process for risk alerts?",
-    "What are the KYC re-verification thresholds?",
+    "What is the escalation process when a fraud alert triggers on a high-value merchant transaction?",
+    "Walk me through the settlement reconciliation steps with a partner bank after a failed batch.",
+    "What KYC re-verification is required when a merchant's transaction volume doubles?",
   ],
   vi: [
-    "Quy trình đối soát thanh toán với ngân hàng đối tác như thế nào?",
-    "Quy trình leo thang cảnh báo rủi ro là gì?",
-    "Ngưỡng xác minh lại KYC là bao nhiêu?",
+    "Quy trình leo thang khi cảnh báo gian lận kích hoạt trên giao dịch merchant giá trị cao là gì?",
+    "Các bước đối soát thanh toán với ngân hàng đối tác khi một batch thất bại diễn ra như thế nào?",
+    "Cần xác minh lại KYC như thế nào khi khối lượng giao dịch của merchant tăng gấp đôi?",
   ],
 };
 

@@ -1,6 +1,13 @@
-import type { Department, Lang } from "./types";
+/**
+ * departments.ts — UI catalog derived from app/common/departments.py
+ *
+ * Data is exported to departments.data.json via scripts/export_departments.py.
+ * Run that script after editing the Python registry.
+ */
 
-/** Mirror of app/common/departments.py — single source for UI labels & colors. */
+import type { Department, Lang } from "./types";
+import catalog from "./departments.data.json";
+
 export interface DepartmentMeta {
   key: Department;
   name_en: string;
@@ -13,49 +20,9 @@ export interface DepartmentMeta {
   description_vi: string;
 }
 
-export const DEPARTMENTS: DepartmentMeta[] = [
-  {
-    key: "risk",
-    name_en: "Risk",
-    name_vi: "Quản lý Rủi ro",
-    accent_color: "#E63946",
-    channel_hint: "teams-risk-knowledge",
-    head_manager_en: "Lan Nguyen",
-    head_manager_vi: "Nguyễn Thị Lan",
-    description_en:
-      "Risk controls, fraud monitoring, compliance policies, and incident escalation.",
-    description_vi:
-      "Kiểm soát rủi ro, giám sát gian lận, chính sách tuân thủ và leo thang sự cố.",
-  },
-  {
-    key: "grow_enablement",
-    name_en: "Grow Enablement",
-    name_vi: "Phát triển Kinh doanh",
-    accent_color: "#2A9D8F",
-    channel_hint: "teams-grow-enablement-knowledge",
-    head_manager_en: "Minh Tran",
-    head_manager_vi: "Trần Văn Minh",
-    description_en:
-      "Merchant growth programs, onboarding playbooks, and enablement runbooks.",
-    description_vi:
-      "Chương trình phát triển merchant, playbook onboarding và runbook enablement.",
-  },
-  {
-    key: "bank_partnerships",
-    name_en: "Bank Partnerships",
-    name_vi: "Đối tác Ngân hàng",
-    accent_color: "#457B9D",
-    channel_hint: "teams-bank-partnerships-knowledge",
-    head_manager_en: "Hoang Le",
-    head_manager_vi: "Lê Hoàng",
-    description_en:
-      "Bank integrations, settlement reconciliation, and partner SLA documentation.",
-    description_vi:
-      "Tích hợp ngân hàng, đối soát thanh toán và tài liệu SLA đối tác.",
-  },
-];
+export const DEPARTMENTS = catalog.departments as DepartmentMeta[];
 
-export const ROLES = ["engineer", "pm", "ops", "risk", "business"] as const;
+export const ROLES = catalog.roles as readonly string[];
 
 export function getDepartment(key: Department): DepartmentMeta {
   const dept = DEPARTMENTS.find((d) => d.key === key);
@@ -120,3 +87,6 @@ export function roleLabel(role: string, locale: Lang): string {
   const entry = labels[role] ?? { en: role, vi: role };
   return locale === "vi" ? entry.vi : entry.en;
 }
+
+/** Registry-ordered department keys (for tests and fixtures). */
+export const DEPARTMENT_KEYS: readonly Department[] = DEPARTMENTS.map((d) => d.key);

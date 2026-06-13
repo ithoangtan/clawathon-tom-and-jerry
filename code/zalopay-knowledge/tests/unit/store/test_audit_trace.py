@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from app.store.audit import AuditStore
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_log_query_persists_stage_trace(tmp_path) -> None:
@@ -10,10 +11,10 @@ def test_log_query_persists_stage_trace(tmp_path) -> None:
     trace = {
         "query": "What is KYC?",
         "rewrite": "KYC policy",
-        "chunks": {"risk": [{"chunk_id": "c1", "score": 0.9}]},
-        "grades": {"risk": {"status": "answered"}},
+        "chunks": {RISK:  [{"chunk_id": "c1", "score": 0.9}]},
+        "grades": {RISK:  {"status": "answered"}},
         "citations": [{"title": "KYC", "url": "https://example.com"}],
-        "verify": {"risk": {"status": "answered", "citation_count": 1}},
+        "verify": {RISK:  {"status": "answered", "citation_count": 1}},
     }
 
     row_id = store.log_query(
@@ -21,7 +22,7 @@ def test_log_query_persists_stage_trace(tmp_path) -> None:
         session_id="s1",
         role="engineer",
         question="What is KYC?",
-        departments=["risk"],
+        departments=[RISK],
         status="answered",
         confidence=0.9,
         latency_ms=1200,
@@ -41,4 +42,4 @@ def test_log_query_persists_stage_trace(tmp_path) -> None:
     assert row is not None
     persisted = json.loads(row["stage_trace_json"])
     assert persisted["query"] == "What is KYC?"
-    assert persisted["chunks"]["risk"][0]["chunk_id"] == "c1"
+    assert persisted["chunks"][RISK][0]["chunk_id"] == "c1"

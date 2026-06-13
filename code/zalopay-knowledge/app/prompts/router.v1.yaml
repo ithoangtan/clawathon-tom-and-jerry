@@ -6,6 +6,7 @@ description: >
 required_inputs:
   - question
   - department_catalog
+  - department_keys
   - conversation_history
 
 system: |
@@ -56,7 +57,7 @@ system: |
     "confidence": <float 0.0 to 1.0>
   }
 
-  Department keys must be exactly one of: risk, grow_enablement, bank_partnerships.
+  Department keys must be exactly one of: {department_keys}.
   confidence must be a float between 0.0 and 1.0 inclusive.
 
 user: |

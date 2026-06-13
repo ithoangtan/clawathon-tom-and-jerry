@@ -21,12 +21,13 @@ from app.graph.build import GraphDeps, build_graph
 from app.ports.types import LLMResult, RetrievedChunk
 from tests.contract.test_chat_contract import AUTH_HEADERS
 from tests.unit.graph.conftest import StubLLM, StubRetriever
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 # Engineer role — full MVP department access (business role excludes Risk).
 FLOW_AUTH_HEADERS = {
     **AUTH_HEADERS,
     "X-GreenNode-AgentBase-Role": "engineer",
-    "X-GreenNode-AgentBase-Home-Department": "risk",
+    "X-GreenNode-AgentBase-Home-Department": RISK,
 }
 
 
@@ -59,7 +60,7 @@ def _default_settings(**overrides: Any) -> Settings:
 def _risk_chunk() -> RetrievedChunk:
     return RetrievedChunk(
         chunk_id="c-risk-1",
-        department="risk",
+        department=RISK,
         doc_type="Risk",
         title="Risk Alert Escalation Policy",
         url="https://confluence.example.com/risk/escalation",
@@ -79,7 +80,7 @@ def _graph_state(**kwargs: Any) -> dict[str, Any]:
         "user_id": "flow-user",
         "session_id": "flow-session",
         "role": "engineer",
-        "home_department": "risk",
+        "home_department": RISK,
         "pinned": [],
         "deadline_ts": time.time() + 120,
     }
@@ -94,7 +95,7 @@ def test_full_answered_flow_with_citations_and_disclaimer():
             json.dumps(
                 {
                     "intent": "policy_lookup",
-                    "target_departments": ["risk"],
+                    "target_departments": [RISK],
                     "confidence": 0.92,
                 }
             ),
@@ -111,14 +112,14 @@ def test_full_answered_flow_with_citations_and_disclaimer():
     result = build_graph(deps).invoke(_graph_state())
 
     assert result["status"] == "answered"
-    assert result["source_departments"] == ["risk"]
+    assert result["source_departments"] == [RISK]
     assert len(result["citations"]) == 1
     assert result["citations"][0]["title"] == "Risk Alert Escalation Policy"
     assert "[1]" in result["answer"]
     assert "Verify with" in result["answer"]
     assert result.get("feedback_id")
     assert deps.retriever.search_calls
-    assert deps.retriever.search_calls[0]["department"] == "risk"
+    assert deps.retriever.search_calls[0]["department"] == RISK
 
     api = state_to_response(result)
     assert api.status == "answered"
@@ -139,11 +140,11 @@ def test_direct_department_pin_bypasses_router_llm():
         retriever=StubRetriever(chunks=[_risk_chunk()], ready=True),
         settings=_default_settings(),
     )
-    result = build_graph(deps).invoke(_graph_state(pinned=["risk"]))
+    result = build_graph(deps).invoke(_graph_state(pinned=[RISK]))
 
     assert result["intent"] == "pinned"
     assert result["status"] == "answered"
-    assert result["source_departments"] == ["risk"]
+    assert result["source_departments"] == [RISK]
     assert len(llm.calls) == 3  # grade, synthesize, verify — no router LLM
 
 
@@ -154,7 +155,7 @@ def test_empty_retrieval_produces_refusal_with_escalation():
             json.dumps(
                 {
                     "intent": "policy_lookup",
-                    "target_departments": ["risk"],
+                    "target_departments": [RISK],
                     "confidence": 0.9,
                 }
             ),
@@ -207,7 +208,7 @@ def test_out_of_scope_intent_refuses_without_retrieval():
 def test_partial_when_one_department_refuses():
     grow_chunk = RetrievedChunk(
         chunk_id="c-grow-1",
-        department="grow_enablement",
+        department=GROW,
         doc_type="Operation",
         title="Merchant Onboarding",
         url="https://confluence.example.com/grow/onboard",
@@ -224,7 +225,7 @@ def test_partial_when_one_department_refuses():
             json.dumps(
                 {
                     "intent": "policy_lookup",
-                    "target_departments": ["risk", "grow_enablement"],
+                    "target_departments": [RISK, GROW],
                     "confidence": 0.88,
                 }
             ),
@@ -237,7 +238,7 @@ def test_partial_when_one_department_refuses():
     class DeptAwareRetriever(StubRetriever):
         def search(self, **kwargs: Any) -> list[RetrievedChunk]:
             self.search_calls.append(kwargs)
-            if kwargs.get("department") == "grow_enablement":
+            if kwargs.get("department") == GROW:
                 return [grow_chunk]
             return []
 
@@ -249,8 +250,8 @@ def test_partial_when_one_department_refuses():
     result = build_graph(deps).invoke(_graph_state(question="How does merchant onboarding work?"))
 
     assert result["status"] == "partial"
-    assert "grow_enablement" in result["source_departments"]
-    assert "risk" in (result.get("refusals") or [])
+    assert GROW in result["source_departments"]
+    assert RISK in (result.get("refusals") or [])
     assert result["citations"]
 
 
@@ -258,7 +259,7 @@ def test_multi_department_reconcile_surfaces_conflicts():
     risk_chunk = _risk_chunk()
     bank_chunk = RetrievedChunk(
         chunk_id="c-bank-1",
-        department="bank_partnerships",
+        department=BANK,
         doc_type="Operation",
         title="Partner SLA",
         url="https://confluence.example.com/bank/sla",
@@ -275,9 +276,9 @@ def test_multi_department_reconcile_surfaces_conflicts():
         def search(self, **kwargs: Any) -> list[RetrievedChunk]:
             self.search_calls.append(kwargs)
             dept = kwargs.get("department")
-            if dept == "risk":
+            if dept == RISK:
                 return [risk_chunk]
-            if dept == "bank_partnerships":
+            if dept == BANK:
                 return [bank_chunk]
             return []
 
@@ -289,12 +290,12 @@ def test_multi_department_reconcile_surfaces_conflicts():
                     "topic": "Level 2 SLA",
                     "sides": [
                         {
-                            "department": "risk",
+                            "department": RISK,
                             "statement": "4 hours",
                             "citation_index": 1,
                         },
                         {
-                            "department": "bank_partnerships",
+                            "department": BANK,
                             "statement": "8 business hours",
                             "citation_index": 1,
                         },
@@ -309,7 +310,7 @@ def test_multi_department_reconcile_surfaces_conflicts():
             json.dumps(
                 {
                     "intent": "policy_lookup",
-                    "target_departments": ["risk", "bank_partnerships"],
+                    "target_departments": [RISK, BANK],
                     "confidence": 0.9,
                 }
             ),
@@ -333,7 +334,7 @@ def test_multi_department_reconcile_surfaces_conflicts():
     assert len(result.get("conflicts") or []) == 1
     assert result["conflicts"][0]["topic"] == "Level 2 SLA"
     assert len(result["citations"]) == 2
-    assert set(result["source_departments"]) == {"risk", "bank_partnerships"}
+    assert set(result["source_departments"]) == {RISK, BANK}
 
 
 @pytest.fixture()
@@ -361,7 +362,7 @@ def test_post_chat_http_answered_with_citations(api_client, monkeypatch):
             json.dumps(
                 {
                     "intent": "policy_lookup",
-                    "target_departments": ["risk"],
+                    "target_departments": [RISK],
                     "confidence": 0.92,
                 }
             ),
@@ -386,7 +387,7 @@ def test_post_chat_http_answered_with_citations(api_client, monkeypatch):
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "answered"
-    assert body["source_departments"] == ["risk"]
+    assert body["source_departments"] == [RISK]
     assert len(body["citations"]) == 1
     assert body["citations"][0]["title"] == "Risk Alert Escalation Policy"
     assert "[1]" in body["answer"]
@@ -397,7 +398,7 @@ def test_post_chat_http_partial_includes_refusals(api_client, monkeypatch):
     """Partial ladder: wire exposes refusals for FE PartialGapBanner."""
     grow_chunk = RetrievedChunk(
         chunk_id="c-grow-1",
-        department="grow_enablement",
+        department=GROW,
         doc_type="Operation",
         title="Merchant Onboarding",
         url="https://confluence.example.com/grow/onboard",
@@ -413,7 +414,7 @@ def test_post_chat_http_partial_includes_refusals(api_client, monkeypatch):
     class DeptAwareRetriever(StubRetriever):
         def search(self, **kwargs: Any) -> list[RetrievedChunk]:
             self.search_calls.append(kwargs)
-            if kwargs.get("department") == "grow_enablement":
+            if kwargs.get("department") == GROW:
                 return [grow_chunk]
             return []
 
@@ -422,7 +423,7 @@ def test_post_chat_http_partial_includes_refusals(api_client, monkeypatch):
             json.dumps(
                 {
                     "intent": "policy_lookup",
-                    "target_departments": ["risk", "grow_enablement"],
+                    "target_departments": [RISK, GROW],
                     "confidence": 0.88,
                 }
             ),
@@ -447,8 +448,8 @@ def test_post_chat_http_partial_includes_refusals(api_client, monkeypatch):
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "partial"
-    assert body["refusals"] == ["risk"]
-    assert body["source_departments"] == ["grow_enablement"]
+    assert body["refusals"] == [RISK]
+    assert body["source_departments"] == [GROW]
 
 
 def test_full_refusal_includes_escalation_on_api():
@@ -458,7 +459,7 @@ def test_full_refusal_includes_escalation_on_api():
             json.dumps(
                 {
                     "intent": "policy_lookup",
-                    "target_departments": ["risk"],
+                    "target_departments": [RISK],
                     "confidence": 0.9,
                 }
             ),
@@ -485,7 +486,7 @@ def test_refusal_body_localized(lang: str, needle: str):
             json.dumps(
                 {
                     "intent": "policy_lookup",
-                    "target_departments": ["risk"],
+                    "target_departments": [RISK],
                     "confidence": 0.9,
                 }
             ),

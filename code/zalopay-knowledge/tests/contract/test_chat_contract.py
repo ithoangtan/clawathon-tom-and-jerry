@@ -7,12 +7,13 @@ from fastapi.testclient import TestClient
 
 from app.api.app import create_app
 from app.api.schemas import ChatResponse, ClarifyingQuestion, ConflictModel, ConflictSide
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 AUTH_HEADERS = {
     "X-GreenNode-AgentBase-User-Id": "contract-user",
     "X-GreenNode-AgentBase-Session-Id": "contract-session",
     "X-GreenNode-AgentBase-Role": "business",
-    "X-GreenNode-AgentBase-Home-Department": "risk",
+    "X-GreenNode-AgentBase-Home-Department": RISK,
 }
 
 
@@ -59,7 +60,7 @@ def _answered_response() -> ChatResponse:
                 "page": 3,
             },
         ],
-        source_departments=["risk"],
+        source_departments=[RISK],
         confidence=0.87,
         feedback_id="fb-550e8400-e29b-41d4-a716-446655440000",
         status="answered",
@@ -123,7 +124,7 @@ class TestChatContractSuccess:
                 "/chat",
                 json={
                     "question": "What is the escalation process for risk alerts?",
-                    "target_departments": ["risk"],
+                    "target_departments": [RISK],
                 },
                 headers=AUTH_HEADERS,
             )
@@ -145,7 +146,7 @@ class TestChatContractSuccess:
         }
         assert body["status"] == "answered"
         assert 0.0 <= body["confidence"] <= 1.0
-        assert body["source_departments"] == ["risk"]
+        assert body["source_departments"] == [RISK]
         assert body["lang"] == "en"
         assert "[1]" in body["answer"]
 
@@ -182,7 +183,7 @@ class TestChatContractSuccess:
             status="refused",
             clarifying_question=ClarifyingQuestion(
                 prompt="Which department's policies are you asking about?",
-                options=["risk", "grow_enablement"],
+                options=[RISK, GROW],
             ),
         )
         with patch("app.api.routes.run_chat", return_value=response):
@@ -195,7 +196,7 @@ class TestChatContractSuccess:
         body = resp.json()
         cq = body["clarifying_question"]
         assert cq["prompt"] == "Which department's policies are you asking about?"
-        assert cq["options"] == ["risk", "grow_enablement"]
+        assert cq["options"] == [RISK, GROW]
 
     def test_conflict_shape(self, client: TestClient, ready_index: None) -> None:
         _ = ready_index
@@ -206,7 +207,7 @@ class TestChatContractSuccess:
         response = ChatResponse(
             answer="Conflicting info [1][2]",
             citations=[citation, citation],
-            source_departments=["risk", "bank_partnerships"],
+            source_departments=[RISK, BANK],
             confidence=0.6,
             feedback_id="fb-conflict",
             status="partial",
@@ -215,12 +216,12 @@ class TestChatContractSuccess:
                     topic="Escalation SLA for Level 2 incidents",
                     sides=[
                         ConflictSide(
-                            department="risk",
+                            department=RISK,
                             statement="Level 2 must be resolved within 4 hours.",
                             citation=citation,  # type: ignore[arg-type]
                         ),
                         ConflictSide(
-                            department="bank_partnerships",
+                            department=BANK,
                             statement="Level 2 SLA is 8 business hours.",
                             citation=citation,  # type: ignore[arg-type]
                         ),
@@ -239,7 +240,7 @@ class TestChatContractSuccess:
         conflict = body["conflicts"][0]
         assert conflict["topic"] == "Escalation SLA for Level 2 incidents"
         assert len(conflict["sides"]) == 2
-        assert conflict["sides"][0]["department"] == "risk"
+        assert conflict["sides"][0]["department"] == RISK
         assert "citation" in conflict["sides"][0]
 
     def test_snake_case_wire_format(self, client: TestClient, ready_index: None) -> None:

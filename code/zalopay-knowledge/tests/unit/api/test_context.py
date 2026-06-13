@@ -15,6 +15,7 @@ from tests.unit.api.conftest import (
     HEADER_SESSION,
     HEADER_USER,
 )
+from tests.department_fixtures import DEFAULT_HOME, GROW, RISK
 
 
 class TestParseContextFromHeaders:
@@ -23,7 +24,7 @@ class TestParseContextFromHeaders:
         assert ctx.user_id == "test-user"
         assert ctx.session_id == "test-session"
         assert ctx.role == "engineer"
-        assert ctx.home_department == "risk"
+        assert ctx.home_department == RISK
 
     def test_applies_defaults_for_optional_headers(self) -> None:
         ctx = parse_context_from_headers(
@@ -33,7 +34,7 @@ class TestParseContextFromHeaders:
             }
         )
         assert ctx.role == "business"
-        assert ctx.home_department == "risk"
+        assert ctx.home_department == RISK
 
     def test_case_insensitive_header_keys(self) -> None:
         ctx = parse_context_from_headers(
@@ -68,13 +69,13 @@ class TestRequireUserContext:
             x_greennode_agentbase_user_id="user-abc",
             x_greennode_agentbase_session_id="sess-xyz",
             x_greennode_agentbase_role="pm",
-            x_greennode_agentbase_home_department="grow_enablement",
+            x_greennode_agentbase_home_department=GROW,
         )
         assert ctx == UserContext(
             user_id="user-abc",
             session_id="sess-xyz",
             role="pm",
-            home_department="grow_enablement",
+            home_department=GROW,
         )
 
     def test_missing_user_id_returns_400(self) -> None:
@@ -107,7 +108,7 @@ class TestRequireUserContext:
             x_greennode_agentbase_home_department=None,
         )
         assert ctx.role == "business"
-        assert ctx.home_department == "risk"
+        assert ctx.home_department == RISK
 
     def test_whitespace_only_user_id_returns_400(self) -> None:
         with pytest.raises(HTTPException) as exc:

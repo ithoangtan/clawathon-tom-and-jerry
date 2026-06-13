@@ -20,7 +20,11 @@ User-pinned departments bypass the LLM and the confidence gate entirely.
 import logging
 from typing import Callable
 
-from app.common.departments import department_catalog_text, iter_keys
+from app.common.departments import (
+    department_catalog_text,
+    format_department_keys_for_prompt,
+    iter_keys,
+)
 from app.config import Settings, get_settings
 from app.graph.nodes._helpers import budget_exceeded, parse_json_response
 from app.graph.state import GraphState
@@ -166,6 +170,7 @@ def _build_messages(
     rendered = prompt.render(
         question=question,
         department_catalog=department_catalog_text(lang),
+        department_keys=format_department_keys_for_prompt(),
         conversation_history=history_block,
     )
     return [

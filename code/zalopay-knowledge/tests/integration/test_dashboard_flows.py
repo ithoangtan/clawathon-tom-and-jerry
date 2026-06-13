@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app.api.app import create_app
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_dashboard_tracks_partial_refusal_and_conflict_rates() -> None:
@@ -18,7 +19,7 @@ def test_dashboard_tracks_partial_refusal_and_conflict_rates() -> None:
         session_id="dash-session",
         role="engineer",
         question="How does merchant onboarding work?",
-        departments=["grow_enablement"],
+        departments=[GROW],
         status="partial",
         confidence=0.55,
         latency_ms=2100,

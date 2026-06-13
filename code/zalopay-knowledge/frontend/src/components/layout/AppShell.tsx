@@ -9,6 +9,7 @@ import {
   Brain,
   Database,
   LayoutDashboard,
+  Loader2,
   MessageSquare,
   Plus,
   Settings,
@@ -158,6 +159,22 @@ export function Nav() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const locale = useUserStore((s) => s.locale);
+  const { loading } = useHealth();
+
+  if (loading) {
+    return (
+      <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-surface">
+        <div className="flex items-center gap-3">
+          <Brain size="lg" strokeWidth={2.25} className="text-brand" />
+          <span className="text-xl font-bold text-content-primary">Zalopay Knowledge</span>
+        </div>
+        <Loader2 size="lg" className="text-brand" />
+        <p className="text-sm text-content-secondary">
+          {locale === "vi" ? "Đang kết nối…" : "Connecting…"}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden">

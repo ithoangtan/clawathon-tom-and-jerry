@@ -38,8 +38,7 @@ class RetrieverPort(Protocol):
         """Retrieve the top-*k* chunks for *query* from *department*'s partition.
 
         Args:
-            department: Canonical department key (``risk`` / ``grow_enablement``
-                        / ``bank_partnerships``).
+            department: Canonical department key (see ``app.common.departments`` registry).
             query: Natural-language question string (NOT yet prefixed with
                    ``query: `` — the adapter handles that).
             k: Maximum number of chunks to return.  May return fewer when the

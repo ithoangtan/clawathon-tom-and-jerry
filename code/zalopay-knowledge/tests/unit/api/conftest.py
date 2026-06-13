@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.api.app import create_app
 from app.api.schemas import ChatResponse
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 HEADER_USER = "X-GreenNode-AgentBase-User-Id"
 HEADER_SESSION = "X-GreenNode-AgentBase-Session-Id"
@@ -17,7 +18,7 @@ AUTH_HEADERS = {
     HEADER_USER: "test-user",
     HEADER_SESSION: "test-session",
     HEADER_ROLE: "engineer",
-    HEADER_HOME: "risk",
+    HEADER_HOME: RISK,
 }
 
 
@@ -56,7 +57,7 @@ def sample_chat_response() -> ChatResponse:
                 "page": None,
             }
         ],
-        source_departments=["risk"],
+        source_departments=[RISK],
         confidence=0.87,
         feedback_id="fb-550e8400-e29b-41d4-a716-446655440000",
         status="answered",

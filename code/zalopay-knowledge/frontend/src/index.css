@@ -601,6 +601,20 @@
     100% { background-position: -100% 0; }
   }
 
+  /* ─── Streaming cursor ─── */
+  .streaming-cursor {
+    display: inline-block;
+    margin-left: 1px;
+    font-weight: 300;
+    color: var(--color-brand, #0068ff);
+    animation: streaming-blink 0.7s step-end infinite;
+  }
+
+  @keyframes streaming-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
   /* ─── Prose chat ─── */
   .prose-chat > :first-child { @apply mt-0; }
   .prose-chat > :last-child { @apply mb-0; }
@@ -949,6 +963,7 @@
     .typing-shimmer::after,
     .streaming-text.is-streaming::after,
     .streaming-shimmer,
+    .streaming-cursor,
     .typing-dot,
     .pipeline-dept-chip--active {
       animation: none !important;

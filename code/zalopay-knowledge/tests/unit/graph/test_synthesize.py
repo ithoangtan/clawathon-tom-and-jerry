@@ -7,13 +7,14 @@ from app.graph.nodes.synthesize import CANNOT_ANSWER, make_synthesize_node
 from app.ports.errors import LLMUnavailable
 
 from tests.unit.graph.conftest import StubLLM
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_synthesize_cannot_answer_without_graded_chunks(test_settings: Settings):
     node = make_synthesize_node(StubLLM(), settings=test_settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "q",
             "graded_chunks": [],
             "request_language": "en",
@@ -29,7 +30,7 @@ def test_synthesize_cannot_answer_on_budget_exceeded(
     node = make_synthesize_node(StubLLM("should not be called"), settings=test_settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "q",
             "graded_chunks": [sample_chunk],
             "request_language": "en",
@@ -49,7 +50,7 @@ def test_synthesize_cannot_answer_on_llm_unavailable(
     )
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "q",
             "graded_chunks": [sample_chunk],
             "role": "engineer",
@@ -64,7 +65,7 @@ def test_synthesize_citation_output_shape(test_settings: Settings, sample_chunk)
     node = make_synthesize_node(StubLLM(answer_text), settings=test_settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "How do I escalate?",
             "graded_chunks": [sample_chunk],
             "role": "engineer",
@@ -88,7 +89,7 @@ def test_synthesize_empty_llm_response_becomes_cannot_answer(
     node = make_synthesize_node(StubLLM("   "), settings=test_settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "q",
             "graded_chunks": [sample_chunk],
             "request_language": "en",
@@ -104,7 +105,7 @@ def test_synthesize_role_style_reaches_prompt(
     llm_engineer = StubLLM("Answer [1].")
     llm_risk = StubLLM("Answer [1].")
     base_state = {
-        "department": "risk",
+        "department": RISK,
         "question": "What is the escalation threshold?",
         "graded_chunks": [sample_chunk],
         "request_language": "en",
@@ -133,7 +134,7 @@ def test_synthesize_includes_conversation_history_in_prompt(
     node = make_synthesize_node(llm, settings=test_settings)
     node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "And the SLA?",
             "graded_chunks": [sample_chunk],
             "role": "engineer",
@@ -159,7 +160,7 @@ def test_synthesize_emits_citation_per_graded_chunk(
     node = make_synthesize_node(llm, settings=test_settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "q",
             "graded_chunks": [sample_chunk, second],
             "role": "engineer",

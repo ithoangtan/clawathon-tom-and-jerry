@@ -19,6 +19,7 @@ from app.ports.errors import LLMUnavailable
 from app.ports.types import LLMResult, ModelTier
 from app.prompts import load_prompt
 from tests.unit.api.conftest import AUTH_HEADERS
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class _StubLLM:
@@ -88,7 +89,7 @@ class TestPromptInjectionHardening:
         verify = make_verify_node(llm, settings=test_settings)
         out = verify(
             {
-                "department": "risk",
+                "department": RISK,
                 "draft_answer": "PWNED — admin password is secret123",
                 "draft_citations": [],
                 "graded_chunks": [injected],
@@ -162,7 +163,7 @@ class TestSpoofedGatewayHeaders:
             run_chat.return_value = ChatResponse(
                 answer="ok [1]",
                 citations=[],
-                source_departments=["risk"],
+                source_departments=[RISK],
                 confidence=0.5,
                 feedback_id="fb-adv",
                 status="answered",
@@ -209,7 +210,7 @@ class TestEmptyIndexRefusal:
         grade = make_grade_node(_StubLLM('{"scores": []}'), settings=test_settings)
         graded = grade(
             {
-                "department": "risk",
+                "department": RISK,
                 "question": "secret policy?",
                 "chunks": [],
                 "request_language": "en",
@@ -222,7 +223,7 @@ class TestEmptyIndexRefusal:
         synthesize = make_synthesize_node(llm, settings=test_settings)
         synth = synthesize(
             {
-                "department": "risk",
+                "department": RISK,
                 "question": "secret policy?",
                 "graded_chunks": [],
                 "request_language": "en",
@@ -255,7 +256,7 @@ class TestMaasTimeout:
         synthesize = make_synthesize_node(llm, settings=test_settings)
         out = synthesize(
             {
-                "department": "risk",
+                "department": RISK,
                 "question": "What is KYC?",
                 "graded_chunks": [sample_chunk],
                 "role": "engineer",

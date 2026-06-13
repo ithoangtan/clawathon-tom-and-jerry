@@ -7,6 +7,7 @@ import re
 import uuid
 from typing import Iterator
 
+from app.common.departments import default_doc_type
 from app.ingestion.metadata import (
     DOC_TYPES,
     chunk_metadata_defaults,
@@ -42,13 +43,6 @@ _DOC_TYPE_KEYWORDS: tuple[tuple[tuple[str, ...], str], ...] = (
     ),
 )
 
-_DEPARTMENT_DOC_TYPE_DEFAULT: dict[str, str] = {
-    "risk": "Risk",
-    "grow_enablement": "Operation",
-    "bank_partnerships": "Technical",
-}
-
-
 def classify_doc_type(
     *,
     title: str,
@@ -64,7 +58,7 @@ def classify_doc_type(
     for keywords, doc_type in _DOC_TYPE_KEYWORDS:
         if any(kw in haystack for kw in keywords):
             return doc_type
-    default = _DEPARTMENT_DOC_TYPE_DEFAULT.get(department, "Operation")
+    default = default_doc_type(department) if department else "Operation"
     assert default in DOC_TYPES
     return default
 

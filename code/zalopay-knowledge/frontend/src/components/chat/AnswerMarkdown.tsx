@@ -22,15 +22,20 @@ export function AnswerMarkdown({
   streaming,
 }: AnswerMarkdownProps) {
   return (
-    <MarkdownRenderer
-      content={answer}
-      citations={citations}
-      onCitationClick={onCitationClick}
-      streaming={streaming}
-      className={classNames(
-        "answer-markdown",
-        streaming && "streaming-shimmer",
+    <>
+      <MarkdownRenderer
+        content={answer}
+        citations={citations}
+        onCitationClick={onCitationClick}
+        streaming={streaming}
+        className={classNames(
+          "answer-markdown",
+          streaming && "streaming-shimmer",
+        )}
+      />
+      {streaming && (
+        <span aria-hidden className="streaming-cursor">|</span>
       )}
-    />
+    </>
   );
 }

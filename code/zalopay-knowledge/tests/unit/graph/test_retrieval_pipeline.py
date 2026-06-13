@@ -7,6 +7,7 @@ from app.ports.types import RetrievedChunk
 from app.retrieval.lexical import bm25_scores, tokenize
 from app.retrieval.pipeline import refine_candidates
 from app.retrieval.recency import prefer_recent_versions
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class StubReranker:
@@ -27,7 +28,7 @@ def _chunk(
 ) -> RetrievedChunk:
     return RetrievedChunk(
         chunk_id=chunk_id,
-        department="risk",
+        department=RISK,
         doc_type="policy",
         title="Policy",
         url=url,

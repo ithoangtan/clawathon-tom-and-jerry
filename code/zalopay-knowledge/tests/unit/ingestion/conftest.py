@@ -15,6 +15,7 @@ if "pypdf" not in sys.modules:
     _pypdf.PdfReader = MagicMock()
     sys.modules["pypdf"] = _pypdf
 
+from app.common.departments import DepartmentKey
 from app.config import Settings
 from app.ingestion.metadata import serialize_acl, serialize_labels
 from app.store.meta import MetaStore
@@ -126,7 +127,7 @@ def sample_chunks() -> list[dict]:
     return [
         {
             "chunk_id": "risk-abc12345-deadbeef",
-            "department": "risk",
+            "department": DepartmentKey.RISK.value,
             "vec_pos": 0,
             "doc_type": "Risk",
             "title": "Escalation Policy",
@@ -146,7 +147,7 @@ def sample_chunks() -> list[dict]:
         },
         {
             "chunk_id": "risk-fedcba98-cafebabe",
-            "department": "risk",
+            "department": DepartmentKey.RISK.value,
             "vec_pos": 1,
             "doc_type": "Risk",
             "title": "Escalation Policy",

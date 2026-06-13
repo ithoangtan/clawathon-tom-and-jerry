@@ -10,6 +10,7 @@ from app.store.sync_state import (
 )
 
 from tests.unit.store.helpers import make_chunk_row
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class TestSyncOrchestratorLifecycle:
@@ -101,8 +102,8 @@ class TestSyncOrchestratorMetaIntegration:
     ) -> None:
         meta_store.upsert_chunks(
             [
-                make_chunk_row(chunk_id="c0", vec_pos=0, department="risk"),
-                make_chunk_row(chunk_id="c1", vec_pos=1, department="risk"),
+                make_chunk_row(chunk_id="c0", vec_pos=0, department=RISK),
+                make_chunk_row(chunk_id="c1", vec_pos=1, department=RISK),
                 make_chunk_row(chunk_id="c2", vec_pos=0, department="legal"),
             ]
         )
@@ -151,16 +152,16 @@ class TestSyncOrchestratorAdmin:
     ) -> None:
         snapshot = sync_orchestrator.admin_status_snapshot()
         assert snapshot["jobs"]["confluence"]["status"] == "pending"
-        assert snapshot["departments_indexed"]["risk"]["has_data"] is False
+        assert snapshot["departments_indexed"][RISK]["has_data"] is False
 
     def test_admin_status_running_and_department_results(
         self, sync_orchestrator: SyncOrchestrator
     ) -> None:
-        sync_orchestrator.start("confluence", department="risk")
+        sync_orchestrator.start("confluence", department=RISK)
         sync_orchestrator.record_department_result(
             "confluence",
             DepartmentSyncResult(
-                department="risk",
+                department=RISK,
                 space_key="RISK",
                 status="running",
                 page_count=0,
@@ -170,8 +171,8 @@ class TestSyncOrchestratorAdmin:
         snapshot = sync_orchestrator.admin_status_snapshot()
         conf = snapshot["jobs"]["confluence"]
         assert conf["status"] == "running"
-        assert conf["target_department"] == "risk"
-        assert conf["departments"][0]["department"] == "risk"
+        assert conf["target_department"] == RISK
+        assert conf["departments"][0]["department"] == RISK
         assert conf["job_id"] is not None
 
     def test_history_records_finished_job(self, sync_orchestrator: SyncOrchestrator) -> None:
@@ -179,7 +180,7 @@ class TestSyncOrchestratorAdmin:
         sync_orchestrator.record_department_result(
             "confluence",
             DepartmentSyncResult(
-                department="risk",
+                department=RISK,
                 space_key="RISK",
                 status="success",
                 page_count=2,

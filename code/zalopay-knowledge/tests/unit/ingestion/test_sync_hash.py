@@ -4,6 +4,7 @@ from app.ingestion.sync_hash import page_content_hash, resolve_document_chunks
 from app.store.meta import MetaStore
 
 from tests.unit.store.helpers import make_chunk_row
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_page_content_hash_normalizes_whitespace() -> None:
@@ -20,7 +21,7 @@ def test_resolve_document_chunks_reuses_when_hash_matches(meta_store: MetaStore)
     ]
     meta_store.upsert_chunks(rows)
     meta_store.record_source_hashes(
-        "risk",
+        RISK,
         [{"url": url, "source_id": "1", "content_hash": digest, "last_modified": None}],
     )
 
@@ -31,7 +32,7 @@ def test_resolve_document_chunks_reuses_when_hash_matches(meta_store: MetaStore)
         return [{"chunk_id": "new"}]
 
     chunks, skipped = resolve_document_chunks(
-        department="risk",
+        department=RISK,
         url=url,
         text=text,
         meta=meta_store,
@@ -47,7 +48,7 @@ def test_resolve_document_chunks_reuses_when_hash_matches(meta_store: MetaStore)
 def test_resolve_document_chunks_rechunks_when_hash_differs(meta_store: MetaStore) -> None:
     url = "https://example.com/policy"
     meta_store.record_source_hashes(
-        "risk",
+        RISK,
         [
             {
                 "url": url,
@@ -60,7 +61,7 @@ def test_resolve_document_chunks_rechunks_when_hash_differs(meta_store: MetaStor
 
     new_chunks = [{"chunk_id": "fresh", "url": url, "text": "updated"}]
     chunks, skipped = resolve_document_chunks(
-        department="risk",
+        department=RISK,
         url=url,
         text="updated body",
         meta=meta_store,

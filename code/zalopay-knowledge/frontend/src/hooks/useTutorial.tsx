@@ -239,13 +239,15 @@ function useTutorialController() {
 
   useEffect(() => () => destroyTour(), [destroyTour]);
 
-  // useLayoutEffect: start right after first paint, before the 900ms-style delay users perceive.
   // Wait for persist hydration so returning users with "Don't show again" are not auto-started.
-  useLayoutEffect(() => {
+  // Only auto-start on the chat route ("/") after a 3-second delay.
+  useEffect(() => {
     if (!hasHydrated || dismissed || autoStartedRef.current || isRunning) return;
+    if (location.pathname !== "/") return;
     autoStartedRef.current = true;
-    startTutorial(0);
-  }, [hasHydrated, dismissed, isRunning, startTutorial]);
+    const timerId = window.setTimeout(() => startTutorial(0), 3000);
+    return () => window.clearTimeout(timerId);
+  }, [hasHydrated, dismissed, isRunning, startTutorial, location.pathname]);
 
   const pauseTutorial = useCallback(() => {
     destroyTour();

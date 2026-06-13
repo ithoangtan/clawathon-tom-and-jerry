@@ -7,6 +7,7 @@ import pytest
 
 from app.ingestion.chunker import _MAX_CHARS, _MIN_CHARS, _OVERLAP_CHARS, chunk_text, classify_doc_type
 from app.ingestion.metadata import parse_acl, parse_labels
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 # Approximate token count using the chunker's 4 chars/token heuristic.
 _CHARS_PER_TOKEN = 4
@@ -25,15 +26,15 @@ def _hash_prefix(department: str, url: str, text: str) -> str:
 
 class TestChunkText:
     def test_empty_text_returns_no_chunks(self):
-        assert chunk_text("", department="risk", doc_type="policy", title="T", url="u") == []
+        assert chunk_text("", department=RISK, doc_type="policy", title="T", url="u") == []
 
     def test_whitespace_only_returns_no_chunks(self):
-        assert chunk_text("   \n\n  ", department="risk", doc_type="policy", title="T", url="u") == []
+        assert chunk_text("   \n\n  ", department=RISK, doc_type="policy", title="T", url="u") == []
 
     def test_produces_at_least_one_chunk(self, sample_text: str):
         chunks = chunk_text(
             sample_text,
-            department="risk",
+            department=RISK,
             doc_type="policy",
             title="Escalation Policy",
             url="https://example.com/policy",
@@ -44,7 +45,7 @@ class TestChunkText:
         """Long segments are windowed to ~300–800 tokens (chars heuristic)."""
         chunks = chunk_text(
             long_text,
-            department="risk",
+            department=RISK,
             doc_type="policy",
             title="Long Doc",
             url="https://example.com/long",
@@ -61,7 +62,7 @@ class TestChunkText:
     def test_metadata_preserved_on_every_chunk(self, sample_text: str):
         chunks = chunk_text(
             sample_text,
-            department="grow_enablement",
+            department=GROW,
             doc_type="Operation",
             title="Growth Playbook",
             url="https://example.com/grow",
@@ -78,7 +79,7 @@ class TestChunkText:
         )
         assert chunks
         for chunk in chunks:
-            assert chunk["department"] == "grow_enablement"
+            assert chunk["department"] == GROW
             assert chunk["doc_type"] == "Operation"
             assert chunk["title"] == "Growth Playbook"
             assert chunk["url"] == "https://example.com/grow"
@@ -100,7 +101,7 @@ class TestChunkText:
     def test_pdf_page_metadata(self):
         chunks = chunk_text(
             "Page content about bank partnerships.",
-            department="bank_partnerships",
+            department=BANK,
             doc_type="guide",
             title="partner.pdf",
             url="https://drive.google.com/file/d/abc",
@@ -117,7 +118,7 @@ class TestChunkText:
         text = section_a + "\n\n" + section_b
         chunks = chunk_text(
             text,
-            department="risk",
+            department=RISK,
             doc_type="policy",
             title="Segmented",
             url="https://example.com/seg",
@@ -132,7 +133,7 @@ class TestChunkText:
         segment = "word " * 2000  # well over _MAX_CHARS
         chunks = chunk_text(
             segment,
-            department="risk",
+            department=RISK,
             doc_type="policy",
             title="Overlap",
             url="https://example.com/overlap",
@@ -147,20 +148,20 @@ class TestChunkText:
         url = "https://example.com/stable"
         chunks_a = chunk_text(
             sample_text,
-            department="risk",
+            department=RISK,
             doc_type="policy",
             title="T",
             url=url,
         )
         chunks_b = chunk_text(
             sample_text,
-            department="risk",
+            department=RISK,
             doc_type="policy",
             title="T",
             url=url,
         )
         for a, b in zip(chunks_a, chunks_b, strict=True):
-            expected = _hash_prefix("risk", url, a["text"])
+            expected = _hash_prefix(RISK, url, a["text"])
             assert a["chunk_id"].startswith(expected)
             assert b["chunk_id"].startswith(expected)
             # UUID suffix differs across calls.
@@ -170,7 +171,7 @@ class TestChunkText:
         text = "Line one\n\n\n\n\nLine two"
         chunks = chunk_text(
             text,
-            department="risk",
+            department=RISK,
             doc_type="policy",
             title="T",
             url="u",
@@ -181,26 +182,26 @@ class TestChunkText:
 
 class TestClassifyDocType:
     def test_title_keyword_prd(self):
-        assert classify_doc_type(title="Q1 Product PRD", department="risk") == "PRD"
+        assert classify_doc_type(title="Q1 Product PRD", department=RISK) == "PRD"
 
     def test_title_keyword_rca(self):
-        assert classify_doc_type(title="Payment outage RCA", department="risk") == "RCA"
+        assert classify_doc_type(title="Payment outage RCA", department=RISK) == "RCA"
 
     def test_url_keyword_security(self):
         assert (
             classify_doc_type(
                 title="Review",
                 url="https://wiki/spaces/RISK/pages/security-audit",
-                department="risk",
+                department=RISK,
             )
             == "Security"
         )
 
     def test_department_default_risk(self):
-        assert classify_doc_type(title="General notes", department="risk") == "Risk"
+        assert classify_doc_type(title="General notes", department=RISK) == "Risk"
 
     def test_department_default_grow(self):
-        assert classify_doc_type(title="Notes", department="grow_enablement") == "Operation"
+        assert classify_doc_type(title="Notes", department=GROW) == "Operation"
 
     def test_runbook_maps_to_operation(self):
-        assert classify_doc_type(title="Settlement runbook", department="bank_partnerships") == "Operation"
+        assert classify_doc_type(title="Settlement runbook", department=BANK) == "Operation"

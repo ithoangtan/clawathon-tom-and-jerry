@@ -11,6 +11,7 @@ from app.graph.pipeline import (
     map_node_to_step_key,
     next_dept_step,
 )
+from tests.department_fixtures import RISK
 
 
 def test_node_step_map_covers_dept_subgraph_nodes() -> None:
@@ -37,14 +38,14 @@ def test_build_pipeline_event_includes_timing_fields() -> None:
         step_key="router",
         phase="end",
         node="router",
-        departments=["risk"],
+        departments=[RISK],
         stream_started=started,
         step_started=started,
     )
     assert payload["step_key"] == "router"
     assert payload["phase"] == "end"
     assert payload["node"] == "router"
-    assert payload["departments"] == ["risk"]
+    assert payload["departments"] == [RISK]
     assert payload["elapsed_ms"] >= 0
     assert payload["step_elapsed_ms"] is not None
     assert payload["ts"].endswith("Z")
@@ -52,11 +53,11 @@ def test_build_pipeline_event_includes_timing_fields() -> None:
 
 def test_pipeline_tracker_start_and_end() -> None:
     tracker = PipelineTracker()
-    start = tracker.start_event("retrieve", node="retrieve", departments=["risk"])
+    start = tracker.start_event("retrieve", node="retrieve", departments=[RISK])
     assert start["phase"] == "start"
     assert start["step_elapsed_ms"] is None
 
-    end = tracker.end_event("retrieve", node="retrieve", departments=["risk"])
+    end = tracker.end_event("retrieve", node="retrieve", departments=[RISK])
     assert end["phase"] == "end"
     assert end["step_elapsed_ms"] is not None
 
@@ -67,14 +68,14 @@ def test_pipeline_emitter_streams_dept_steps() -> None:
     def writer(payload: dict) -> None:
         emitted.append(payload)
 
-    emitter = PipelineEmitter(writer, department="risk")
+    emitter = PipelineEmitter(writer, department=RISK)
     emitter.branch_start()
     emitter.on_node_complete("retrieve")
     emitter.on_node_complete("grade")
 
     assert emitted[0]["step_key"] == "retrieve"
     assert emitted[0]["phase"] == "start"
-    assert emitted[0]["departments"] == ["risk"]
+    assert emitted[0]["departments"] == [RISK]
 
     assert emitted[1]["step_key"] == "retrieve"
     assert emitted[1]["phase"] == "end"

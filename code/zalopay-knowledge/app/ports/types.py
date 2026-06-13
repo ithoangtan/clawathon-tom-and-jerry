@@ -60,7 +60,7 @@ class RetrievedChunk:
     """Stable unique id for this chunk (used as FAISS vector id key)."""
 
     department: str
-    """Department key this chunk belongs to (``risk`` / ``grow_enablement`` / ``bank_partnerships``)."""
+    """Department key this chunk belongs to (see ``app.common.departments`` registry)."""
 
     # ── Document metadata ─────────────────────────────────────────────────────
     doc_type: str

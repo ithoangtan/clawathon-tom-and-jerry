@@ -29,6 +29,7 @@ except ImportError:
     from langgraph.constants import Send  # type: ignore
 
 from tests.unit.graph.conftest import StubLLM, StubRetriever
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_dept_subgraph_compiles(graph_deps: GraphDeps):
@@ -76,10 +77,10 @@ def test_route_after_router_fans_out_with_send(test_settings):
     graph_deadline = time.time() + 60
     result = route(
         {
-            "target_departments": ["risk", "grow_enablement"],
+            "target_departments": [RISK, GROW],
             "question": "q",
             "role": "engineer",
-            "home_department": "risk",
+            "home_department": RISK,
             "request_language": "en",
             "deadline_ts": graph_deadline,
         }
@@ -88,10 +89,10 @@ def test_route_after_router_fans_out_with_send(test_settings):
     assert len(result) == 2
     assert all(isinstance(s, Send) for s in result)
     payloads = [s.arg for s in result]
-    assert {p["department"] for p in payloads} == {"risk", "grow_enablement"}
+    assert {p["department"] for p in payloads} == {RISK, GROW}
     assert all(p["question"] == "q" for p in payloads)
     assert all(p["role"] == "engineer" for p in payloads)
-    assert all(p["home_department"] == "risk" for p in payloads)
+    assert all(p["home_department"] == RISK for p in payloads)
     # Per-branch deadline is min(graph budget, now + branch_timeout_s).
     expected_branch_deadline = min(
         graph_deadline, time.time() + test_settings.branch_timeout_s
@@ -127,7 +128,7 @@ def test_graph_invoke_end_to_end_greeting(graph_deps: GraphDeps):
             "user_id": "u1",
             "session_id": "s1",
             "role": "engineer",
-            "home_department": "risk",
+            "home_department": RISK,
             "pinned": [],
         }
     )
@@ -147,7 +148,7 @@ def test_graph_stm_accumulates_messages_across_turns(
         '{"intent": "greeting", "target_departments": [], "confidence": 0.99}'
     )
     follow_up_payload = (
-        '{"intent": "policy_lookup", "target_departments": ["risk"], "confidence": 0.9}'
+        '{"intent": "policy_lookup", "target_departments": [RISK], "confidence": 0.9}'
     )
     llm = StubLLM(greeting_payload)
     graph_deps.llm = llm
@@ -160,7 +161,7 @@ def test_graph_stm_accumulates_messages_across_turns(
             "user_id": "u1",
             "session_id": "stm-session-1",
             "role": "engineer",
-            "home_department": "risk",
+            "home_department": RISK,
             "pinned": [],
             "messages": [HumanMessage(content="hello")],
         },
@@ -174,7 +175,7 @@ def test_graph_stm_accumulates_messages_across_turns(
             "user_id": "u1",
             "session_id": "stm-session-1",
             "role": "engineer",
-            "home_department": "risk",
+            "home_department": RISK,
             "pinned": [],
             "messages": [HumanMessage(content="And what's the SLA for that?")],
         },
@@ -201,7 +202,7 @@ def test_dept_subgraph_refuses_when_branch_budget_exceeded(
     subgraph = build_dept_subgraph(graph_deps)
     result = subgraph.invoke(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "What is the SLA?",
             "role": "engineer",
             "request_language": "en",
@@ -224,7 +225,7 @@ def test_dept_branch_degrades_when_subgraph_raises(graph_deps: GraphDeps):
     ):
         result = branch(
             {
-                "department": "risk",
+                "department": RISK,
                 "question": "What is KYC?",
                 "role": "engineer",
                 "request_language": "en",
@@ -233,6 +234,6 @@ def test_dept_branch_degrades_when_subgraph_raises(graph_deps: GraphDeps):
         )
 
     dept_result = result["dept_results"][0]
-    assert dept_result["department"] == "risk"
+    assert dept_result["department"] == RISK
     assert dept_result["status"] == "timeout"
     assert "branch_error" in dept_result["warnings"]

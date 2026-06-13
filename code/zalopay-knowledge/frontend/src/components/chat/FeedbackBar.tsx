@@ -66,21 +66,23 @@ export function FeedbackBar({ feedbackId }: FeedbackBarProps) {
         {t("feedbackPrompt", locale)}
       </p>
 
-      <div className="mb-3">
-        <label htmlFor={commentId} className="block text-xs text-slate-500 mb-1">
-          {t("feedbackComment", locale)}
-        </label>
-        <textarea
-          id={commentId}
-          className="w-full rounded-lg border border-slate-200/80 bg-white/80 p-2 text-sm resize-y min-h-[60px] transition-shadow focus:border-brand focus:ring-1 focus:ring-brand/30"
-          placeholder={t("feedbackCommentPlaceholder", locale)}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          maxLength={2000}
-          disabled={submitting}
-          aria-describedby={`${feedbackId}-prompt`}
-        />
-      </div>
+      {rating !== null && (
+        <div className="mb-3">
+          <label htmlFor={commentId} className="block text-xs text-slate-500 mb-1">
+            {t("feedbackComment", locale)}
+          </label>
+          <textarea
+            id={commentId}
+            className="w-full rounded-lg border border-slate-200/80 bg-white/80 p-2 text-sm resize-y min-h-[60px] transition-shadow focus:border-brand focus:ring-1 focus:ring-brand/30"
+            placeholder={t("feedbackCommentPlaceholder", locale)}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={2000}
+            disabled={submitting}
+            aria-describedby={`${feedbackId}-prompt`}
+          />
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button

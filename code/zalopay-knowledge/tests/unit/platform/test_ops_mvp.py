@@ -15,6 +15,7 @@ from app.graph.build import _make_dept_branch, build_dept_subgraph
 from app.ingestion.indexer import IndexBuilder
 from app.ingestion.sync_hash import page_content_hash
 from tests.unit.graph.conftest import StubLLM, StubRetriever, test_settings  # noqa: F401
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class TestSyncPlatformInvariants:
@@ -67,10 +68,10 @@ class TestStageTracing:
             {
                 "question": "q",
                 "retrieval_query": "rewrite",
-                "evidence": {"risk": [{"chunk_id": "1", "score": 0.9}]},
+                "evidence": {RISK:  [{"chunk_id": "1", "score": 0.9}]},
                 "dept_results": [
                     {
-                        "department": "risk",
+                        "department": RISK,
                         "status": "answered",
                         "confidence": 0.8,
                         "citations": [{}],
@@ -100,7 +101,7 @@ class TestDeptSubgraphDegradation:
         ):
             result = branch(
                 {
-                    "department": "risk",
+                    "department": RISK,
                     "question": "What is KYC?",
                     "role": "engineer",
                     "request_language": "en",

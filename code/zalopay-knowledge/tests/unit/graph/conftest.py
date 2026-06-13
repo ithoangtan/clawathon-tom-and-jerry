@@ -10,6 +10,7 @@ from app.graph.build import GraphDeps
 from app.graph.state import Chunk, Citation, DeptResult
 from app.ports.errors import LLMUnavailable, RetrieverUnavailable
 from app.ports.types import LLMResult, RetrievedChunk
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 class StubLLM:
@@ -97,7 +98,7 @@ def past_deadline() -> float:
 def sample_retrieved_chunk() -> RetrievedChunk:
     return RetrievedChunk(
         chunk_id="c1",
-        department="risk",
+        department=RISK,
         doc_type="policy",
         title="Escalation Policy",
         url="https://example.com/policy",
@@ -147,7 +148,7 @@ def sample_citation() -> Citation:
 @pytest.fixture
 def answered_dept_result(sample_citation: Citation) -> DeptResult:
     return DeptResult(
-        department="risk",
+        department=RISK,
         status="answered",
         answer="Escalation requires approval [1].",
         citations=[sample_citation],

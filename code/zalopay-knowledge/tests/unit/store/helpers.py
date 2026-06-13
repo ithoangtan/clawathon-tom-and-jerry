@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from app.ingestion.metadata import serialize_acl, serialize_labels
 from app.store.meta import CHUNK_COLUMNS
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def make_chunk_row(**overrides: object) -> dict:
     """Build a chunk dict with all CHUNK_COLUMNS keys."""
     row: dict = {
         "chunk_id": "chunk-1",
-        "department": "risk",
+        "department": RISK,
         "vec_pos": 0,
         "doc_type": "Risk",
         "title": "Test Policy",

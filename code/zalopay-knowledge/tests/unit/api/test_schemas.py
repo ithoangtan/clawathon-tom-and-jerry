@@ -18,6 +18,7 @@ from app.api.schemas import (
     SyncStartResponse,
     SyncStatusResponse,
 )
+from tests.department_fixtures import GROW, RISK
 
 
 class TestChatRequest:
@@ -27,8 +28,8 @@ class TestChatRequest:
         assert req.target_departments is None
 
     def test_valid_with_target_departments(self) -> None:
-        req = ChatRequest(question="hello", target_departments=["risk", "grow_enablement"])
-        assert req.target_departments == ["risk", "grow_enablement"]
+        req = ChatRequest(question="hello", target_departments=[RISK, GROW])
+        assert req.target_departments == [RISK, GROW]
 
     def test_rejects_empty_question(self) -> None:
         with pytest.raises(ValidationError) as exc:
@@ -118,7 +119,7 @@ class TestCitationModel:
 class TestConflictAndClarifying:
     def test_conflict_model(self) -> None:
         side = ConflictSide(
-            department="risk",
+            department=RISK,
             statement="SLA is 4 hours",
             citation=CitationModel(title="Runbook", url="https://example.com"),
         )
@@ -129,9 +130,9 @@ class TestConflictAndClarifying:
     def test_clarifying_question(self) -> None:
         cq = ClarifyingQuestion(
             prompt="Which department?",
-            options=["risk", "grow_enablement"],
+            options=[RISK, GROW],
         )
-        assert cq.options == ["risk", "grow_enablement"]
+        assert cq.options == [RISK, GROW]
 
 
 class TestChatResponse:
@@ -211,7 +212,7 @@ class TestSyncAndDashboardSchemas:
         item = HistoryItem(
             ts="2024-12-01T15:42:00Z",
             question="What is KYC?",
-            departments=["risk"],
+            departments=[RISK],
             status="answered",
             confidence=0.91,
             latency_ms=1523,

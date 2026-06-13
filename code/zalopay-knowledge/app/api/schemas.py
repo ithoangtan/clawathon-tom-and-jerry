@@ -13,16 +13,32 @@ field name, type, or optionality here MUST be mirrored in types.ts and
 API-CONTRACT.md before parallel frontend/backend work can proceed.
 """
 
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
-from pydantic import ConfigDict, Field
+from pydantic import AfterValidator, ConfigDict, Field
 from pydantic import BaseModel as _Base
+
+from app.common.departments import ROLES, get_department
 
 
 # ── Primitive literals (used in both request and response shapes) ─────────────
 
-Department = Literal["risk", "grow_enablement", "bank_partnerships"]
-Role = Literal["engineer", "pm", "ops", "risk", "business"]
+def _validate_department_key(value: str) -> str:
+    try:
+        get_department(value)
+    except KeyError as exc:
+        raise ValueError(str(exc)) from exc
+    return value
+
+
+def _validate_role(value: str) -> str:
+    if value not in ROLES:
+        raise ValueError(f"Unknown role {value!r}. Valid roles: {', '.join(ROLES)}")
+    return value
+
+
+Department = Annotated[str, AfterValidator(_validate_department_key)]
+Role = Annotated[str, AfterValidator(_validate_role)]
 AnswerStatus = Literal["answered", "refused", "partial"]
 RefusalReason = Literal["out_of_scope"]
 Lang = Literal["en", "vi"]

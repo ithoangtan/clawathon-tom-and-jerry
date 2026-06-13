@@ -12,6 +12,7 @@ from app.common.product_copy import (
     out_of_scope_notice,
     refusal_body,
 )
+from tests.department_fixtures import GROW, RISK
 
 
 def test_out_of_scope_lists_mvp_departments() -> None:
@@ -23,13 +24,13 @@ def test_out_of_scope_lists_mvp_departments() -> None:
 
 
 def test_escalation_hint_includes_teams_channel() -> None:
-    hint = escalation_hint("en", ["risk"])
+    hint = escalation_hint("en", [RISK])
     assert "teams-risk-knowledge" in hint
     assert "Lan Nguyen" in hint
 
 
 def test_refusal_body_includes_escalation_and_scope() -> None:
-    body = refusal_body("en", ["risk", "grow_enablement"])
+    body = refusal_body("en", [RISK, GROW])
     assert "Not covered in the docs" in body
     assert "teams-risk-knowledge" in body
     assert "MVP scope" in body
@@ -53,7 +54,7 @@ def test_maybe_append_high_stakes_disclaimer() -> None:
         "The fraud threshold is 10M VND.",
         lang="en",
         citations=[{"doc_type": "Risk", "last_modified": "2024-06-01", "title": "Fraud policy"}],
-        departments=["risk"],
+        departments=[RISK],
     )
     assert "Verify with" in answer
     assert "2024-06-01" in answer
@@ -70,7 +71,7 @@ def test_append_high_stakes_disclaimer_adds_owner_line() -> None:
         [
             {
                 "title": "Risk limit policy",
-                "department": "risk",
+                "department": RISK,
                 "last_modified": "2024-06-01T00:00:00Z",
             }
         ],
@@ -85,7 +86,7 @@ def test_append_high_stakes_disclaimer_skips_when_present() -> None:
         append_high_stakes_disclaimer_if_needed(
             answer,
             "en",
-            [{"title": "Compliance policy", "department": "risk"}],
+            [{"title": "Compliance policy", "department": RISK}],
         )
         == answer
     )

@@ -11,6 +11,7 @@ from app.graph.nodes.router import make_router_node
 from app.ports.errors import LLMUnavailable
 
 from tests.unit.graph.conftest import StubLLM
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_router_out_of_scope_status_or_data(test_settings: Settings):
@@ -21,7 +22,7 @@ def test_router_out_of_scope_status_or_data(test_settings: Settings):
     out = node(
         {
             "question": "What is today's transaction volume?",
-            "allowed_departments": ["risk"],
+            "allowed_departments": [RISK],
             "request_language": "en",
         }
     )
@@ -50,12 +51,12 @@ def test_router_honours_pinned_departments(test_settings: Settings):
     out = node(
         {
             "question": "test",
-            "allowed_departments": ["risk", "grow_enablement"],
-            "pinned": ["risk"],
+            "allowed_departments": [RISK, GROW],
+            "pinned": [RISK],
             "request_language": "en",
         }
     )
-    assert out["target_departments"] == ["risk"]
+    assert out["target_departments"] == [RISK]
     assert out["intent"] == "pinned"
     assert out["routing_confidence"] == 1.0
     assert out["clarify_question"] is None
@@ -66,23 +67,23 @@ def test_router_filters_pinned_by_allowed_departments(test_settings: Settings):
     out = node(
         {
             "question": "test",
-            "allowed_departments": ["risk"],
-            "pinned": ["risk", "bank_partnerships"],
+            "allowed_departments": [RISK],
+            "pinned": [RISK, BANK],
             "request_language": "en",
         }
     )
-    assert out["target_departments"] == ["risk"]
+    assert out["target_departments"] == [RISK]
 
 
 def test_router_short_circuit_greeting(test_settings: Settings):
     payload = json.dumps(
-        {"intent": "greeting", "target_departments": ["risk"], "confidence": 0.99}
+        {"intent": "greeting", "target_departments": [RISK], "confidence": 0.99}
     )
     node = make_router_node(StubLLM(payload), settings=test_settings)
     out = node(
         {
             "question": "hello",
-            "allowed_departments": ["risk"],
+            "allowed_departments": [RISK],
             "request_language": "en",
         }
     )
@@ -94,13 +95,13 @@ def test_router_short_circuit_greeting(test_settings: Settings):
 @pytest.mark.parametrize("intent", ["capability_query", "action_request"])
 def test_router_short_circuit_canned_intents(intent: str, test_settings: Settings):
     payload = json.dumps(
-        {"intent": intent, "target_departments": ["risk"], "confidence": 0.9}
+        {"intent": intent, "target_departments": [RISK], "confidence": 0.9}
     )
     node = make_router_node(StubLLM(payload), settings=test_settings)
     out = node(
         {
             "question": "what can you do?",
-            "allowed_departments": ["risk", "grow_enablement"],
+            "allowed_departments": [RISK, GROW],
             "request_language": "en",
         }
     )
@@ -112,7 +113,7 @@ def test_router_filters_targets_by_allowed_departments(test_settings: Settings):
     payload = json.dumps(
         {
             "intent": "policy_lookup",
-            "target_departments": ["risk", "bank_partnerships"],
+            "target_departments": [RISK, BANK],
             "confidence": 0.9,
         }
     )
@@ -120,11 +121,11 @@ def test_router_filters_targets_by_allowed_departments(test_settings: Settings):
     out = node(
         {
             "question": "policy?",
-            "allowed_departments": ["risk"],
+            "allowed_departments": [RISK],
             "request_language": "en",
         }
     )
-    assert out["target_departments"] == ["risk"]
+    assert out["target_departments"] == [RISK]
 
 
 def test_router_filters_invalid_department_keys(test_settings: Settings):
@@ -139,18 +140,18 @@ def test_router_filters_invalid_department_keys(test_settings: Settings):
     out = node(
         {
             "question": "policy?",
-            "allowed_departments": ["risk", "grow_enablement", "bank_partnerships"],
+            "allowed_departments": ALL_DEPARTMENT_KEYS,
             "request_language": "en",
         }
     )
-    assert out["target_departments"] == ["risk"]
+    assert out["target_departments"] == [RISK]
 
 
 def test_router_clarify_on_low_confidence(test_settings: Settings):
     payload = json.dumps(
         {
             "intent": "unclear",
-            "target_departments": ["risk"],
+            "target_departments": [RISK],
             "confidence": 0.2,
         }
     )
@@ -158,7 +159,7 @@ def test_router_clarify_on_low_confidence(test_settings: Settings):
     out = node(
         {
             "question": "ambiguous",
-            "allowed_departments": ["risk"],
+            "allowed_departments": [RISK],
             "request_language": "en",
         }
     )
@@ -176,7 +177,7 @@ def test_router_clarify_when_no_usable_targets(test_settings: Settings):
     out = node(
         {
             "question": "policy?",
-            "allowed_departments": ["risk"],
+            "allowed_departments": [RISK],
             "request_language": "en",
         }
     )
@@ -188,7 +189,7 @@ def test_router_normal_fan_out(test_settings: Settings):
     payload = json.dumps(
         {
             "intent": "policy_lookup",
-            "target_departments": ["risk", "grow_enablement"],
+            "target_departments": [RISK, GROW],
             "confidence": 0.85,
         }
     )
@@ -196,11 +197,11 @@ def test_router_normal_fan_out(test_settings: Settings):
     out = node(
         {
             "question": "What is the refund policy?",
-            "allowed_departments": ["risk", "grow_enablement", "bank_partnerships"],
+            "allowed_departments": ALL_DEPARTMENT_KEYS,
             "request_language": "en",
         }
     )
-    assert out["target_departments"] == ["risk", "grow_enablement"]
+    assert out["target_departments"] == [RISK, GROW]
     assert out["routing_confidence"] == pytest.approx(0.85)
     assert out["clarify_question"] is None
 
@@ -213,11 +214,11 @@ def test_router_fallback_on_llm_unavailable(test_settings: Settings):
     out = node(
         {
             "question": "test",
-            "allowed_departments": ["risk", "grow_enablement"],
+            "allowed_departments": [RISK, GROW],
             "request_language": "en",
         }
     )
-    assert set(out["target_departments"]) == {"risk", "grow_enablement"}
+    assert set(out["target_departments"]) == {RISK, GROW}
     assert out["routing_confidence"] == 0.0
     assert "router_unavailable" in out.get("errors", [])
 
@@ -230,11 +231,11 @@ def test_router_clarify_options_respect_allowed_departments(test_settings: Setti
     out = node(
         {
             "question": "ambiguous",
-            "allowed_departments": ["grow_enablement"],
+            "allowed_departments": [GROW],
             "request_language": "en",
         }
     )
-    assert out["clarify_question"]["options"] == ["grow_enablement"]
+    assert out["clarify_question"]["options"] == [GROW]
 
 
 def test_router_fallback_on_budget_exceeded(test_settings: Settings, past_deadline: float):
@@ -242,12 +243,12 @@ def test_router_fallback_on_budget_exceeded(test_settings: Settings, past_deadli
     out = node(
         {
             "question": "test",
-            "allowed_departments": ["risk"],
+            "allowed_departments": [RISK],
             "request_language": "en",
             "deadline_ts": past_deadline,
         }
     )
-    assert out["target_departments"] == ["risk"]
+    assert out["target_departments"] == [RISK]
     assert "budget_exceeded" in out.get("errors", [])
 
 
@@ -259,7 +260,7 @@ def test_router_clarify_prompt_vietnamese(test_settings: Settings):
     out = node(
         {
             "question": "mơ hồ",
-            "allowed_departments": ["risk"],
+            "allowed_departments": [RISK],
             "request_language": "vi",
         }
     )
@@ -271,7 +272,7 @@ def test_router_passes_conversation_history_to_llm(test_settings: Settings):
     payload = json.dumps(
         {
             "intent": "policy_lookup",
-            "target_departments": ["risk"],
+            "target_departments": [RISK],
             "confidence": 0.9,
         }
     )
@@ -280,7 +281,7 @@ def test_router_passes_conversation_history_to_llm(test_settings: Settings):
     node(
         {
             "question": "And the SLA?",
-            "allowed_departments": ["risk"],
+            "allowed_departments": [RISK],
             "request_language": "en",
             "conversation_history": "User: What is escalation?\nAssistant: Level 1 first.",
         }
@@ -304,7 +305,7 @@ def test_router_never_returns_answer_text(test_settings: Settings):
     out = node(
         {
             "question": "hello",
-            "allowed_departments": ["risk"],
+            "allowed_departments": [RISK],
             "request_language": "en",
         }
     )

@@ -7,6 +7,7 @@ from unittest.mock import patch
 from app.graph.build import _make_dept_branch, build_dept_subgraph
 
 from tests.unit.graph.conftest import GraphDeps, StubLLM, StubRetriever
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_dept_branch_degrades_to_timeout_on_subgraph_failure(graph_deps: GraphDeps):
@@ -22,7 +23,7 @@ def test_dept_branch_degrades_to_timeout_on_subgraph_failure(graph_deps: GraphDe
     ):
         result = branch(
             {
-                "department": "risk",
+                "department": RISK,
                 "question": "What is the SLA?",
                 "retrieval_query": "What is the SLA?",
                 "role": "engineer",
@@ -33,7 +34,7 @@ def test_dept_branch_degrades_to_timeout_on_subgraph_failure(graph_deps: GraphDe
 
     assert len(result["dept_results"]) == 1
     row = result["dept_results"][0]
-    assert row["department"] == "risk"
+    assert row["department"] == RISK
     assert row["status"] == "timeout"
     assert row["citations"] == []
     assert "branch_error" in row["warnings"]

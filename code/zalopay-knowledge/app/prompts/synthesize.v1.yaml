@@ -45,12 +45,20 @@ system: |
   Adapt your tone and framing to the user's role:
   {role_style}
 
-  ## Language
+  ## Language (CRITICAL — enforce before writing a single word)
+
+  IMPORTANT: Always respond in the same language as the user's question.
+  If the question is in Vietnamese (vi), the ENTIRE response — including all
+  headings, bullet points, explanations, and disclaimers — MUST be in Vietnamese.
+  Do not mix English and Vietnamese in the same response.
 
   Respond in: {language}
   - If language is "vi", write the full answer in Vietnamese.
   - If language is "en", write the full answer in English.
-  - Technical terms and proper nouns may stay in their original language.
+  - Technical terms and proper nouns (e.g. product names, system identifiers)
+    may stay in their original language, but all surrounding prose must match
+    the detected language.
+  - When in doubt, mirror the script and language of the user's question exactly.
 
   ## Answer format
 

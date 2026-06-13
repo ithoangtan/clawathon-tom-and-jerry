@@ -483,6 +483,84 @@
     }
   },
   {
+    "id": "VI-R-01",
+    "department": "risk",
+    "question": "Quy trình leo thang khi xảy ra cảnh báo gian lận là gì?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["leo thang", "cảnh báo", "gian lận"],
+      "citation_keywords": ["risk", "escalation", "fraud"]
+    },
+    "retrieval": { "relevant_chunk_ids": [] }
+  },
+  {
+    "id": "VI-R-02",
+    "department": "risk",
+    "question": "Ngưỡng xác minh lại KYC khi tài khoản có hoạt động bất thường là bao nhiêu?",
+    "target_departments": ["risk"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["KYC", "xác minh", "ngưỡng"],
+      "citation_keywords": ["KYC", "threshold", "verification"]
+    },
+    "retrieval": { "relevant_chunk_ids": [] }
+  },
+  {
+    "id": "VI-G-01",
+    "department": "grow_enablement",
+    "question": "Quy trình onboarding merchant mới bao gồm những bước nào?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["onboarding", "merchant", "bước"],
+      "citation_keywords": ["onboarding", "merchant", "grow"]
+    },
+    "retrieval": { "relevant_chunk_ids": [] }
+  },
+  {
+    "id": "VI-G-02",
+    "department": "grow_enablement",
+    "question": "Chương trình phát triển merchant dành cho đối tác mới được thực hiện như thế nào?",
+    "target_departments": ["grow_enablement"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["phát triển", "merchant", "chương trình"],
+      "citation_keywords": ["growth", "merchant", "enablement"]
+    },
+    "retrieval": { "relevant_chunk_ids": [] }
+  },
+  {
+    "id": "VI-B-01",
+    "department": "bank_partnerships",
+    "question": "Các bước đối soát thanh toán với ngân hàng đối tác khi batch thất bại là gì?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["đối soát", "ngân hàng", "thanh toán"],
+      "citation_keywords": ["reconciliation", "settlement", "bank"]
+    },
+    "retrieval": { "relevant_chunk_ids": [] }
+  },
+  {
+    "id": "VI-B-02",
+    "department": "bank_partnerships",
+    "question": "SLA của đối tác ngân hàng đối với thời gian xử lý giao dịch là bao lâu?",
+    "target_departments": ["bank_partnerships"],
+    "expect": {
+      "status": "answered",
+      "must_refuse": false,
+      "answer_keywords": ["SLA", "ngân hàng", "thời gian"],
+      "citation_keywords": ["SLA", "partner", "bank"]
+    },
+    "retrieval": { "relevant_chunk_ids": [] }
+  },
+  {
     "id": "OOS-01",
     "question": "What is the stock price of Apple today?",
     "expect": {

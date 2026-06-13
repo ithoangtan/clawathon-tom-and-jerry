@@ -7,6 +7,7 @@ import pytest
 
 from app.config import Settings
 from app.store.meta import MetaStore
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def test_atomic_faiss_swap_uses_temp_then_replace(
@@ -25,7 +26,7 @@ def test_atomic_faiss_swap_uses_temp_then_replace(
         patch("app.ingestion.indexer.os.replace") as mock_replace,
         patch("app.ingestion.indexer.faiss.write_index") as mock_write,
     ):
-        builder.rebuild_department("risk", [dict(c) for c in sample_chunks])
+        builder.rebuild_department(RISK, [dict(c) for c in sample_chunks])
 
     mock_write.assert_called_once()
     tmp_path = mock_write.call_args[0][1]
@@ -44,7 +45,7 @@ def test_rebuild_never_leaves_tmp_on_success(
     builder = IndexBuilder(settings)
 
     with patch.object(builder._embedder, "encode_passages", side_effect=mock_encode_passages):
-        builder.rebuild_department("risk", [dict(c) for c in sample_chunks])
+        builder.rebuild_department(RISK, [dict(c) for c in sample_chunks])
 
     faiss_dir = faiss_index_dir / "faiss"
     tmp_files = list(faiss_dir.glob("*.faiss.tmp"))
@@ -63,10 +64,10 @@ def test_empty_rebuild_removes_partition_file(
     builder = IndexBuilder(settings)
 
     with patch.object(builder._embedder, "encode_passages", side_effect=mock_encode_passages):
-        builder.rebuild_department("risk", [dict(c) for c in sample_chunks])
+        builder.rebuild_department(RISK, [dict(c) for c in sample_chunks])
 
     assert (faiss_index_dir / "faiss" / "risk.faiss").exists()
 
-    builder.rebuild_department("risk", [])
+    builder.rebuild_department(RISK, [])
     assert not (faiss_index_dir / "faiss" / "risk.faiss").exists()
-    assert MetaStore(faiss_index_dir / "meta.db").count("risk") == 0
+    assert MetaStore(faiss_index_dir / "meta.db").count(RISK) == 0

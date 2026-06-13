@@ -9,6 +9,7 @@ from app.graph.state import Chunk
 from app.ports.errors import LLMUnavailable
 
 from tests.unit.graph.conftest import StubLLM
+from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
 
 
 def _grade_and_synthesize(
@@ -24,14 +25,14 @@ def _grade_and_synthesize(
         side_effect=llm_error,
     )
     grade_node = make_grade_node(grade_llm, settings=settings)
-    state = {"department": "risk", "question": "q", "chunks": chunks}
+    state = {"department": RISK, "question": "q", "chunks": chunks}
     if deadline_ts is not None:
         state["deadline_ts"] = deadline_ts
     graded = grade_node(state)
 
     synth_node = make_synthesize_node(StubLLM("ignored"), settings=settings)
     synth_state = {
-        "department": "risk",
+        "department": RISK,
         "question": "q",
         "role": "engineer",
         "request_language": "en",
@@ -55,21 +56,21 @@ def test_grade_filters_below_threshold(test_settings: Settings, sample_chunk: Ch
 
 def test_grade_empty_chunks_short_circuits(test_settings: Settings):
     node = make_grade_node(StubLLM(), settings=test_settings)
-    out = node({"department": "risk", "question": "q", "chunks": []})
+    out = node({"department": RISK, "question": "q", "chunks": []})
     assert out["graded_chunks"] == []
-    assert out["evidence"] == {"risk": []}
+    assert out["evidence"] == {RISK:  []}
 
 
 def test_grade_refuse_path_when_all_below_threshold(test_settings: Settings, sample_chunk: Chunk):
     llm = StubLLM('{"scores": [{"id": 0, "score": 0.1}]}')
     node = make_grade_node(llm, settings=test_settings)
-    out = node({"department": "risk", "question": "q", "chunks": [sample_chunk]})
+    out = node({"department": RISK, "question": "q", "chunks": [sample_chunk]})
     assert out["graded_chunks"] == []
 
     synth = make_synthesize_node(StubLLM(), settings=test_settings)
     synth_out = synth(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "q",
             "graded_chunks": out["graded_chunks"],
             "request_language": "en",
@@ -89,7 +90,7 @@ def test_grade_fallback_to_retriever_scores_on_llm_failure(
     low["score"] = 0.3
 
     node = make_grade_node(StubLLM(side_effect=LLMUnavailable()), settings=test_settings)
-    out = node({"department": "risk", "question": "q", "chunks": [high, low]})
+    out = node({"department": RISK, "question": "q", "chunks": [high, low]})
     assert len(out["graded_chunks"]) == 1
     assert out["graded_chunks"][0]["chunk_id"] == high["chunk_id"]
 
@@ -106,7 +107,7 @@ def test_grade_budget_exceeded_uses_retriever_scores(
     node = make_grade_node(StubLLM(), settings=test_settings)
     out = node(
         {
-            "department": "risk",
+            "department": RISK,
             "question": "q",
             "chunks": [high, low],
             "deadline_ts": past_deadline,
@@ -119,7 +120,7 @@ def test_grade_budget_exceeded_uses_retriever_scores(
 def test_grade_keeps_chunk_at_exact_threshold(test_settings: Settings, sample_chunk: Chunk):
     llm = StubLLM('{"scores": [{"id": 0, "score": 0.5}]}')
     node = make_grade_node(llm, settings=test_settings)
-    out = node({"department": "risk", "question": "q", "chunks": [sample_chunk]})
+    out = node({"department": RISK, "question": "q", "chunks": [sample_chunk]})
     assert len(out["graded_chunks"]) == 1
     assert out["graded_chunks"][0]["score"] == 0.5
 
@@ -127,5 +128,5 @@ def test_grade_keeps_chunk_at_exact_threshold(test_settings: Settings, sample_ch
 def test_grade_drops_chunk_just_below_threshold(test_settings: Settings, sample_chunk: Chunk):
     llm = StubLLM('{"scores": [{"id": 0, "score": 0.49}]}')
     node = make_grade_node(llm, settings=test_settings)
-    out = node({"department": "risk", "question": "q", "chunks": [sample_chunk]})
+    out = node({"department": RISK, "question": "q", "chunks": [sample_chunk]})
     assert out["graded_chunks"] == []
