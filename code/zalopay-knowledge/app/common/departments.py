@@ -209,6 +209,16 @@ def parse_confluence_spaces(value: object) -> dict[str, str]:
         raw = value.strip()
         if not raw:
             return {}
+        # Guard against a common .env typo: CONFLUENCE_SPACES=={"..."} (double =)
+        # which causes the value to arrive as ={"..."} — strip the spurious leading =.
+        if raw.startswith("="):
+            logger.warning(
+                "CONFLUENCE_SPACES value starts with '=' — stripping it. "
+                "Check your .env for a double-equals typo (KEY==value)."
+            )
+            raw = raw[1:].strip()
+        if not raw:
+            return {}
         parsed = json.loads(raw)
         if not isinstance(parsed, dict):
             raise ValueError("CONFLUENCE_SPACES must be a JSON object")
