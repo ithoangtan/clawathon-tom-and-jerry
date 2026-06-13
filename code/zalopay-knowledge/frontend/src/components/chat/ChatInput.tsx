@@ -178,7 +178,7 @@ export function ChatInput({ value, onChange, onSubmit, loading, disabled }: Chat
             "mb-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-colors",
             canSend
               ? "bg-gradient-to-br from-brand to-brand-dark text-white shadow-md shadow-brand/25 hover:shadow-lg hover:shadow-brand/30"
-              : "bg-slate-100 text-content-muted cursor-not-allowed",
+              : "bg-white/5 text-content-muted cursor-not-allowed",
           )}
           aria-label={loading ? t("sending", locale) : t("send", locale)}
         >

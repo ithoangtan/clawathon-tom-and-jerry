@@ -77,9 +77,9 @@ export function MarkdownRenderer({
       blockquote: ({ children }) => (
         <blockquote className="my-4">{children}</blockquote>
       ),
-      hr: () => <hr className="my-6 border-slate-200/80" />,
+      hr: () => <hr className="my-6 border-border" />,
       strong: ({ children }) => (
-        <strong className="font-semibold text-slate-900">{wrap(children)}</strong>
+        <strong className="font-semibold text-content-primary">{wrap(children)}</strong>
       ),
       em: ({ children }) => <em className="italic">{wrap(children)}</em>,
       del: ({ children }) => (
@@ -91,20 +91,20 @@ export function MarkdownRenderer({
         </a>
       ),
       table: ({ children }) => (
-        <div className="my-4 overflow-x-auto rounded-lg border border-slate-200/80">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">{children}</table>
+        <div className="my-4 overflow-x-auto rounded-lg border border-border">
+          <table className="min-w-full divide-y divide-border text-sm">{children}</table>
         </div>
       ),
-      thead: ({ children }) => <thead className="bg-slate-50/80">{children}</thead>,
-      tbody: ({ children }) => <tbody className="divide-y divide-slate-100 bg-white/80">{children}</tbody>,
+      thead: ({ children }) => <thead className="bg-surface-elevated/60">{children}</thead>,
+      tbody: ({ children }) => <tbody className="divide-y divide-border">{children}</tbody>,
       tr: ({ children }) => <tr>{children}</tr>,
       th: ({ children }) => (
-        <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+        <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-content-secondary">
           {wrap(children)}
         </th>
       ),
       td: ({ children }) => (
-        <td className="px-4 py-2.5 text-slate-800">{wrap(children)}</td>
+        <td className="px-4 py-2.5 text-content-secondary">{wrap(children)}</td>
       ),
       input: ({ checked, disabled, type }) => {
         if (type === "checkbox") {

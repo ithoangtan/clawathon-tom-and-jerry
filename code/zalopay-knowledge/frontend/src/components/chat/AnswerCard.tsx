@@ -105,8 +105,10 @@ export function AnswerCard({
               streaming={streaming}
             />
           </div>
-          {!streaming && (
-            <CitationList citations={citations} onCitationClick={onCitationClick} />
+          {!streaming && citations.length > 0 && (
+            <div className="mt-5 border-t border-border pt-4">
+              <CitationList citations={citations} onCitationClick={onCitationClick} />
+            </div>
           )}
           {!streaming && conflicts && conflicts.length > 0 && (
             <ConflictPanel conflicts={conflicts} />

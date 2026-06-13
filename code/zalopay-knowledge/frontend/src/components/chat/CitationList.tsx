@@ -28,9 +28,9 @@ export function CitationList({
   const visible = expanded ? citations : citations.slice(0, 3);
 
   return (
-    <section role="region" aria-label={t("citations", locale)} className="mt-4">
+    <section role="region" aria-label={t("citations", locale)} className="mt-0">
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-semibold text-slate-700">
+        <h4 className="text-sm font-semibold text-content-secondary">
           {t("citations", locale)} ({citations.length})
         </h4>
         {collapsible && citations.length > 3 && (
@@ -124,19 +124,32 @@ function CitationCard({
                 {citation.title}
               </a>
             )}
-          <p className="mt-1 truncate text-xs text-slate-400" title={citation.url}>
-            {formatCitationUrl(citation.url)}
-          </p>
-          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+          {interactive ? (
+            <a
+              href={citation.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block truncate text-xs text-content-muted hover:text-brand transition-colors"
+              title={citation.url}
+              tabIndex={-1}
+            >
+              {formatCitationUrl(citation.url)}
+            </a>
+          ) : (
+            <p className="mt-1 truncate text-xs text-content-muted" title={citation.url}>
+              {formatCitationUrl(citation.url)}
+            </p>
+          )}
+          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-content-muted">
             {citation.section && (
               <span>
-                <span className="text-slate-400">{t("citationSection", locale)}:</span>{" "}
+                <span className="text-content-muted/70">{t("citationSection", locale)}:</span>{" "}
                 {citation.section}
               </span>
             )}
             {citation.page != null && (
               <span>
-                <span className="text-slate-400">{t("citationPage", locale)}:</span>{" "}
+                <span className="text-content-muted/70">{t("citationPage", locale)}:</span>{" "}
                 {citation.page}
               </span>
             )}
@@ -145,7 +158,7 @@ function CitationCard({
             )}
             {citation.last_modified && (
               <span>
-                <span className="text-slate-400">{t("citationUpdated", locale)}:</span>{" "}
+                <span className="text-content-muted/70">{t("citationUpdated", locale)}:</span>{" "}
                 <time dateTime={citation.last_modified}>
                   {formatDate(citation.last_modified, locale)}
                 </time>

@@ -381,6 +381,7 @@
     background: var(--chat-surface);
     border-color: var(--chat-border);
     box-shadow: var(--shadow-glass), 0 0 32px var(--color-brand-muted);
+    border-left: 2px solid var(--color-brand);
   }
 
   .avatar-assistant-glow {
@@ -606,14 +607,44 @@
 
   .prose-chat h1,
   .prose-chat h2,
-  .prose-chat h3 {
+  .prose-chat h3,
+  .prose-chat h4 {
     @apply tracking-tight;
     color: var(--color-text-primary);
+  }
+
+  .prose-chat h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .prose-chat h2 {
+    font-size: 1.1rem;
+    font-weight: 650;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.35rem;
+  }
+
+  .prose-chat h3 {
+    font-size: 1rem;
+    font-weight: 650;
+    color: var(--color-brand);
   }
 
   .prose-chat p {
     color: var(--color-text-secondary);
     letter-spacing: 0.01em;
+    line-height: 1.75;
+  }
+
+  .prose-chat ul,
+  .prose-chat ol {
+    color: var(--color-text-secondary);
+  }
+
+  .prose-chat li {
+    line-height: 1.7;
   }
 
   .prose-chat blockquote {
@@ -642,22 +673,40 @@
     text-decoration-color: var(--color-accent);
   }
 
+  .prose-chat strong {
+    color: var(--color-text-primary);
+    font-weight: 650;
+  }
+
+  .prose-chat table {
+    font-size: 0.875rem;
+  }
+
+  .prose-chat td,
+  .prose-chat th {
+    color: var(--color-text-secondary);
+  }
+
   .citation-link {
-    @apply inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 text-xs font-semibold rounded no-underline transition-all;
+    @apply inline-flex items-center justify-center min-w-[1.25rem] h-[1.15em] px-1 text-[0.7em] font-bold rounded no-underline transition-all;
     background: var(--color-brand-muted);
     color: var(--color-brand);
     border: 1px solid var(--color-border-brand);
+    vertical-align: super;
+    line-height: 1;
+    letter-spacing: 0;
+    margin: 0 1px;
   }
 
   button.citation-link {
     cursor: pointer;
     font: inherit;
-    line-height: inherit;
+    line-height: 1;
   }
 
   .citation-link:hover {
     background: linear-gradient(135deg, var(--color-brand), var(--color-brand-hover));
-    color: var(--color-text-inverse);
+    color: white;
     box-shadow: 0 2px 8px var(--color-brand-glow);
     transform: translateY(-1px);
   }
