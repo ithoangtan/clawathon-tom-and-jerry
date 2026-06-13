@@ -19,7 +19,7 @@ set -euo pipefail
 
 RUNTIME_NAME="zalopay-knowledge"
 RUNTIME_DESCRIPTION="ZaloPay Knowledge Agent"
-FLAVOR_ID="runtime-s2-general-2x4"  # 2 CPU, 4 GB
+FLAVOR_ID="runtime-s2-general-2x8"  # 2 CPU, 8 GB
 ENV_FILE="deploy/.runtime.env"
 PLATFORM="linux/amd64"
 
