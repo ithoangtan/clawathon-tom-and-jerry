@@ -152,6 +152,21 @@ class TestConfluenceClient:
         assert mock_client.get.call_count == 2
         assert "/rest/api/content/search" in mock_client.get.call_args_list[1][0][0]
 
+    def test_list_pages_returns_empty_when_space_not_found(self, confluence_settings: Settings):
+        client = ConfluenceClient(confluence_settings)
+        not_found = MagicMock()
+        not_found.status_code = 404
+
+        mock_client = MagicMock()
+        mock_client.get.side_effect = [not_found, not_found]
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+
+        with patch("app.ingestion.confluence.httpx.Client", return_value=mock_client):
+            pages = client.list_pages("ClawathonGrow")
+
+        assert pages == []
+
     def test_fetch_page_body_extracts_text_and_metadata(
         self,
         confluence_settings: Settings,

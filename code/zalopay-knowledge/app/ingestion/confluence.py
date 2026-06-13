@@ -72,6 +72,13 @@ class ConfluenceClient:
             params={"cql": cql, "limit": 50, "expand": "version"},
             auth=self._auth(),
         )
+        if resp.status_code == 404:
+            logger.warning(
+                "Confluence space %r not found (404) — skipping. "
+                "Check CONFLUENCE_SPACES env var for the correct space key.",
+                space_key,
+            )
+            return []
         resp.raise_for_status()
         return resp.json().get("results", [])
 
