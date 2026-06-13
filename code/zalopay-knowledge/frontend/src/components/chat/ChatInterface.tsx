@@ -111,6 +111,42 @@ export function ChatInterface() {
   const examples = locale === "vi" ? EXAMPLE_QUESTIONS.vi : EXAMPLE_QUESTIONS.en;
   const isEmpty = messages.length === 0 && !loading;
 
+  const departmentBar = (
+    <DepartmentTargetBar
+      selected={targetDepartments}
+      autoRoute={targetAutoRoute}
+      onChange={setTargetDepartments}
+      onAutoRouteChange={setTargetAutoRoute}
+      compact
+    />
+  );
+
+  const indexWarning = !indexReady ? (
+    <p className="text-xs text-amber-700" role="status">
+      {indexNotReadyMessage(locale, targetAutoRoute, targetDepartments)}{" "}
+      <Link to="/admin" className="font-medium text-brand underline-offset-2 hover:underline">
+        {t("indexNotReadyAdminLink", locale)}
+      </Link>
+    </p>
+  ) : null;
+
+  function renderComposer(variant: "default" | "hero" = "default") {
+    return (
+      <div className="chat-composer mx-auto w-full max-w-3xl space-y-2">
+        <ChatInput
+          variant={variant}
+          value={input}
+          onChange={setInput}
+          onSubmit={() => sendMessage(input)}
+          loading={loading}
+          disabled={!indexReady}
+        />
+        {departmentBar}
+        {indexWarning}
+      </div>
+    );
+  }
+
   function handleClarify(dept: Department) {
     setTargetAutoRoute(false);
     setTargetDepartments([dept]);
@@ -139,87 +175,82 @@ export function ChatInterface() {
           inspector && isDesktop ? "w-[60%] flex-shrink-0" : "w-full flex-1",
         )}
       >
-      <div className="dept-target-bar relative z-30 flex-shrink-0 overflow-visible border-b border-slate-200/60 chat-glass px-4 py-2.5">
-        <div className="mx-auto max-w-3xl">
-          <DepartmentTargetBar
-            selected={targetDepartments}
-            autoRoute={targetAutoRoute}
-            onChange={setTargetDepartments}
-            onAutoRouteChange={setTargetAutoRoute}
-          />
-          {!indexReady && (
-            <p className="mt-2 text-xs text-amber-700" role="status">
-              {indexNotReadyMessage(locale, targetAutoRoute, targetDepartments)}{" "}
-              <Link to="/admin" className="font-medium text-brand underline-offset-2 hover:underline">
-                {t("indexNotReadyAdminLink", locale)}
-              </Link>
-            </p>
-          )}
+      {isEmpty ? (
+        <div className="chat-top-clearance relative z-10 flex flex-1 flex-col px-4 pb-8">
+          <div className="flex flex-1 flex-col items-center justify-center">
+            <ChatEmptyState
+              examples={examples}
+              onExampleClick={handleExampleClick}
+              belowInput={
+                <>
+                  {departmentBar}
+                  {indexWarning}
+                </>
+              }
+            >
+              <ChatInput
+                variant="hero"
+                value={input}
+                onChange={setInput}
+                onSubmit={() => sendMessage(input)}
+                loading={loading}
+                disabled={!indexReady}
+              />
+            </ChatEmptyState>
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div
+            ref={scrollRef}
+            className="chat-scroll chat-top-clearance relative z-10 flex-1 overflow-y-auto overscroll-contain"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+            aria-label={t("navChat", locale)}
+          >
+            <div className="mx-auto max-w-3xl px-4 py-6">
+              <div className="space-y-8">
+                {messages.map((msg) =>
+                  msg.role === "user" ? (
+                    <UserMessage
+                      key={msg.id}
+                      content={msg.content}
+                      timestamp={msg.timestamp}
+                    />
+                  ) : msg.response ? (
+                    <AssistantMessage
+                      key={msg.id}
+                      response={msg.response}
+                      timestamp={msg.timestamp}
+                      streaming={msg.streaming}
+                      onClarifySelect={handleClarify}
+                      onCitationClick={(index) => openCitation(msg.response!.citations, index)}
+                    />
+                  ) : null,
+                )}
 
-      <div
-        ref={scrollRef}
-        className="chat-scroll relative z-10 flex-1 overflow-y-auto overscroll-contain"
-        role="log"
-        aria-live="polite"
-        aria-relevant="additions"
-        aria-label={t("navChat", locale)}
-      >
-        <div className="mx-auto max-w-3xl px-4 py-6">
-          {isEmpty && (
-            <ChatEmptyState examples={examples} onExampleClick={handleExampleClick} />
-          )}
-
-          {messages.length > 0 && (
-            <div className="space-y-8">
-              {messages.map((msg) =>
-                msg.role === "user" ? (
-                  <UserMessage
-                    key={msg.id}
-                    content={msg.content}
-                    timestamp={msg.timestamp}
+                {(loading || pipelineProgress?.phase === "collapsed") && pipelineProgress && (
+                  <PipelineProgress
+                    progress={pipelineProgress}
+                    onCollapsedDismiss={dismissPipelineSummary}
                   />
-                ) : msg.response ? (
-                  <AssistantMessage
-                    key={msg.id}
-                    response={msg.response}
-                    timestamp={msg.timestamp}
-                    streaming={msg.streaming}
-                    onClarifySelect={handleClarify}
-                    onCitationClick={(index) => openCitation(msg.response!.citations, index)}
-                  />
-                ) : null,
-              )}
+                )}
 
-              {(loading || pipelineProgress?.phase === "collapsed") && pipelineProgress && (
-                <PipelineProgress
-                  progress={pipelineProgress}
-                  onCollapsedDismiss={dismissPipelineSummary}
-                />
-              )}
+                {error && (
+                  <ErrorState message={mapError(error)} onRetry={retryLast} />
+                )}
+              </div>
 
-              {error && (
-                <ErrorState message={mapError(error)} onRetry={retryLast} />
-              )}
+              <div className="h-4" aria-hidden />
             </div>
-          )}
+          </div>
 
-          <div className="h-4" aria-hidden />
-        </div>
-      </div>
-
-      <div className="relative z-10 flex-shrink-0 border-t border-slate-200/60 chat-glass px-4 pb-4 pt-3">
-        <div className="mx-auto max-w-3xl">
-          <ChatInput
-            value={input}
-            onChange={setInput}
-            onSubmit={() => sendMessage(input)}
-            loading={loading}
-            disabled={!indexReady}
-          />
-        </div>
-      </div>
+          <div className="chat-input-dock relative z-10 flex-shrink-0 px-4 pb-4 pt-2">
+            {renderComposer()}
+          </div>
+        </>
+      )}
       </div>
 
       {inspector && (

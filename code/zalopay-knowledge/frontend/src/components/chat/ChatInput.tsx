@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Loader2, Send } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import { classNames } from "@/lib/format";
@@ -18,14 +18,25 @@ interface ChatInputProps {
   onSubmit: () => void;
   loading?: boolean;
   disabled?: boolean;
+  variant?: "default" | "hero";
 }
 
-export function ChatInput({ value, onChange, onSubmit, loading, disabled }: ChatInputProps) {
+export function ChatInput({
+  value,
+  onChange,
+  onSubmit,
+  loading,
+  disabled,
+  variant = "default",
+}: ChatInputProps) {
   const locale = useUserStore((s) => s.locale);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const sendRef = useRef<HTMLButtonElement>(null);
   const canSend = !loading && !disabled && value.trim().length > 0;
+  const isHero = variant === "hero";
+  const inputId = isHero ? "chat-input-hero" : "chat-input";
+  const [focused, setFocused] = useState(false);
 
   useGSAP(
     (_, contextSafe) => {
@@ -128,6 +139,12 @@ export function ChatInput({ value, onChange, onSubmit, loading, disabled }: Chat
     }
   }, [loading]);
 
+  useEffect(() => {
+    if (isHero && !loading && !disabled) {
+      textareaRef.current?.focus();
+    }
+  }, [isHero, loading, disabled]);
+
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -148,44 +165,78 @@ export function ChatInput({ value, onChange, onSubmit, loading, disabled }: Chat
         ref={shellRef}
         data-tour="chat-input"
         className={classNames(
-          "chat-input-shell flex items-end gap-2 p-2",
+          "chat-input-shell flex flex-col",
+          isHero ? "chat-input-shell--hero" : "",
           disabled && "opacity-60",
         )}
       >
-        <label htmlFor="chat-input" className="sr-only">
-          {t("askPlaceholder", locale)}
-        </label>
-        <textarea
-          id="chat-input"
-          ref={textareaRef}
-          rows={1}
-          className="max-h-[200px] min-h-[44px] flex-1 resize-none bg-transparent px-3 py-2.5 text-sm leading-relaxed text-content-primary placeholder:text-content-muted focus:outline-none disabled:cursor-not-allowed"
-          placeholder={t("askPlaceholder", locale)}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={disabled || loading}
-          maxLength={4000}
-          aria-disabled={disabled || loading}
-          aria-describedby="chat-input-hint"
-        />
-        <button
-          ref={sendRef}
-          type="button"
-          onClick={handleSubmit}
-          disabled={!canSend}
+        <div
           className={classNames(
-            "mb-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-colors",
-            canSend
-              ? "bg-gradient-to-br from-brand to-brand-dark text-white shadow-md shadow-brand/25 hover:shadow-lg hover:shadow-brand/30"
-              : "bg-white/5 text-content-muted cursor-not-allowed",
+            "flex items-end gap-2",
+            isHero ? "p-3 pb-2" : "p-2 pb-1.5",
           )}
-          aria-label={loading ? t("sending", locale) : t("send", locale)}
         >
-          {loading ? <Loader2 size="md" /> : <Send size="md" />}
-        </button>
+          <label htmlFor={inputId} className="sr-only">
+            {t("askPlaceholder", locale)}
+          </label>
+          <textarea
+            id={inputId}
+            ref={textareaRef}
+            rows={isHero ? 2 : 1}
+            className={classNames(
+              "max-h-[200px] flex-1 resize-none bg-transparent leading-relaxed text-content-primary placeholder:text-content-muted focus:outline-none disabled:cursor-not-allowed",
+              isHero
+                ? "min-h-[56px] px-4 py-3 text-base"
+                : "min-h-[44px] px-3 py-2.5 text-sm",
+            )}
+            placeholder={t("askPlaceholder", locale)}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            disabled={disabled || loading}
+            maxLength={4000}
+            aria-disabled={disabled || loading}
+            aria-describedby="chat-input-hint"
+          />
+          <button
+            ref={sendRef}
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSend}
+            className={classNames(
+              "mb-1 flex flex-shrink-0 items-center justify-center rounded-xl transition-colors",
+              isHero ? "h-11 w-11" : "h-9 w-9",
+              canSend
+                ? "bg-gradient-to-br from-brand to-brand-dark text-white shadow-md shadow-brand/25 hover:shadow-lg hover:shadow-brand/30"
+                : "bg-white/5 text-content-muted cursor-not-allowed",
+            )}
+            aria-label={loading ? t("sending", locale) : t("send", locale)}
+          >
+            {loading ? <Loader2 size="md" /> : <Send size="md" />}
+          </button>
+        </div>
+
+        <div
+          className={classNames(
+            "chat-input-shortcuts flex items-center gap-3 border-t border-border/35 px-3 py-1.5 transition-opacity duration-150",
+            isHero ? "px-4" : "px-3",
+            focused ? "opacity-100" : "opacity-70",
+          )}
+          aria-hidden={!focused}
+        >
+          <span className="inline-flex items-center gap-1 text-[10px] text-content-muted">
+            <kbd className="chat-kbd">↵</kbd>
+            {t("inputHintSend", locale)}
+          </span>
+          <span className="inline-flex items-center gap-1 text-[10px] text-content-muted">
+            <kbd className="chat-kbd">⇧↵</kbd>
+            {t("inputHintNewline", locale)}
+          </span>
+        </div>
       </div>
-      <p id="chat-input-hint" className="mt-2 text-center text-[11px] text-content-muted">
+      <p id="chat-input-hint" className="sr-only">
         {t("inputHint", locale)}
       </p>
     </div>

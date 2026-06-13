@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { DepartmentChip } from "@/components/chat/Badges";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { History, Menu, Plus, Search, Trash2, X } from "@/components/ui/icons";
+import { ArrowRight, ChevronLeft, History, Menu, Plus, Search, Trash2, X } from "@/components/ui/icons";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { classNames, formatDate } from "@/lib/format";
 import { t } from "@/lib/i18n";
@@ -15,6 +15,7 @@ import {
   type ThreadStatus,
 } from "@/lib/sessionThread";
 import { useSessionStore } from "@/store/sessionStore";
+import { useSidebarStore } from "@/store/sidebarStore";
 import { useUserStore } from "@/store/userStore";
 
 function statusLabel(status: ThreadStatus, locale: "en" | "vi"): string {
@@ -45,9 +46,10 @@ function statusTone(status: ThreadStatus): "success" | "danger" | "warning" | "d
 
 interface SessionSidebarPanelProps {
   onCloseMobile?: () => void;
+  onCloseDesktop?: () => void;
 }
 
-function SessionSidebarPanel({ onCloseMobile }: SessionSidebarPanelProps) {
+export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSidebarPanelProps) {
   const locale = useUserStore((s) => s.locale);
   const activeSessionId = useUserStore((s) => s.sessionId);
   const threadsRecord = useSessionStore((s) => s.threads);
@@ -94,14 +96,14 @@ function SessionSidebarPanel({ onCloseMobile }: SessionSidebarPanelProps) {
             {t("sessionHistoryHint", locale)}
           </p>
         </div>
-        {onCloseMobile && (
+        {(onCloseMobile || onCloseDesktop) && (
           <Button
             variant="ghost"
-            className="!px-2 !py-2 md:hidden"
-            onClick={onCloseMobile}
+            className="!px-2 !py-2"
+            onClick={onCloseMobile ?? onCloseDesktop}
             aria-label={t("closeSessionHistory", locale)}
           >
-            <X size="sm" />
+            {onCloseMobile ? <X size="sm" /> : <ChevronLeft size="sm" />}
           </Button>
         )}
       </div>
@@ -229,6 +231,8 @@ function SessionSidebarPanel({ onCloseMobile }: SessionSidebarPanelProps) {
 
 export function SessionSidebar() {
   const locale = useUserStore((s) => s.locale);
+  const sidebarOpen = useSidebarStore((s) => s.open);
+  const setSidebarOpen = useSidebarStore((s) => s.setOpen);
   const [mobileOpen, setMobileOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
 
@@ -247,13 +251,20 @@ export function SessionSidebar() {
         <Menu size="sm" />
       </Button>
 
-      <aside
-        className="session-sidebar hidden h-full w-[240px] flex-shrink-0 border-r border-border chat-glass md:flex md:flex-col"
-        aria-label={t("sessionHistory", locale)}
-        role="complementary"
-      >
-        <SessionSidebarPanel />
-      </aside>
+      {!sidebarOpen && (
+        <Button
+          variant="ghost"
+          className="absolute left-3 top-3 z-30 hidden items-center gap-1.5 !px-2.5 !py-2 md:inline-flex"
+          onClick={() => setSidebarOpen(true)}
+          aria-label={t("openSessionHistory", locale)}
+          aria-expanded={false}
+          aria-controls="session-sidebar-panel"
+        >
+          <History size="sm" className="text-brand" />
+          <span className="text-xs font-medium text-content-primary">{t("sessionHistory", locale)}</span>
+          <ArrowRight size="xs" className="text-content-muted" />
+        </Button>
+      )}
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden" role="presentation">
@@ -266,7 +277,7 @@ export function SessionSidebar() {
           <div
             id="session-history-drawer"
             ref={drawerRef}
-            className="session-sidebar absolute inset-y-0 left-0 flex w-[min(280px,88vw)] flex-col border-r border-border chat-glass shadow-xl"
+            className="session-sidebar absolute inset-y-0 left-0 flex w-[min(310px,88vw)] flex-col border-r border-border chat-glass shadow-xl"
             role="dialog"
             aria-modal="true"
             aria-label={t("sessionHistory", locale)}

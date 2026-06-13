@@ -1,6 +1,7 @@
 import { render, type RenderOptions } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { useSessionStore } from "@/store/sessionStore";
+import { useSidebarStore } from "@/store/sidebarStore";
 import { useUserStore } from "@/store/userStore";
 import type { UserContext } from "@/lib/types";
 
@@ -22,9 +23,15 @@ export function resetUserStore(overrides: Partial<UserContext> = {}) {
   useUserStore.persist?.clearStorage?.();
 }
 
+export function resetSidebarStore() {
+  useSidebarStore.setState({ open: false });
+  useSidebarStore.persist?.clearStorage?.();
+}
+
 export function resetStores(overrides: Partial<UserContext> = {}) {
   resetUserStore(overrides);
   resetSessionStore();
+  resetSidebarStore();
 }
 
 export function renderWithUser(ui: ReactElement, user: Partial<UserContext> = {}, options?: RenderOptions) {

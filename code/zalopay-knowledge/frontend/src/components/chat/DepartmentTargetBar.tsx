@@ -14,6 +14,8 @@ interface DepartmentTargetBarProps {
   autoRoute: boolean;
   onChange: (departments: Department[]) => void;
   onAutoRouteChange: (autoRoute: boolean) => void;
+  className?: string;
+  compact?: boolean;
 }
 
 export function DepartmentTargetBar({
@@ -21,6 +23,8 @@ export function DepartmentTargetBar({
   autoRoute,
   onChange,
   onAutoRouteChange,
+  className,
+  compact = false,
 }: DepartmentTargetBarProps) {
   const locale = useUserStore((s) => s.locale);
   const { pauseTutorial, isRunning: tutorialRunning } = useTutorialPauseOptional();
@@ -52,12 +56,21 @@ export function DepartmentTargetBar({
   return (
     <>
       <div
-        className="dept-target-bar__tags flex flex-wrap items-center gap-2"
+        className={classNames(
+          "dept-target-bar__tags flex flex-wrap items-center gap-2",
+          compact && "justify-start gap-1.5",
+          className,
+        )}
         role="group"
         aria-label={t("targetDepartments", locale)}
         data-tour="department-bar"
       >
-        <span className="mr-1 text-xs font-medium text-content-secondary">
+        <span
+          className={classNames(
+            "text-xs font-medium text-content-secondary",
+            compact ? "sr-only" : "mr-1",
+          )}
+        >
           {t("targetDepartments", locale)}:
         </span>
 

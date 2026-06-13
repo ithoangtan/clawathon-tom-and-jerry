@@ -109,10 +109,9 @@ export function Nav() {
   const locale = useUserStore((s) => s.locale);
   const navRef = useRef<HTMLDivElement>(null);
 
-  const links: { to: keyof typeof NAV_ICONS; label: string; end?: boolean }[] = [
+  const mainLinks: { to: keyof typeof NAV_ICONS; label: string; end?: boolean }[] = [
     { to: "/", label: t("navChat", locale), end: true },
     { to: "/dashboard", label: t("navDashboard", locale) },
-    { to: "/admin", label: t("navAdmin", locale) },
     { to: "/settings", label: t("navSettings", locale) },
   ];
 
@@ -131,8 +130,8 @@ export function Nav() {
       aria-label={t("navAriaLabel", locale)}
     >
       <div ref={navRef} className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 sm:px-6">
-        <div className="flex flex-1 gap-1">
-          {links.map((link) => {
+        <div className="flex gap-1">
+          {mainLinks.map((link) => {
             const NavIcon = NAV_ICONS[link.to];
             return (
               <NavLink
@@ -151,7 +150,26 @@ export function Nav() {
             );
           })}
         </div>
-        <LanguageSwitcher className="sm:hidden" />
+
+        <div className="ml-auto flex items-center gap-2">
+          <LanguageSwitcher className="sm:hidden" />
+          <div className="group flex min-h-[2.25rem] min-w-[2.75rem] items-center justify-end py-1 pl-4">
+            <NavLink
+              to="/admin"
+              data-nav-pill
+              className={({ isActive }) =>
+                classNames(
+                  "nav-pill opacity-0 transition-opacity duration-150",
+                  "group-hover:opacity-100 focus-visible:opacity-100",
+                  isActive && "nav-pill-active opacity-100",
+                )
+              }
+            >
+              <Database size="sm" className="opacity-80" />
+              {t("navAdmin", locale)}
+            </NavLink>
+          </div>
+        </div>
       </div>
     </nav>
   );

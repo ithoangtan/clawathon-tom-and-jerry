@@ -30,6 +30,7 @@ export const Copy = icon("Copy", (<><rect width="14" height="14" x="8" y="8" rx=
 export const Check = icon("Check", <path d="M20 6 9 17l-5-5" />);
 export const Loader2 = icon("Loader2", <path d="M21 12a9 9 0 1 1-6.219-8.56" />, { className: "animate-spin" });
 export const ArrowRight = icon("ArrowRight", (<><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></>));
+export const ChevronLeft = icon("ChevronLeft", <path d="m15 18-6-6 6-6" />);
 export const ExternalLink = icon("ExternalLink", (<><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></>));
 export const MessageSquare = icon("MessageSquare", <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />);
 export const LayoutDashboard = icon("LayoutDashboard", (<><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></>));

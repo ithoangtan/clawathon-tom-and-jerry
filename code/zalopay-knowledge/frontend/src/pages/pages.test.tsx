@@ -6,6 +6,7 @@ import { DashboardPage } from "./DashboardPage";
 import { SettingsPage } from "./SettingsPage";
 import { AdminPage } from "./AdminPage";
 import { renderWithUser } from "@/test/test-utils";
+import { useSidebarStore } from "@/store/sidebarStore";
 
 vi.mock("@/hooks/useChat", () => ({
   useChat: () => ({
@@ -85,10 +86,61 @@ vi.mock("@/hooks/useAdminSyncStatus", () => ({
 }));
 
 describe("ChatPage", () => {
+  beforeEach(() => {
+    useSidebarStore.setState({ open: false });
+    useSidebarStore.persist?.clearStorage?.();
+  });
+
   it("renders chat interface smoke test", () => {
     renderWithUser(<ChatPage />);
     expect(screen.getByRole("log")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "How can I help?" })).toBeInTheDocument();
+  });
+
+  it("shows session history button on desktop when sidebar is closed", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query === "(min-width: 768px)",
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    );
+
+    renderWithUser(<ChatPage />);
+    expect(screen.getByRole("button", { name: "Open session history" })).toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "Session history" })).not.toBeInTheDocument();
+  });
+
+  it("opens desktop sidebar from corner button and closes with header button", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query === "(min-width: 768px)",
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    );
+
+    renderWithUser(<ChatPage />);
+    await user.click(screen.getByRole("button", { name: "Open session history" }));
+    expect(screen.getByRole("complementary", { name: "Session history" })).toBeInTheDocument();
+    expect(useSidebarStore.getState().open).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Close session history" }));
+    expect(screen.queryByRole("complementary", { name: "Session history" })).not.toBeInTheDocument();
+    expect(useSidebarStore.getState().open).toBe(false);
   });
 });
 

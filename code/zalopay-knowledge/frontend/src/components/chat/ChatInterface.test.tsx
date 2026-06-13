@@ -124,11 +124,11 @@ describe("ChatInterface", () => {
 
     expect(screen.getByRole("heading", { name: "How can I help?" })).toBeInTheDocument();
     const example = screen.getByRole("button", {
-      name: /How does settlement reconciliation work with partner banks/i,
+      name: /Walk me through the settlement reconciliation steps/i,
     });
     await user.click(example);
     expect(sendMessageMock).toHaveBeenCalledWith(
-      "How does settlement reconciliation work with partner banks?",
+      "Walk me through the settlement reconciliation steps with a partner bank after a failed batch.",
     );
   });
 
@@ -136,7 +136,7 @@ describe("ChatInterface", () => {
     renderWithUser(<ChatInterface />, { locale: "vi" });
     expect(screen.getByRole("heading", { name: "Tôi có thể giúp gì?" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Quy trình đối soát thanh toán/i }),
+      screen.getByRole("button", { name: /Các bước đối soát thanh toán/i }),
     ).toBeInTheDocument();
   });
 

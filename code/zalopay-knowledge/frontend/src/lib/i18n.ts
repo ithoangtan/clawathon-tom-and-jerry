@@ -169,6 +169,8 @@ const strings: Strings = {
     en: "Enter to send · Shift+Enter for new line",
     vi: "Enter để gửi · Shift+Enter xuống dòng",
   },
+  inputHintSend: { en: "Send", vi: "Gửi" },
+  inputHintNewline: { en: "New line", vi: "Xuống dòng" },
   exampleQuestions: { en: "Try asking:", vi: "Thử hỏi:" },
   errorGeneric: { en: "Something went wrong. Please try again.", vi: "Đã xảy ra lỗi. Vui lòng thử lại." },
   errorTimeout: { en: "Request timed out. Try a narrower question.", vi: "Hết thời gian chờ. Thử câu hỏi cụ thể hơn." },
