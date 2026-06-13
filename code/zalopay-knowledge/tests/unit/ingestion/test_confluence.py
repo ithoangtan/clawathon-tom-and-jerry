@@ -107,13 +107,18 @@ class TestConfluenceClient:
 
     def test_list_pages_v2_api(self, confluence_settings: Settings, confluence_list_response: dict):
         client = ConfluenceClient(confluence_settings)
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = confluence_list_response
-        mock_response.raise_for_status = MagicMock()
+
+        spaces_response = MagicMock()
+        spaces_response.status_code = 200
+        spaces_response.json.return_value = {"results": [{"id": "999"}]}
+
+        pages_response = MagicMock()
+        pages_response.status_code = 200
+        pages_response.json.return_value = confluence_list_response
+        pages_response.raise_for_status = MagicMock()
 
         mock_client = MagicMock()
-        mock_client.get.return_value = mock_response
+        mock_client.get.side_effect = [spaces_response, pages_response]
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
 
@@ -122,15 +127,18 @@ class TestConfluenceClient:
 
         assert len(pages) == 2
         assert pages[0]["id"] == "12345"
-        mock_client.get.assert_called_once()
-        call_kwargs = mock_client.get.call_args
-        assert "/api/v2/pages" in call_kwargs[0][0]
-        assert call_kwargs[1]["params"]["space-key"] == "RISK"
+        assert mock_client.get.call_count == 2
+        spaces_call = mock_client.get.call_args_list[0]
+        assert "/api/v2/spaces" in spaces_call[0][0]
+        pages_call = mock_client.get.call_args_list[1]
+        assert "/api/v2/pages" in pages_call[0][0]
+        assert pages_call[1]["params"]["space-id"] == "999"
 
-    def test_list_pages_falls_back_to_search_on_404(self, confluence_settings: Settings):
+    def test_list_pages_falls_back_to_search_when_space_id_not_resolved(self, confluence_settings: Settings):
         client = ConfluenceClient(confluence_settings)
-        not_found = MagicMock()
-        not_found.status_code = 404
+
+        spaces_not_found = MagicMock()
+        spaces_not_found.status_code = 404
 
         search_response = MagicMock()
         search_response.status_code = 200
@@ -140,7 +148,7 @@ class TestConfluenceClient:
         search_response.raise_for_status = MagicMock()
 
         mock_client = MagicMock()
-        mock_client.get.side_effect = [not_found, search_response]
+        mock_client.get.side_effect = [spaces_not_found, search_response]
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
 
@@ -151,6 +159,32 @@ class TestConfluenceClient:
         assert pages[0]["title"] == "CQL Page"
         assert mock_client.get.call_count == 2
         assert "/rest/api/content/search" in mock_client.get.call_args_list[1][0][0]
+
+    def test_list_pages_falls_back_to_search_on_400(self, confluence_settings: Settings):
+        client = ConfluenceClient(confluence_settings)
+
+        spaces_response = MagicMock()
+        spaces_response.status_code = 200
+        spaces_response.json.return_value = {"results": [{"id": "999"}]}
+
+        bad_request = MagicMock()
+        bad_request.status_code = 400
+
+        search_response = MagicMock()
+        search_response.status_code = 200
+        search_response.json.return_value = {"results": [{"id": "99", "title": "CQL Page"}]}
+        search_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.get.side_effect = [spaces_response, bad_request, search_response]
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+
+        with patch("app.ingestion.confluence.httpx.Client", return_value=mock_client):
+            pages = client.list_pages("RISK")
+
+        assert pages[0]["title"] == "CQL Page"
+        assert "/rest/api/content/search" in mock_client.get.call_args_list[2][0][0]
 
     def test_list_pages_returns_empty_when_space_not_found(self, confluence_settings: Settings):
         client = ConfluenceClient(confluence_settings)

@@ -50,16 +50,22 @@ class ConfluenceClient:
         cursor: str | None = None
         try:
             with httpx.Client(timeout=self._timeout) as client:
+                # Resolve space key → numeric space ID required by v2 API
+                space_id = self._resolve_space_id(client, space_key)
+                if space_id is None:
+                    result = self._search_space_pages(client, space_key)
+                    logger.info(
+                        "Confluence list_pages space=%r → %d pages via CQL (%.0fms)",
+                        space_key, len(result), (time.monotonic() - t0) * 1000,
+                    )
+                    return result
+
                 while True:
-                    params: dict[str, Any] = {"limit": limit, "space-id": space_key}
+                    params: dict[str, Any] = {"limit": limit, "space-id": space_id}
                     if cursor:
                         params["cursor"] = cursor
-                    # v2 spaces/{id}/pages — space_key used as key filter via CQL fallback
-                    url = f"{self._base}/api/v2/pages"
-                    params["space-key"] = space_key
-                    resp = client.get(url, params=params, auth=self._auth())
-                    if resp.status_code == 404:
-                        # Fallback: search API with CQL
+                    resp = client.get(f"{self._base}/api/v2/pages", params=params, auth=self._auth())
+                    if resp.status_code in (400, 404):
                         result = self._search_space_pages(client, space_key)
                         logger.info(
                             "Confluence list_pages space=%r → %d pages via CQL (%.0fms)",
@@ -83,6 +89,23 @@ class ConfluenceClient:
             space_key, len(pages), (time.monotonic() - t0) * 1000,
         )
         return pages
+
+    def _resolve_space_id(self, client: httpx.Client, space_key: str) -> str | None:
+        """Resolve a space key to its numeric ID via the v2 spaces API."""
+        try:
+            resp = client.get(
+                f"{self._base}/api/v2/spaces",
+                params={"keys": space_key, "limit": 1},
+                auth=self._auth(),
+            )
+            if resp.status_code != 200:
+                return None
+            results = resp.json().get("results", [])
+            if results:
+                return str(results[0]["id"])
+        except Exception as exc:
+            logger.warning("Confluence _resolve_space_id space=%r failed: %s", space_key, exc)
+        return None
 
     def _search_space_pages(self, client: httpx.Client, space_key: str) -> list[dict[str, Any]]:
         cql = f'space="{space_key}" and type=page'
