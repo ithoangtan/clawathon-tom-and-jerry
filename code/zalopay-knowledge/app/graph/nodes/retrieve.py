@@ -41,7 +41,7 @@ def make_retrieve_node(
         try:
             results = retriever.search(
                 department=department,
-                query=state.get("question", ""),
+                query=state.get("retrieval_query") or state.get("question", ""),
                 k=cfg.topk,
                 language=state.get("request_language", "en"),
             )

@@ -22,6 +22,8 @@ import logging
 import uuid
 from typing import Callable
 
+from langchain_core.messages import AIMessage
+
 from app.config import Settings, get_settings
 from app.graph.nodes.router import SHORT_CIRCUIT_INTENTS
 from app.graph.state import DeptResult, GraphState
@@ -55,6 +57,9 @@ def make_respond_node(
                 confidence=0.0,
                 source_departments=[],
             )
+            if state.get("errors"):
+                out["errors"] = list(state["errors"])
+            out["messages"] = [AIMessage(content=state["answer"])]
             return out
 
         # ── Case 2: router asked a clarifying question ────────────────────────
@@ -68,6 +73,8 @@ def make_respond_node(
                 source_departments=[],
                 clarify_question=cq,
             )
+            if out["answer"]:
+                out["messages"] = [AIMessage(content=out["answer"])]
             return out
 
         # ── Case 3: short-circuit intents (no retrieval happened) ─────────────
@@ -80,6 +87,7 @@ def make_respond_node(
                 confidence=1.0,
                 source_departments=[],
             )
+            out["messages"] = [AIMessage(content=out["answer"])]
             return out
 
         # ── Case 4: normal answer from reconcile ──────────────────────────────
@@ -106,6 +114,8 @@ def make_respond_node(
             len(out["citations"]),
             feedback_id,
         )
+        if answer:
+            out["messages"] = [AIMessage(content=answer)]
         return out
 
     return respond

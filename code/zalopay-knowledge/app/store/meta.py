@@ -197,3 +197,138 @@ class MetaStore:
             conn.close()
 
         return {int(r["vec_pos"]): dict(r) for r in rows}
+
+    # ── Writes (used by the ingestion job) ────────────────────────────────────
+
+    def replace_department_chunks(self, department: str, rows: list[dict]) -> int:
+        """Replace all chunks for *department* with *rows*.
+
+        Each row must include all :data:`CHUNK_COLUMNS` keys.  Returns the number
+        of rows written.
+        """
+        self.ensure_schema()
+        conn = self._connect()
+        try:
+            conn.execute("DELETE FROM chunks WHERE department = ?", (department,))
+            for row in rows:
+                conn.execute(
+                    f"""
+                    INSERT INTO chunks ({', '.join(CHUNK_COLUMNS)})
+                    VALUES ({', '.join('?' for _ in CHUNK_COLUMNS)})
+                    """,
+                    tuple(row[c] for c in CHUNK_COLUMNS),
+                )
+            conn.commit()
+            return len(rows)
+        finally:
+            conn.close()
+
+    def total_chunks(self) -> int:
+        """Return total chunk count across all departments."""
+        if not self._path.exists():
+            return 0
+        conn = self._connect()
+        try:
+            row = conn.execute("SELECT COUNT(*) AS n FROM chunks").fetchone()
+            return int(row["n"]) if row else 0
+        except sqlite3.Error:
+            return 0
+        finally:
+            conn.close()
+
+    # ── Writes (used by the ingestion job) ────────────────────────────────────
+
+    def clear_department(self, department: str) -> None:
+        """Remove all chunks for *department* (called before a full re-index)."""
+        if not self._path.exists():
+            self.ensure_schema()
+        conn = self._connect()
+        try:
+            conn.execute("DELETE FROM chunks WHERE department = ?", (department,))
+            conn.commit()
+        finally:
+            conn.close()
+
+    def upsert_chunks(self, rows: list[dict]) -> None:
+        """Insert or replace chunk rows in bulk."""
+        if not rows:
+            return
+        self.ensure_schema()
+        conn = self._connect()
+        try:
+            conn.executemany(
+                f"""
+                INSERT OR REPLACE INTO chunks (
+                    {', '.join(CHUNK_COLUMNS)}
+                ) VALUES ({', '.join('?' for _ in CHUNK_COLUMNS)})
+                """,
+                [
+                    tuple(row.get(col) for col in CHUNK_COLUMNS)
+                    for row in rows
+                ],
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def distinct_urls(self, department: str) -> set[str]:
+        """Return distinct source URLs indexed for *department*."""
+        if not self._path.exists():
+            return set()
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                "SELECT DISTINCT url FROM chunks WHERE department = ? AND url IS NOT NULL",
+                (department,),
+            ).fetchall()
+            return {r["url"] for r in rows if r["url"]}
+        except sqlite3.Error as exc:
+            logger.warning("MetaStore.distinct_urls(%s) failed: %s", department, exc)
+            return set()
+        finally:
+            conn.close()
+
+    def tombstone_urls(self, department: str, urls: set[str]) -> int:
+        """Mark chunks for *urls* as ``sunset`` (soft delete, excluded from search)."""
+        if not urls or not self._path.exists():
+            return 0
+        placeholders = ",".join("?" for _ in urls)
+        conn = self._connect()
+        try:
+            cur = conn.execute(
+                f"""
+                UPDATE chunks SET lifecycle_state = 'sunset'
+                WHERE department = ? AND url IN ({placeholders})
+                  AND lifecycle_state != 'sunset'
+                """,
+                (department, *sorted(urls)),
+            )
+            conn.commit()
+            return int(cur.rowcount)
+        except sqlite3.Error as exc:
+            logger.warning("MetaStore.tombstone_urls(%s) failed: %s", department, exc)
+            return 0
+        finally:
+            conn.close()
+
+    def doc_count(self, department: str | None = None) -> int:
+        """Count distinct source documents (by url) optionally filtered by dept."""
+        if not self._path.exists():
+            return 0
+        conn = self._connect()
+        try:
+            if department:
+                row = conn.execute(
+                    "SELECT COUNT(DISTINCT url) AS n FROM chunks WHERE department = ?",
+                    (department,),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    "SELECT COUNT(DISTINCT url) AS n FROM chunks"
+                ).fetchone()
+            return int(row["n"]) if row else 0
+        except sqlite3.Error as exc:
+            logger.warning("MetaStore.doc_count failed: %s", exc)
+            return 0
+        finally:
+            conn.close()

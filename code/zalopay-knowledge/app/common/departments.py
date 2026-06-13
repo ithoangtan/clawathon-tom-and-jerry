@@ -55,24 +55,24 @@ class Department:
 # ── Registry ──────────────────────────────────────────────────────────────────
 
 _REGISTRY: dict[str, Department] = {
-    DepartmentKey.RISK: Department(
-        key=DepartmentKey.RISK,
+    DepartmentKey.RISK.value: Department(
+        key=DepartmentKey.RISK.value,
         name_en="Risk",
         name_vi="Quản lý Rủi ro",
         space_env_var="CONFLUENCE_SPACE_RISK",
         accent_color="#E63946",  # assertive red — risk theme
         channel_hint="teams-risk-knowledge",
     ),
-    DepartmentKey.GROW_ENABLEMENT: Department(
-        key=DepartmentKey.GROW_ENABLEMENT,
+    DepartmentKey.GROW_ENABLEMENT.value: Department(
+        key=DepartmentKey.GROW_ENABLEMENT.value,
         name_en="Grow Enablement",
         name_vi="Phát triển Kinh doanh",
         space_env_var="CONFLUENCE_SPACE_GROW",
         accent_color="#2A9D8F",  # teal-green — growth theme
         channel_hint="teams-grow-enablement-knowledge",
     ),
-    DepartmentKey.BANK_PARTNERSHIPS: Department(
-        key=DepartmentKey.BANK_PARTNERSHIPS,
+    DepartmentKey.BANK_PARTNERSHIPS.value: Department(
+        key=DepartmentKey.BANK_PARTNERSHIPS.value,
         name_en="Bank Partnerships",
         name_vi="Đối tác Ngân hàng",
         space_env_var="CONFLUENCE_SPACE_BANK",
@@ -93,9 +93,9 @@ ROLES: list[str] = ["engineer", "pm", "ops", "risk", "business"]
 def all_departments() -> list[Department]:
     """Return all departments in a stable, deterministic order."""
     return [_REGISTRY[k] for k in (
-        DepartmentKey.RISK,
-        DepartmentKey.GROW_ENABLEMENT,
-        DepartmentKey.BANK_PARTNERSHIPS,
+        DepartmentKey.RISK.value,
+        DepartmentKey.GROW_ENABLEMENT.value,
+        DepartmentKey.BANK_PARTNERSHIPS.value,
     )]
 
 

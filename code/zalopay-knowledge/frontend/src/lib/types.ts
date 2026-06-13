@@ -13,6 +13,7 @@
 export type Department = "risk" | "grow_enablement" | "bank_partnerships";
 export type Role = "engineer" | "pm" | "ops" | "risk" | "business";
 export type AnswerStatus = "answered" | "refused" | "partial";
+export type RefusalReason = "access_denied";
 export type Lang = "en" | "vi";
 
 // ── Citation ─────────────────────────────────────────────────────────────────
@@ -67,6 +68,15 @@ export interface ChatRequest {
   target_departments?: Department[] | null;
 }
 
+/** SSE event names from POST /chat/stream */
+export type ChatStreamEventName = "start" | "node" | "error" | "done";
+
+/** One SSE payload from POST /chat/stream (`data: {event, data}` lines). */
+export interface ChatStreamEvent {
+  event: ChatStreamEventName;
+  data: Record<string, unknown>;
+}
+
 /** Body of a successful POST /chat response */
 export interface ChatResponse {
   /** Markdown-formatted answer text with inline [n] citation markers. */
@@ -86,6 +96,8 @@ export interface ChatResponse {
   clarifying_question?: ClarifyingQuestion | null;
   /** Language of the response: "en" or "vi". */
   lang?: Lang | null;
+  /** Present when refused due to department access control (FR-7.2). */
+  refusal_reason?: RefusalReason | null;
 }
 
 // ── Feedback ─────────────────────────────────────────────────────────────────
@@ -143,7 +155,7 @@ export interface HistoryItem {
   latency_ms: number;
 }
 
-/** Body of GET /dashboard */
+/** Body of GET /api/dashboard */
 export interface DashboardData {
   query_count: number;
   refusal_rate: number;

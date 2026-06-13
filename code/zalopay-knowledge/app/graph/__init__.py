@@ -1,11 +1,11 @@
-"""LangGraph application package — state, nodes, and graph assembly.
+"""Compiled graph singleton accessor."""
 
-Public entry points:
-    * :class:`app.graph.state.GraphState` — the checkpointed top-level state.
-    * :func:`app.graph.build.build_graph` — compile the runnable agent graph.
-    * :class:`app.graph.build.GraphDeps` — the injected port bundle.
-"""
+from functools import lru_cache
 
-from app.graph.build import GraphDeps, build_dept_subgraph, build_graph
 
-__all__ = ["GraphDeps", "build_graph", "build_dept_subgraph"]
+@lru_cache(maxsize=1)
+def get_compiled_graph():
+    from app.adapters.deps import get_deps
+    from app.graph.build import build_graph
+
+    return build_graph(get_deps())

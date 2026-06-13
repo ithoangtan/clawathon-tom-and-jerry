@@ -230,12 +230,15 @@ def _resolve_citation(cites: list[Citation], index) -> Citation:
 
 
 def _all_refused_message(lang: str) -> str:
+    """FR-2.2 refusal copy when no department passes the grade/verify gate."""
     if lang == "vi":
         return (
-            "Xin lỗi, tôi không tìm thấy thông tin trong tài liệu nội bộ để trả lời "
-            "câu hỏi này. Vui lòng liên hệ bộ phận liên quan để được hỗ trợ."
+            "Không có thông tin trong tài liệu.\n\n"
+            "Tôi không tìm thấy nội dung liên quan trong tài liệu nội bộ. "
+            "Hãy thử hỏi cụ thể hơn hoặc liên hệ bộ phận sở hữu tài liệu."
         )
     return (
-        "I couldn't find supporting information in the internal documentation to "
-        "answer this question. Please reach out to the relevant department for help."
+        "Not covered in the docs.\n\n"
+        "I couldn't find relevant content in the internal documentation. "
+        "Try rephrasing your question or contact the document owner."
     )

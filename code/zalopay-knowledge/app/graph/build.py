@@ -230,6 +230,8 @@ def _dept_payload(state: GraphState, department: str, deadline_ts: float) -> Dep
     return DeptState(
         department=department,
         question=state.get("question", ""),
+        retrieval_query=state.get("retrieval_query") or state.get("question", ""),
+        conversation_history=state.get("conversation_history") or "",
         role=state.get("role", ""),
         home_department=state.get("home_department", ""),
         request_language=state.get("request_language", "en"),

@@ -56,3 +56,7 @@ langdetect>=1,<2
 
 # --- Prompt loader ---
 PyYAML>=6,<7
+
+# --- Tests (CI / local) ---
+pytest>=8,<9
+httpx>=0.27,<1

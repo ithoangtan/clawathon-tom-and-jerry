@@ -63,6 +63,7 @@ def make_synthesize_node(
             role_style=role_style_for(state.get("role")),
             language=state.get("request_language", "en"),
             recalled_preferences=state.get("recalled_preferences") or "(none)",
+            conversation_history=state.get("conversation_history") or "(none)",
         )
         messages = [
             {"role": "system", "content": rendered["system"]},

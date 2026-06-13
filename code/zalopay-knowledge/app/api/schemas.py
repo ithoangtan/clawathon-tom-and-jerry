@@ -24,6 +24,7 @@ from pydantic import BaseModel as _Base
 Department = Literal["risk", "grow_enablement", "bank_partnerships"]
 Role = Literal["engineer", "pm", "ops", "risk", "business"]
 AnswerStatus = Literal["answered", "refused", "partial"]
+RefusalReason = Literal["access_denied"]
 Lang = Literal["en", "vi"]
 
 
@@ -139,6 +140,9 @@ class ChatResponse(_Base):
     lang: Optional[Lang] = None
     """Language of the response (``"en"`` or ``"vi"``)."""
 
+    refusal_reason: Optional[RefusalReason] = None
+    """Set when ``status`` is ``refused`` for a reason other than missing docs (e.g. access denied)."""
+
 
 class SyncStartResponse(_Base):
     """Body returned by ``POST /sync/confluence`` and ``POST /sync/gdrive``."""
@@ -205,7 +209,7 @@ class HistoryItem(_Base):
 
 
 class DashboardData(_Base):
-    """Body of ``GET /dashboard``."""
+    """Body of ``GET /api/dashboard``."""
 
     model_config = ConfigDict(extra="allow")
 

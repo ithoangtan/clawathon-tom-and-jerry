@@ -19,7 +19,12 @@ __pycache__/
 
 # Environment & secrets (injected at runtime)
 .env
+.env.*
 .env.local
+.greennode.json
+.agentbase/
+.agentbase-state.json
+*.credentials.json
 *-sa.json
 
 # Tests (not needed in production image)

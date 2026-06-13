@@ -1,4 +1,4 @@
-.PHONY: up down logs build fe-dev fe-build test sync-confluence sync-gdrive
+.PHONY: up down logs build docker-build docker-build-amd64 fe-dev fe-build test sync-confluence sync-gdrive
 
 # ── Docker Compose ──────────────────────────────────────────────────────────
 
@@ -14,9 +14,17 @@ down:
 logs:
 	docker compose logs -f agent
 
-## Build the image without starting
+## Build the image without starting (docker compose)
 build:
 	docker compose build
+
+## Build production image directly (AgentBase /agentbase-wizard test docker)
+docker-build:
+	docker build -t zalopay-knowledge:local .
+
+## Build linux/amd64 image for AgentBase deploy pipeline
+docker-build-amd64:
+	docker build --platform linux/amd64 -t zalopay-knowledge:test .
 
 # ── Frontend ────────────────────────────────────────────────────────────────
 

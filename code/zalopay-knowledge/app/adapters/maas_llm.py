@@ -65,9 +65,10 @@ class VngMaasLLM:
     def __init__(self, settings: Settings | None = None) -> None:
         """Build the shared OpenAI client from settings."""
         self._cfg = settings or get_settings()
+        api_key = self._cfg.effective_llm_api_key or "missing"
         self._client = OpenAI(
             base_url=self._cfg.llm_base_url,
-            api_key=self._cfg.llm_api_key or "missing",  # client rejects empty str
+            api_key=api_key,
         )
 
     # ── LLMPort ───────────────────────────────────────────────────────────────
@@ -84,8 +85,10 @@ class VngMaasLLM:
     ) -> LLMResult:
         """Send *messages* to the *tier* model and return an :class:`LLMResult`."""
         model = self._model_for(tier)
-        if not self._cfg.llm_api_key:
-            raise LLMUnavailable("MaaS API key (LLM_API_KEY) is not configured")
+        if not self._cfg.effective_llm_api_key:
+            raise LLMUnavailable(
+                "MaaS API key is not configured (set LLM_API_KEY or GREENNODE_API_KEY on AgentBase)"
+            )
 
         want_json = response_format == "json"
         base_kwargs: dict = {
@@ -176,3 +179,7 @@ class VngMaasLLM:
             text = ""
         usage = resp.usage.model_dump() if getattr(resp, "usage", None) else {}
         return LLMResult(text=text, raw=resp.model_dump(), usage=usage, degraded=degraded)
+
+
+# Exported for unit tests that patch/inspect the mapper directly.
+_to_result = VngMaasLLM._to_result

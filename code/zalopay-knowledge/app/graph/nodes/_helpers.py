@@ -283,3 +283,80 @@ def role_style_for(role: str | None) -> str:
     if not role:
         return _DEFAULT_ROLE_STYLE
     return _ROLE_STYLE.get(role.lower(), _DEFAULT_ROLE_STYLE)
+
+
+# ── Conversation history (STM follow-ups, FR-1.3) ───────────────────────────────
+
+def _message_text(msg: Any) -> str:
+    """Extract plain text from a LangChain message or dict-shaped message."""
+    if msg is None:
+        return ""
+    content = getattr(msg, "content", None)
+    if content is None and isinstance(msg, dict):
+        content = msg.get("content")
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "text":
+                parts.append(str(block.get("text", "")).strip())
+            elif isinstance(block, str):
+                parts.append(block.strip())
+        return " ".join(p for p in parts if p)
+    return str(content or "").strip()
+
+
+def _message_role(msg: Any) -> str:
+    role = getattr(msg, "type", None) or getattr(msg, "role", None)
+    if role is None and isinstance(msg, dict):
+        role = msg.get("role") or msg.get("type")
+    if role in {"human", "user"}:
+        return "user"
+    if role in {"ai", "assistant"}:
+        return "assistant"
+    return str(role or "unknown")
+
+
+def format_conversation_history(
+    messages: list[Any] | None,
+    *,
+    max_turns: int = 4,
+    exclude_last: bool = False,
+) -> str:
+    """Render recent user/assistant turns for router and synthesis prompts.
+
+    Args:
+        messages: LangGraph ``messages`` list (HumanMessage / AIMessage).
+        max_turns: Cap on user+assistant pairs to include.
+        exclude_last: When True, omit the final message (typically the current
+            user question, which is passed separately).
+    """
+    if not messages:
+        return ""
+
+    items = list(messages)
+    if exclude_last and items:
+        items = items[:-1]
+    if not items:
+        return ""
+
+    lines: list[str] = []
+    for msg in items[-(max_turns * 2) :]:
+        text = _message_text(msg)
+        if not text:
+            continue
+        role = _message_role(msg)
+        if role == "user":
+            lines.append(f"User: {text}")
+        elif role == "assistant":
+            lines.append(f"Assistant: {text}")
+    return "\n".join(lines)
+
+
+def build_retrieval_query(question: str, messages: list[Any] | None) -> str:
+    """Expand a follow-up question with prior turns for multilingual retrieval."""
+    history = format_conversation_history(messages, max_turns=2, exclude_last=True)
+    if not history:
+        return question
+    return f"{history}\n\nFollow-up question: {question}"

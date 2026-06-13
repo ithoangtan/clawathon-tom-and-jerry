@@ -1,0 +1,9 @@
+# Backend dev / test dependencies (not installed in production Docker image by default)
+#
+# Full test run (matches CI / Docker Python 3.11):
+#   pip install -r requirements.txt -r requirements-dev.txt
+#   pytest
+#
+# requirements.txt already includes pytest, httpx, faiss-cpu, sentence-transformers.
+pytest>=8,<9
+httpx>=0.27,<1

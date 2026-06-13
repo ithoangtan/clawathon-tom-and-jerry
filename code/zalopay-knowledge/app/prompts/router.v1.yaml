@@ -6,6 +6,7 @@ description: >
 required_inputs:
   - question
   - department_catalog
+  - conversation_history
 
 system: |
   You are a routing classifier for ZaloPay's internal knowledge assistant.
@@ -59,7 +60,11 @@ system: |
   confidence must be a float between 0.0 and 1.0 inclusive.
 
 user: |
-  Question: {question}
+  Conversation history (if any):
+  {conversation_history}
+
+  Current question: {question}
 
   Classify the intent and select the target department(s).
+  Use conversation history to resolve pronouns and follow-up references.
   Output ONLY the JSON object — nothing else.

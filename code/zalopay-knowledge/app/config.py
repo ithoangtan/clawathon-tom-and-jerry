@@ -7,6 +7,8 @@ strong types.  Import ``get_settings()`` everywhere — never read ``os.environ`
 directly in application code.
 """
 
+import json
+import logging
 from functools import lru_cache
 from typing import Any
 
@@ -28,6 +30,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",  # tolerate GREENNODE_* injected by platform
+        populate_by_name=True,
     )
 
     # ── Application ──────────────────────────────────────────────────────────
@@ -43,6 +46,11 @@ class Settings(BaseSettings):
         description="OpenAI-compatible inference base URL",
     )
     llm_api_key: str = Field(default="", description="MaaS API key")
+    greennode_api_key: str = Field(
+        default="",
+        validation_alias="GREENNODE_API_KEY",
+        description="Platform-injected MaaS key on AgentBase (fallback when LLM_API_KEY unset)",
+    )
     small_model: str = Field(default="", description="Model id for routing/grading/verify tier")
     main_model: str = Field(default="", description="Model id for synthesis/reconcile tier")
 
@@ -125,6 +133,17 @@ class Settings(BaseSettings):
         description="GreenNode AgentBase Memory ID (blank locally → stateless stub)",
     )
 
+    # ── Access control (FR-7.2) ───────────────────────────────────────────────
+
+    role_dept_access_json: str = Field(
+        default="",
+        validation_alias="ROLE_DEPT_ACCESS",
+        description=(
+            "JSON map of role → list of department keys the role may query. "
+            "When empty, a restrictive MVP demo default is used (business cannot access risk)."
+        ),
+    )
+
     # ── Computed properties ───────────────────────────────────────────────────
 
     @computed_field  # type: ignore[misc]
@@ -145,19 +164,15 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[misc]
     @property
     def role_dept_access(self) -> dict[str, list[str]]:
-        """Which departments each role may query.
+        """Which departments each role may query (FR-7.2).
 
-        MVP: every role may access all three departments.  Override this with
-        a JSON env var ``ROLE_DEPT_ACCESS`` in the future if you need RBAC.
-        All role→department mappings must use the canonical department keys
-        from ``app.common.departments``.
+        Uses ``ROLE_DEPT_ACCESS`` when set; otherwise the MVP demo default
+        restricts ``business`` from ``risk`` so access denial can be demonstrated.
         """
-        all_depts: list[str] = [
-            DepartmentKey.RISK,
-            DepartmentKey.GROW_ENABLEMENT,
-            DepartmentKey.BANK_PARTNERSHIPS,
-        ]
-        return {role: list(all_depts) for role in ROLES}
+        raw = (self.role_dept_access_json or "").strip()
+        if raw:
+            return _parse_role_dept_access(raw)
+        return _default_role_dept_access()
 
     @computed_field  # type: ignore[misc]
     @property
@@ -171,7 +186,24 @@ class Settings(BaseSettings):
         """True when deployed on GreenNode AgentBase."""
         return self.app_env == "agentbase"
 
+    @computed_field  # type: ignore[misc]
+    @property
+    def effective_llm_api_key(self) -> str:
+        """MaaS key: explicit ``LLM_API_KEY`` wins; on AgentBase fall back to ``GREENNODE_API_KEY``."""
+        if self.llm_api_key:
+            return self.llm_api_key
+        if self.is_agentbase and self.greennode_api_key:
+            return self.greennode_api_key
+        return ""
+
     # ── Validators ────────────────────────────────────────────────────────────
+
+    @model_validator(mode="after")
+    def _validate_role_dept_access_json(self) -> "Settings":
+        """Fail fast when ROLE_DEPT_ACCESS is present but invalid."""
+        if (self.role_dept_access_json or "").strip():
+            _parse_role_dept_access(self.role_dept_access_json)
+        return self
 
     @model_validator(mode="after")
     def _warn_missing_models(self) -> "Settings":
@@ -181,8 +213,6 @@ class Settings(BaseSettings):
         /health endpoint even without a fully configured LLM — the chat
         endpoint will degrade gracefully.
         """
-        import logging
-
         logger = logging.getLogger(__name__)
         if not self.small_model:
             logger.warning(
@@ -193,6 +223,55 @@ class Settings(BaseSettings):
                 "MAIN_MODEL is not set — synthesis/reconcile nodes will fail at runtime"
             )
         return self
+
+
+_ALL_DEPARTMENTS: list[str] = [
+    DepartmentKey.RISK,
+    DepartmentKey.GROW_ENABLEMENT,
+    DepartmentKey.BANK_PARTNERSHIPS,
+]
+
+
+def _default_role_dept_access() -> dict[str, list[str]]:
+    """MVP demo RBAC: ``business`` may not query Risk; other roles get full access."""
+    non_risk = [
+        DepartmentKey.GROW_ENABLEMENT,
+        DepartmentKey.BANK_PARTNERSHIPS,
+    ]
+    access: dict[str, list[str]] = {role: list(_ALL_DEPARTMENTS) for role in ROLES}
+    access["business"] = list(non_risk)
+    return access
+
+
+def _parse_role_dept_access(raw: str) -> dict[str, list[str]]:
+    """Parse and validate ``ROLE_DEPT_ACCESS`` JSON."""
+    logger = logging.getLogger(__name__)
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"ROLE_DEPT_ACCESS is not valid JSON: {exc}") from exc
+
+    if not isinstance(parsed, dict):
+        raise ValueError("ROLE_DEPT_ACCESS must be a JSON object mapping role → [departments]")
+
+    valid_keys = {d.value for d in DepartmentKey}
+    normalized: dict[str, list[str]] = {}
+    for role, depts in parsed.items():
+        if not isinstance(role, str):
+            raise ValueError("ROLE_DEPT_ACCESS role keys must be strings")
+        if not isinstance(depts, list):
+            raise ValueError(f"ROLE_DEPT_ACCESS[{role!r}] must be a list of department keys")
+        cleaned: list[str] = []
+        for dept in depts:
+            if not isinstance(dept, str) or dept not in valid_keys:
+                raise ValueError(
+                    f"ROLE_DEPT_ACCESS[{role!r}] contains invalid department {dept!r}; "
+                    f"valid keys: {sorted(valid_keys)}"
+                )
+            if dept not in cleaned:
+                cleaned.append(dept)
+        normalized[role] = cleaned
+    return normalized
 
 
 @lru_cache(maxsize=1)

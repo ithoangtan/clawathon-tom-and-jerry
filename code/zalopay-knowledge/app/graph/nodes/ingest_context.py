@@ -16,9 +16,10 @@ It performs no LLM calls.
 import logging
 from typing import Callable, Optional
 
+from app.common.access import ACCESS_DENIED_ERROR, access_denied_message
 from app.common.departments import iter_keys
 from app.config import Settings, get_settings
-from app.graph.nodes._helpers import detect_language
+from app.graph.nodes._helpers import build_retrieval_query, detect_language, format_conversation_history
 from app.graph.state import GraphState
 from app.ports.errors import RetrieverUnavailable
 from app.ports.retriever import RetrieverPort
@@ -57,6 +58,11 @@ def make_ingest_context_node(
         lang = state.get("request_language") or detect_language(state.get("question", ""))
         out["request_language"] = lang
 
+        # ── STM conversation context (FR-1.3) ───────────────────────────────────
+        messages = state.get("messages") or []
+        out["conversation_history"] = format_conversation_history(messages, exclude_last=True)
+        out["retrieval_query"] = build_retrieval_query(state.get("question", ""), messages)
+
         # ── Allowed departments (RBAC) ────────────────────────────────────────
         role = state.get("role") or "business"
         access = cfg.role_dept_access
@@ -66,6 +72,22 @@ def make_ingest_context_node(
             logger.warning("Unknown role %r — defaulting to all departments", role)
             allowed = list(iter_keys())
         out["allowed_departments"] = list(allowed)
+
+        # ── Access denial: pinned department(s) the user may not query ─────────
+        pinned_raw = list(state.get("pinned") or [])
+        if pinned_raw:
+            allowed_pins = [d for d in pinned_raw if d in allowed]
+            if not allowed_pins:
+                logger.info(
+                    "Access denied: role=%r pinned=%s allowed=%s",
+                    role,
+                    pinned_raw,
+                    allowed,
+                )
+                out["status"] = "refused"
+                out["answer"] = access_denied_message(lang)
+                out["errors"] = [ACCESS_DENIED_ERROR]
+                return out
 
         # ── Index readiness ───────────────────────────────────────────────────
         try:

@@ -151,6 +151,11 @@ class FaissRetriever:
         except Exception:  # noqa: BLE001 — health check must never raise
             return False
 
+    def reload(self) -> None:
+        """Re-read FAISS partitions from disk after a sync job completes."""
+        self._indexes = self._load_partitions()
+        logger.info("FAISS retriever reloaded (%d partitions)", len(self._indexes))
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     @staticmethod

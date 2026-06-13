@@ -1,0 +1,38 @@
+# Local development stack — mirrors AgentBase container contract (port 8080, /health).
+# FAISS index + HF cache persist in the named volume across restarts.
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zalopay-knowledge:local
+    container_name: zalopay-knowledge-agent
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      APP_ENV: local
+      INDEX_DIR: /data/index
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - faiss-index:/data/index
+      - ./corpus/pdfs:/app/corpus/pdfs
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    restart: unless-stopped
+
+volumes:
+  faiss-index:
+    name: zalopay-knowledge-faiss-index

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "S-A1",
+    "question": "What is the risk alert escalation process?",
+    "target_departments": ["risk"],
+    "expect": { "status": "answered" }
+  },
+  {
+    "id": "S-B1",
+    "question": "What is the stock price of Apple today?",
+    "expect": { "status": "refused" }
+  },
+  {
+    "id": "S-C1",
+    "question": "How do grow campaigns interact with bank partner SLAs?",
+    "expect": { "status": "partial" }
+  }
+]

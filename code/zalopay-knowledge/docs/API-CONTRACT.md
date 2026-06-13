@@ -350,7 +350,7 @@ and the Settings SyncControls (polled every 2 s while running, 30 s idle).
 
 ---
 
-### `GET /dashboard`
+### `GET /api/dashboard`
 
 Aggregate usage metrics for the Dashboard page.
 
