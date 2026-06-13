@@ -1,0 +1,199 @@
+from __future__ import annotations
+
+"""MetaStore — the SQLite metadata DB that backs the FAISS retriever.
+
+The corpus index is two files per ``INDEX_DIR`` (see 03-ARCHITECTURE.md §5):
+
+* ``faiss/{department}.faiss`` — the dense vectors (one IndexFlatIP per department).
+* ``meta.db``                  — this store: one ``chunks`` row per indexed chunk.
+
+The **contract** between the two: within a department, a chunk's FAISS row
+position equals its ``vec_pos`` column here.  The FAISS adapter searches the
+vectors, gets back row positions, and resolves them to chunk metadata through
+:meth:`MetaStore.fetch_by_positions`.
+
+This module is read-mostly: the (future) ingestion job calls
+:meth:`ensure_schema` and writes rows; the retriever only reads.  We open a
+fresh connection per call rather than sharing one, because concurrent
+department subgraph branches each query in their own thread and a single
+``sqlite3.Connection`` is not safe to share across threads.
+"""
+
+import logging
+import sqlite3
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+# Columns mirror app.ports.types.RetrievedChunk (minus ``score``, which is
+# produced at search time).  Order matters: it is reused by row factories.
+CHUNK_COLUMNS: tuple[str, ...] = (
+    "chunk_id",
+    "department",
+    "vec_pos",
+    "doc_type",
+    "title",
+    "url",
+    "section",
+    "last_modified",
+    "lifecycle_state",
+    "source_type",
+    "page",
+    "text",
+)
+
+_CREATE_TABLE = """
+CREATE TABLE IF NOT EXISTS chunks (
+    chunk_id        TEXT PRIMARY KEY,
+    department      TEXT NOT NULL,
+    vec_pos         INTEGER NOT NULL,
+    doc_type        TEXT,
+    title           TEXT,
+    url             TEXT,
+    section         TEXT,
+    last_modified   TEXT,
+    lifecycle_state TEXT NOT NULL DEFAULT 'active',
+    source_type     TEXT,
+    page            INTEGER,
+    text            TEXT NOT NULL
+)
+"""
+
+_CREATE_POS_INDEX = (
+    "CREATE INDEX IF NOT EXISTS idx_chunks_dept_pos ON chunks (department, vec_pos)"
+)
+_CREATE_LIFECYCLE_INDEX = (
+    "CREATE INDEX IF NOT EXISTS idx_chunks_dept_lifecycle "
+    "ON chunks (department, lifecycle_state)"
+)
+
+
+class MetaStore:
+    """Thin SQLite accessor for chunk metadata at ``{index_dir}/meta.db``."""
+
+    def __init__(self, db_path: str | Path) -> None:
+        """Bind the store to *db_path* (the file need not exist yet)."""
+        self._path = Path(db_path)
+
+    # ── Connection ──────────────────────────────────────────────────────────
+
+    def _connect(self) -> sqlite3.Connection:
+        """Open a new read-capable connection (caller closes it).
+
+        We pass ``check_same_thread=False`` defensively, but each connection is
+        used and closed within a single call so it never actually crosses
+        threads.  ``Row`` factory gives us name-based column access.
+        """
+        conn = sqlite3.connect(str(self._path), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    # ── Schema (used by the ingestion job, idempotent) ───────────────────────
+
+    def ensure_schema(self) -> None:
+        """Create the ``chunks`` table and its indexes if absent.
+
+        Safe to call on every ingestion run.  Creates the parent directory and
+        the DB file if they don't exist.
+        """
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        conn = self._connect()
+        try:
+            conn.execute(_CREATE_TABLE)
+            conn.execute(_CREATE_POS_INDEX)
+            conn.execute(_CREATE_LIFECYCLE_INDEX)
+            conn.commit()
+        finally:
+            conn.close()
+
+    # ── Reads (used by the retriever) ─────────────────────────────────────────
+
+    def exists(self) -> bool:
+        """Return True when the DB file is present and holds at least one chunk.
+
+        Never raises — a missing/corrupt DB is reported as "no data" so the
+        retriever can degrade to a clean refusal.
+        """
+        if not self._path.exists():
+            return False
+        conn = self._connect()
+        try:
+            row = conn.execute("SELECT 1 FROM chunks LIMIT 1").fetchone()
+            return row is not None
+        except sqlite3.Error as exc:
+            logger.warning("MetaStore.exists() query failed: %s", exc)
+            return False
+        finally:
+            conn.close()
+
+    def count(self, department: str) -> int:
+        """Return the number of chunks indexed for *department* (0 on any error)."""
+        if not self._path.exists():
+            return 0
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                "SELECT COUNT(*) AS n FROM chunks WHERE department = ?",
+                (department,),
+            ).fetchone()
+            return int(row["n"]) if row else 0
+        except sqlite3.Error as exc:
+            logger.warning("MetaStore.count(%s) failed: %s", department, exc)
+            return 0
+        finally:
+            conn.close()
+
+    def departments_with_data(self) -> list[str]:
+        """Return the distinct department keys that have at least one chunk."""
+        if not self._path.exists():
+            return []
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                "SELECT DISTINCT department FROM chunks ORDER BY department"
+            ).fetchall()
+            return [r["department"] for r in rows]
+        except sqlite3.Error as exc:
+            logger.warning("MetaStore.departments_with_data() failed: %s", exc)
+            return []
+        finally:
+            conn.close()
+
+    def fetch_by_positions(
+        self, department: str, positions: list[int]
+    ) -> dict[int, dict]:
+        """Resolve FAISS row *positions* to chunk metadata for *department*.
+
+        Args:
+            department: Department partition the positions index into.
+            positions: FAISS row positions returned by a vector search.
+
+        Returns:
+            ``{vec_pos: {column: value, ...}}`` for every position that resolves
+            to a row.  Positions with no matching row are simply absent from the
+            result (e.g. a stale FAISS index referencing deleted chunks).
+        """
+        if not positions or not self._path.exists():
+            return {}
+        # Deduplicate while preserving nothing — order is reapplied by the caller.
+        unique = list({int(p) for p in positions if p >= 0})
+        if not unique:
+            return {}
+
+        placeholders = ",".join("?" for _ in unique)
+        sql = (
+            f"SELECT {', '.join(CHUNK_COLUMNS)} FROM chunks "
+            f"WHERE department = ? AND vec_pos IN ({placeholders})"
+        )
+        conn = self._connect()
+        try:
+            rows = conn.execute(sql, (department, *unique)).fetchall()
+        except sqlite3.Error as exc:
+            logger.warning(
+                "MetaStore.fetch_by_positions(%s) failed: %s", department, exc
+            )
+            return {}
+        finally:
+            conn.close()
+
+        return {int(r["vec_pos"]): dict(r) for r in rows}

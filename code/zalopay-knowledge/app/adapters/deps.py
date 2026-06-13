@@ -1,0 +1,77 @@
+from __future__ import annotations
+
+"""deps.py — the one place that decides local-vs-AgentBase adapter wiring.
+
+``build_graph`` ([app/graph/build.py]) takes a :class:`GraphDeps` bundle of
+ports and callables.  This module constructs that bundle for the active
+environment (``APP_ENV``), so the graph and node code never know which concrete
+adapter they're talking to:
+
+| Port            | local (APP_ENV=local) | agentbase (APP_ENV=agentbase) |
+|-----------------|-----------------------|-------------------------------|
+| LLMPort         | VngMaasLLM            | VngMaasLLM (same MaaS API)    |
+| RetrieverPort   | FaissRetriever        | FaissRetriever (index baked)  |
+| CheckpointerPort| SqliteCheckpointer    | AgentBaseCheckpointer         |
+| recall (STM)    | None (stateless)      | make_agentbase_recall(...)    |
+
+``get_deps()`` memoizes the bundle for the process: constructing the retriever
+loads the embedding model and FAISS partitions, which is expensive and must
+happen exactly once at boot — never per request.
+"""
+
+import logging
+from functools import lru_cache
+from pathlib import Path
+
+from app.adapters.agentbase_checkpointer import AgentBaseCheckpointer
+from app.adapters.agentbase_memory import make_agentbase_recall
+from app.adapters.faiss_retriever import FaissRetriever
+from app.adapters.maas_llm import VngMaasLLM
+from app.adapters.sqlite_checkpointer import SqliteCheckpointer
+from app.config import Settings, get_settings
+from app.graph.build import GraphDeps
+
+logger = logging.getLogger(__name__)
+
+
+def build_deps(settings: Settings | None = None) -> GraphDeps:
+    """Construct a fully-wired :class:`GraphDeps` for the active environment.
+
+    Args:
+        settings: Injectable settings (defaults to the cached singleton).  Pass
+            an explicit ``Settings`` in tests to exercise both environments.
+
+    Returns:
+        A :class:`GraphDeps` ready to hand to ``build_graph``.
+    """
+    cfg = settings or get_settings()
+
+    llm = VngMaasLLM(cfg)
+    retriever = FaissRetriever(cfg)
+
+    if cfg.is_agentbase:
+        checkpointer = AgentBaseCheckpointer(cfg)
+        recall = make_agentbase_recall(cfg)
+        logger.info("Wired AgentBase deps (platform Memory checkpointer + recall)")
+    else:
+        checkpoints_db = Path(cfg.index_dir) / "checkpoints.db"
+        checkpointer = SqliteCheckpointer(checkpoints_db)
+        recall = None
+        logger.info("Wired local deps (SqliteSaver checkpointer, stateless recall)")
+
+    return GraphDeps(
+        llm=llm,
+        retriever=retriever,
+        checkpointer=checkpointer,
+        recall=recall,
+        settings=cfg,
+    )
+
+
+@lru_cache(maxsize=1)
+def get_deps() -> GraphDeps:
+    """Return the process-wide :class:`GraphDeps` singleton (built once).
+
+    Call ``get_deps.cache_clear()`` in tests to rebuild from fresh settings.
+    """
+    return build_deps()
