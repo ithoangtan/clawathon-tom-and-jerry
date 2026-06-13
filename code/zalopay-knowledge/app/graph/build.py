@@ -36,6 +36,7 @@ except ImportError:  # pragma: no cover - import-path shim
 from app.config import Settings, get_settings
 from app.graph.pipeline import PipelineEmitter
 from app.graph.nodes import (
+    make_compress_node,
     make_grade_node,
     make_ingest_context_node,
     make_reconcile_node,
@@ -94,12 +95,14 @@ def build_dept_subgraph(deps: GraphDeps):
 
     sg.add_node("retrieve", make_retrieve_node(deps.retriever, settings=cfg))
     sg.add_node("grade", make_grade_node(deps.llm, settings=cfg))
+    sg.add_node("compress", make_compress_node(deps.llm, settings=cfg))
     sg.add_node("synthesize", make_synthesize_node(deps.llm, settings=cfg))
     sg.add_node("verify", make_verify_node(deps.llm, settings=cfg))
 
     sg.add_edge(START, "retrieve")
     sg.add_edge("retrieve", "grade")
-    sg.add_edge("grade", "synthesize")
+    sg.add_edge("grade", "compress")
+    sg.add_edge("compress", "synthesize")
     sg.add_edge("synthesize", "verify")
     sg.add_edge("verify", END)
 

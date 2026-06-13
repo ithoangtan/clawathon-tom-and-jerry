@@ -9,6 +9,7 @@ Top-level (GraphState):  ingest_context → router → … → reconcile → res
 Per-department (DeptState):           retrieve → grade → synthesize → verify
 """
 
+from app.graph.nodes.compress import make_compress_node
 from app.graph.nodes.grade import make_grade_node
 from app.graph.nodes.ingest_context import make_ingest_context_node
 from app.graph.nodes.reconcile import make_reconcile_node
@@ -23,6 +24,7 @@ __all__ = [
     "make_router_node",
     "make_retrieve_node",
     "make_grade_node",
+    "make_compress_node",
     "make_synthesize_node",
     "make_verify_node",
     "make_reconcile_node",
