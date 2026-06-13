@@ -1,10 +1,13 @@
 import { AppShell } from "@/components/layout/AppShell";
+import { MockScenarioPicker } from "@/components/dev/MockScenarioPicker";
 import { TutorialProvider } from "@/hooks/useTutorial";
 import { AdminPage } from "@/pages/AdminPage";
 import { ChatPage } from "@/pages/ChatPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+
+const IS_DEV = import.meta.env.DEV || window.location.hostname === "localhost";
 
 export default function App() {
   return (
@@ -19,6 +22,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AppShell>
+        {IS_DEV && <MockScenarioPicker />}
       </TutorialProvider>
     </BrowserRouter>
   );
