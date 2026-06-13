@@ -25,8 +25,32 @@ def _maas_reachable() -> bool:
         return False
 
 
+def probe_liveness() -> dict[str, Any]:
+    """Fast liveness check — no MaaS ping, always safe to call."""
+    cfg = get_settings()
+    try:
+        index_ready = get_deps().retriever.is_ready()
+    except Exception:  # noqa: BLE001 — liveness must never raise
+        index_ready = False
+    return {
+        "status": "healthy",
+        "version": cfg.app_version,
+        "index_ready": index_ready,
+        "maas_ready": False,
+        "ready": False,
+        "config": {
+            "small_model": cfg.small_model,
+            "main_model": cfg.main_model,
+            "embedding_model": cfg.embedding_model,
+            "grade_threshold": cfg.grade_threshold,
+            "topk": cfg.topk,
+            "route_confidence_min": cfg.route_confidence_min,
+        },
+    }
+
+
 def probe_status() -> dict[str, Any]:
-    """Collect liveness/readiness fields for ``GET /health`` family endpoints."""
+    """Full readiness check — includes MaaS ping (may be slow)."""
     cfg = get_settings()
     retriever = get_deps().retriever
     index_ready = retriever.is_ready()

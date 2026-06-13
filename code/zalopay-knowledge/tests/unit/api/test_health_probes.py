@@ -64,7 +64,8 @@ def test_health_ready_200_when_fully_ready(client: TestClient, monkeypatch: pyte
     assert body["maas_ready"] is True
 
 
-def test_health_root_includes_readiness_fields(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_health_root_always_200_no_maas_ping(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/health is a liveness probe — never pings MaaS, never returns non-200."""
     mock_deps = MagicMock()
     mock_deps.retriever.is_ready.return_value = True
     mock_deps.llm.is_reachable.return_value = True
@@ -73,6 +74,9 @@ def test_health_root_includes_readiness_fields(client: TestClient, monkeypatch: 
     resp = client.get("/health")
     assert resp.status_code == 200
     body = resp.json()
-    assert "maas_ready" in body
-    assert "ready" in body
-    assert body["ready"] is True
+    assert body["status"] == "healthy"
+    assert body["index_ready"] is True
+    # maas_ready is not checked on liveness — always False to avoid slow pings
+    assert body["maas_ready"] is False
+    # is_reachable must NOT have been called (no MaaS ping on /health)
+    mock_deps.llm.is_reachable.assert_not_called()

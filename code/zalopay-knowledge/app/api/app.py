@@ -16,7 +16,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api.health import is_live, is_ready, probe_status
+from app.api.health import is_ready, probe_liveness, probe_status
 from app.api.spa_static import SPAStaticFiles
 from app.api.middleware import GatewayTrustMiddleware, KillSwitchMiddleware, RequestLoggingMiddleware
 from app.api.routes import router
@@ -47,15 +47,19 @@ def register_health_routes(app: FastAPI) -> None:
 
     @app.get("/health", response_model=HealthInfo, tags=["health"])
     def health() -> HealthInfo:
-        """Process snapshot — always 200 while HTTP server is up."""
-        if not is_live():
-            raise HTTPException(status_code=503, detail="Process not live")
-        return HealthInfo(**probe_status())
+        """Liveness probe — always HTTP 200 while the process accepts connections."""
+        try:
+            return HealthInfo(**probe_liveness())
+        except Exception:  # noqa: BLE001 — platform health check must never 5xx
+            return HealthInfo()
 
     @app.get("/health/live", response_model=HealthInfo, tags=["health"])
     def health_live() -> HealthInfo:
         """Liveness — always 200 while accepting requests (no index/MaaS gate)."""
-        return HealthInfo(**probe_status())
+        try:
+            return HealthInfo(**probe_liveness())
+        except Exception:  # noqa: BLE001
+            return HealthInfo()
 
     @app.get("/health/ready", response_model=HealthInfo, tags=["health"])
     def health_ready(response: Response) -> HealthInfo:
