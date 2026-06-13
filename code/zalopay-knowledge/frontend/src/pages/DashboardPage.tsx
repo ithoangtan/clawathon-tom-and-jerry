@@ -1,6 +1,7 @@
 import { Activity } from "@/components/ui/icons";
 import { HistoryTable, MetricsGrid } from "@/components/dashboard/DashboardPanels";
 import { SyncStatusPanel } from "@/components/dashboard/SyncStatusPanel";
+import { ScrollablePage } from "@/components/layout/ScrollablePage";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/StateViews";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -13,6 +14,7 @@ export function DashboardPage() {
   const { data, error, loading, refresh } = useDashboard();
 
   return (
+    <ScrollablePage>
     <div className="page-shell space-y-8 sm:space-y-10" data-tour="dashboard-overview">
       <header className="page-header">
         <div className="flex items-start gap-4">
@@ -63,5 +65,6 @@ export function DashboardPage() {
         </section>
       )}
     </div>
+    </ScrollablePage>
   );
 }

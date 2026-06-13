@@ -63,6 +63,20 @@ vi.mock("@/hooks/useSyncStatus", () => ({
   }),
 }));
 
+vi.mock("@/hooks/useAdminSyncStatus", () => ({
+  useAdminSyncStatus: () => ({
+    status: {
+      running: false,
+      departments: [],
+      recent_jobs: [],
+      sources: [],
+    },
+    error: null,
+    loading: false,
+    refresh: vi.fn(),
+  }),
+}));
+
 describe("App navigation", () => {
   it("renders chat at / and navigates to dashboard", async () => {
     const user = userEvent.setup();
@@ -74,6 +88,9 @@ describe("App navigation", () => {
 
     await user.click(screen.getByRole("link", { name: "Dashboard" }));
     expect(screen.getByRole("heading", { name: "Usage & Health" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Admin" }));
+    expect(screen.getByRole("heading", { name: "Knowledge sync" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Chat" }));
     expect(screen.getByRole("heading", { name: "How can I help?" })).toBeInTheDocument();

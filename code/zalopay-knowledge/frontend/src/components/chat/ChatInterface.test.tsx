@@ -1,5 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatInterface } from "./ChatInterface";
 import type { ChatMessage } from "@/hooks/useChat";
@@ -58,6 +59,14 @@ vi.mock("@/hooks/useHealth", () => ({
 }));
 
 describe("ChatInterface", () => {
+  function renderChat() {
+    return renderWithUser(
+      <MemoryRouter>
+        <ChatInterface />
+      </MemoryRouter>,
+    );
+  }
+
   beforeEach(() => {
     sendMessageMock.mockReset();
     retryLastMock.mockReset();
@@ -90,15 +99,28 @@ describe("ChatInterface", () => {
 
   it("shows warning and disables input when index is not ready", () => {
     mockHealth.health = { status: "healthy", index_ready: false };
-    renderWithUser(<ChatInterface />);
+    renderChat();
 
-    expect(screen.getByText(/Knowledge base not synced yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/Target departments have no indexed data yet/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Go to Admin to sync from Confluence/i })).toHaveAttribute(
+      "href",
+      "/admin",
+    );
     expect(screen.getByRole("textbox")).toBeDisabled();
+  });
+
+  it("shows department-specific warning when a department is pinned", () => {
+    mockHealth.health = { status: "healthy", index_ready: false };
+    mockChatState.targetAutoRoute = false;
+    mockChatState.targetDepartments = ["risk"];
+    renderChat();
+
+    expect(screen.getByText(/The Risk department has no indexed data yet/i)).toBeInTheDocument();
   });
 
   it("renders empty state with example questions", async () => {
     const user = userEvent.setup();
-    renderWithUser(<ChatInterface />);
+    renderChat();
 
     expect(screen.getByRole("heading", { name: "How can I help?" })).toBeInTheDocument();
     const example = screen.getByRole("button", {
@@ -143,7 +165,7 @@ describe("ChatInterface", () => {
       },
     ];
 
-    renderWithUser(<ChatInterface />);
+    renderChat();
     expect(screen.getByText("Per-department retrieval")).toBeInTheDocument();
     const branches = screen.getByRole("list", { name: "Department retrieval branches" });
     expect(within(branches).getByText("Risk")).toBeInTheDocument();
@@ -161,7 +183,7 @@ describe("ChatInterface", () => {
       },
     ];
 
-    renderWithUser(<ChatInterface />);
+    renderChat();
     expect(
       screen.getByText(/Request timed out. Try a narrower question./i),
     ).toBeInTheDocument();
@@ -188,7 +210,7 @@ describe("ChatInterface", () => {
       },
     ];
 
-    renderWithUser(<ChatInterface />);
+    renderChat();
     const clarifyRegion = screen.getByRole("region", { name: "Clarification needed" });
     await user.click(within(clarifyRegion).getByRole("button", { name: "Risk" }));
 
@@ -217,7 +239,7 @@ describe("ChatInterface", () => {
       },
     ];
 
-    renderWithUser(<ChatInterface />);
+    renderChat();
     expect(
       screen.getByRole("heading", { name: "Outside indexed documentation" }),
     ).toBeInTheDocument();
@@ -243,7 +265,7 @@ describe("ChatInterface", () => {
       },
     ];
 
-    renderWithUser(<ChatInterface />);
+    renderChat();
     expect(screen.getByRole("heading", { name: "Access denied" })).toBeInTheDocument();
     expect(screen.getByText("Access blocked.")).toBeInTheDocument();
   });

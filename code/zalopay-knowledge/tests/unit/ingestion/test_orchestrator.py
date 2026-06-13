@@ -20,6 +20,8 @@ def sync_settings(tmp_path: Path) -> Settings:
         confluence_email="bot@example.com",
         confluence_api_token="secret-token",
         confluence_space_risk="RISK",
+        confluence_space_grow="",
+        confluence_space_bank="",
         index_dir=str(tmp_path / "index"),
     )
 

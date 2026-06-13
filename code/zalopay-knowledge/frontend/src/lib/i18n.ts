@@ -1,4 +1,5 @@
-import type { Lang } from "./types";
+import type { Department, Lang } from "./types";
+import { departmentLabel } from "./departments";
 
 type Strings = Record<string, { en: string; vi: string }>;
 
@@ -11,6 +12,7 @@ const strings: Strings = {
   navChat: { en: "Chat", vi: "Hỏi đáp" },
   navDashboard: { en: "Dashboard", vi: "Bảng điều khiển" },
   navSettings: { en: "Settings", vi: "Cài đặt" },
+  navAdmin: { en: "Admin", vi: "Quản trị" },
   newSession: { en: "New session", vi: "Phiên mới" },
   sessionHistory: { en: "Session history", vi: "Lịch sử phiên hỏi đáp" },
   sessionHistoryHint: {
@@ -30,9 +32,21 @@ const strings: Strings = {
   statusPending: { en: "In progress", vi: "Đang xử lý" },
   cancel: { en: "Cancel", vi: "Hủy" },
   confirm: { en: "Confirm", vi: "Xác nhận" },
-  indexNotReady: {
-    en: "Knowledge base not synced yet — go to Settings to sync.",
-    vi: "Cơ sở tri thức chưa được đồng bộ — vào Cài đặt để đồng bộ.",
+  indexNotReadyDept: {
+    en: "The {department} department has no indexed data yet.",
+    vi: "Phòng ban {department} chưa có dữ liệu.",
+  },
+  indexNotReadyDepts: {
+    en: "The selected departments ({departments}) have no indexed data yet.",
+    vi: "Các phòng ban đã chọn ({departments}) chưa có dữ liệu.",
+  },
+  indexNotReadyAuto: {
+    en: "Target departments have no indexed data yet.",
+    vi: "Các phòng ban mục tiêu chưa có dữ liệu.",
+  },
+  indexNotReadyAdminLink: {
+    en: "Go to Admin to sync from Confluence.",
+    vi: "Vào Quản trị để đồng bộ từ Confluence.",
   },
   askPlaceholder: {
     en: "Ask about Zalopay policies, runbooks, or procedures…",
@@ -219,6 +233,31 @@ const strings: Strings = {
     en: "Configure your identity, sync preferences, and runtime environment for grounded answers.",
     vi: "Cấu hình danh tính, tùy chọn đồng bộ và môi trường runtime để nhận câu trả lời có căn cứ.",
   },
+  adminTitle: { en: "Knowledge sync", vi: "Đồng bộ tri thức" },
+  adminSubtitle: {
+    en: "Trigger Confluence sync per department or globally, and monitor live job status with page counts and errors.",
+    vi: "Kích hoạt đồng bộ Confluence theo phòng ban hoặc toàn bộ, theo dõi trạng thái job, số trang và lỗi.",
+  },
+  adminSyncActions: { en: "Sync actions", vi: "Thao tác đồng bộ" },
+  adminSyncAll: { en: "Sync all departments", vi: "Đồng bộ tất cả phòng ban" },
+  adminSyncDepartment: { en: "Sync {department}", vi: "Đồng bộ {department}" },
+  adminDepartmentStatus: { en: "Per-department index", vi: "Chỉ mục theo phòng ban" },
+  adminRecentJobs: { en: "Recent sync jobs", vi: "Job đồng bộ gần đây" },
+  adminNoJobs: { en: "No sync jobs yet.", vi: "Chưa có job đồng bộ nào." },
+  adminSpace: { en: "Confluence space", vi: "Không gian Confluence" },
+  adminPages: { en: "Pages", vi: "Trang" },
+  adminJobSource: { en: "Source", vi: "Nguồn" },
+  adminJobDepartment: { en: "Department", vi: "Phòng ban" },
+  adminJobStatus: { en: "Status", vi: "Trạng thái" },
+  adminJobStarted: { en: "Started", vi: "Bắt đầu" },
+  adminJobFinished: { en: "Finished", vi: "Kết thúc" },
+  adminJobAllDepartments: { en: "All departments", vi: "Tất cả phòng ban" },
+  adminJobSuccess: { en: "success", vi: "thành công" },
+  adminJobFailure: { en: "failure", vi: "thất bại" },
+  adminJobRunning: { en: "running", vi: "đang chạy" },
+  adminSyncStarted: { en: "Sync started.", vi: "Đã bắt đầu đồng bộ." },
+  adminSyncInProgress: { en: "A sync job is already running.", vi: "Đã có job đồng bộ đang chạy." },
+  adminSyncFailed: { en: "Failed to start sync.", vi: "Không thể bắt đầu đồng bộ." },
   dashboardSubtitle: {
     en: "Real-time usage metrics, sync health, and query history for your knowledge agent.",
     vi: "Số liệu sử dụng theo thời gian thực, tình trạng đồng bộ và lịch sử truy vấn của trợ lý tri thức.",
@@ -390,6 +429,24 @@ export function sourceLabel(source: string, locale: Lang): string {
   if (source === "confluence") return t("sourceConfluence", locale);
   if (source === "gdrive") return t("sourceGdrive", locale);
   return source;
+}
+
+export function indexNotReadyMessage(
+  locale: Lang,
+  autoRoute: boolean,
+  departments: Department[],
+): string {
+  if (!autoRoute && departments.length === 1) {
+    return t("indexNotReadyDept", locale, {
+      department: departmentLabel(departments[0], locale),
+    });
+  }
+  if (!autoRoute && departments.length > 1) {
+    return t("indexNotReadyDepts", locale, {
+      departments: departments.map((d) => departmentLabel(d, locale)).join(", "),
+    });
+  }
+  return t("indexNotReadyAuto", locale);
 }
 
 export function t(

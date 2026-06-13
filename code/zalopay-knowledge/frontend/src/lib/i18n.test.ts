@@ -30,7 +30,7 @@ describe("i18n", () => {
     expect(t("accessDeniedTitle", "en")).toBe("Access denied");
     expect(t("statusAccessDenied", "vi")).toBe("Không có quyền truy cập");
     expect(t("emptyChatTitle", "vi")).toBe("Tôi có thể giúp gì?");
-    expect(t("indexNotReady", "en")).toMatch(/not synced/i);
+    expect(t("indexNotReadyAuto", "en")).toMatch(/no indexed data/i);
   });
 
   it("covers dashboard and layout chrome strings", () => {

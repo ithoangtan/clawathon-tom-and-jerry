@@ -202,6 +202,116 @@ class SyncStatusResponse(_Base):
     sources: list[SourceStatus] = Field(default_factory=list)
 
 
+class AdminSyncRequest(_Base):
+    """Body of ``POST /api/admin/sync``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source: Literal["confluence", "gdrive"]
+    department: Optional[Department] = None
+    """When set with ``source=confluence``, sync only this department's space."""
+
+
+class AdminSyncStartResponse(_Base):
+    """Body returned by ``POST /api/admin/sync``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source: str
+    department: Optional[Department] = None
+    started: bool
+    job_id: Optional[str] = None
+    message: str
+
+
+class SyncedContentItem(_Base):
+    """One synced document in admin status/history payloads."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: str
+    title: str
+    url: Optional[str] = None
+
+
+class AdminDepartmentSyncStatus(_Base):
+    """Per-department sync result within an admin job."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    department: Department
+    space_key: Optional[str] = None
+    status: Literal["pending", "running", "success", "failed"]
+    page_count: int = 0
+    chunk_count: int = 0
+    synced_items: list[SyncedContentItem] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
+
+
+class AdminJobStatus(_Base):
+    """Sync job status for one source (confluence or gdrive)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    job_id: Optional[str] = None
+    status: Literal["pending", "running", "success", "failed"]
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    last_success_at: Optional[str] = None
+    target_department: Optional[Department] = None
+    doc_count: int = 0
+    chunk_count: int = 0
+    errors: list[str] = Field(default_factory=list)
+    progress: Optional[dict] = None
+    departments: list[AdminDepartmentSyncStatus] = Field(default_factory=list)
+
+
+class AdminDepartmentIndexStatus(_Base):
+    """Indexed corpus snapshot for one department."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    chunk_count: int = 0
+    doc_count: int = 0
+    has_data: bool = False
+
+
+class AdminSyncStatusResponse(_Base):
+    """Body of ``GET /api/admin/sync/status``."""
+
+    model_config = ConfigDict(extra="allow")
+
+    jobs: dict[str, AdminJobStatus] = Field(default_factory=dict)
+    departments_indexed: dict[Department, AdminDepartmentIndexStatus] = Field(
+        default_factory=dict
+    )
+
+
+class AdminSyncHistoryEntry(_Base):
+    """One row in ``GET /api/admin/sync/history``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: str
+    source: str
+    status: Literal["pending", "running", "success", "failed"]
+    started_at: str
+    finished_at: Optional[str] = None
+    department: Optional[Department] = None
+    doc_count: int = 0
+    chunk_count: int = 0
+    errors: list[str] = Field(default_factory=list)
+    departments: list[AdminDepartmentSyncStatus] = Field(default_factory=list)
+
+
+class AdminSyncHistoryResponse(_Base):
+    """Body of ``GET /api/admin/sync/history``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    entries: list[AdminSyncHistoryEntry] = Field(default_factory=list)
+
+
 class HistoryItem(_Base):
     """One row in the query history table on the Dashboard."""
 

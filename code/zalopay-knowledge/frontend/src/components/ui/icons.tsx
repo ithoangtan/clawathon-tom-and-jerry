@@ -49,6 +49,7 @@ export const ShieldX = icon("ShieldX", (<><path d="M20 13c0 5-3.5 7.5-7.66 8.95a
 export const Gauge = icon("Gauge", (<><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></>));
 export const Timer = icon("Timer", (<><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></>));
 export const Activity = icon("Activity", <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />);
+export const Database = icon("Database", (<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></>));
 export const Menu = icon("Menu", (<><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></>));
 export const X = icon("X", (<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>));
 export const Search = icon("Search", (<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>));

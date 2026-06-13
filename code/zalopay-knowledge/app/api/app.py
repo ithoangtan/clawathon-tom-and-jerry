@@ -89,6 +89,10 @@ def create_app() -> FastAPI:
     register_health_routes(app)
     app.include_router(router)
 
+    from app.api.admin_routes import router as admin_router
+
+    app.include_router(admin_router)
+
     dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if dist.is_dir():
         app.mount("/", StaticFiles(directory=str(dist), html=True), name="frontend")

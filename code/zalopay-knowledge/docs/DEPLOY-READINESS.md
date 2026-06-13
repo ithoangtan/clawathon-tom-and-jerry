@@ -17,21 +17,31 @@ Combined platform suite: `pytest tests/unit/platform/test_ops_mvp.py tests/unit/
 
 ## Prerequisites
 
+AgentBase CLI credentials are **shell-only** — never paste into runtime env or Docker.
+
 ```bash
-export GREENNODE_CLIENT_ID="..."
-export GREENNODE_CLIENT_SECRET="..."
+cp deploy/operator-cli.env.example deploy/operator-cli.env   # gitignored
+# fill GREENNODE_CLIENT_ID / GREENNODE_CLIENT_SECRET
+set -a && source deploy/operator-cli.env && set +a
+```
+
+Validate runtime env files before apply:
+
+```bash
+chmod +x scripts/validate-runtime-env.sh
+scripts/validate-runtime-env.sh deploy/agentbase-runtime.env.example deploy/.runtime.env
 ```
 
 ## Ordered steps
 
 1. **LLM** — `/agentbase-llm`: create API key; enable SMALL + MAIN models; set runtime env `LLM_API_KEY` (or rely on platform `GREENNODE_API_KEY` fallback).
 2. **Memory (STM)** — `/agentbase-memory create`; set `MEMORY_ID` on runtime.
-3. **Identity (Outbound Auth)** — Access Control console; bind to agent identity (`GREENNODE_AGENT_IDENTITY`):
+3. **Identity (Outbound Auth)** — Access Control console; bind providers to the agent identity the platform registers (injected as `GREENNODE_AGENT_IDENTITY` — do **not** set in runtime env):
    - **Confluence** — Type API Key → `identity-confluence-zalopay-knowledge`; runtime: `CONFLUENCE_API_KEY_PROVIDER`, `CONFLUENCE_EMAIL`, `CONFLUENCE_BASE_URL`
    - **GDrive** — Type OAuth (Included Google) → `identity-google-space`; Google Cloud: whitelist `callbackUrl`, enable Drive API, share folder; runtime: `GDRIVE_FOLDER_ID`, `GDRIVE_OAUTH_PROVIDER`, `GDRIVE_OAUTH_SCOPES`
 4. **Validate** — `/agentbase-wizard test validate` → `test docker --platform linux/amd64` → `test preflight`.
 5. **Build** — `make docker-build-amd64` from project root.
-6. **Deploy** — `/agentbase-deploy` (PUBLIC MVP, flavor with enough RAM for embeddings + FAISS).
+6. **Deploy** — `/agentbase-deploy` with `--env-file deploy/.runtime.env` (PUBLIC MVP, flavor with enough RAM for embeddings + FAISS). Set `GATEWAY_TRUST_REQUIRED=false` for PUBLIC same-origin SPA.
 7. **Sync** — trigger Confluence + GDrive sync via Settings; confirm `GET /health/ready` → `ready: true` (index + MaaS).
 8. **Monitor** — `/agentbase-monitor runtime-logs` and budget alert at 80%.
 9. **Teardown playbook** — `/agentbase-teardown zalopay-knowledge --dry-run` before any real cleanup.
@@ -60,11 +70,35 @@ The Docker `HEALTHCHECK` uses `/health/live` so the container stays up during lo
 
 **GDrive sync prerequisites (AgentBase):** `GDRIVE_FOLDER_ID`; Outbound Auth OAuth `identity-google-space` bound; egress includes `drive.googleapis.com`. **Confluence:** Outbound Auth apikey `identity-confluence-zalopay-knowledge` + `CONFLUENCE_EMAIL`. Resolution: `app/adapters/gdrive_credentials.py`, `app/adapters/confluence_credentials.py`.
 
-## Runtime env (non-`GREENNODE_*` in env file)
+## Runtime env
 
-See `.env.example`. On AgentBase, `APP_ENV=agentbase`. Platform injects `GREENNODE_API_KEY` when `LLM_API_KEY` is unset.
+Templates: `deploy/agentbase-runtime.env.example` (minimal) and `deploy/.runtime.env` (full operator copy, gitignored).
 
-Key ops tunables: `INDEX_DIR`, `GRAPH_BUDGET_S`, `BRANCH_TIMEOUT_S`, `LLM_REQUEST_TIMEOUT_S`, `HEALTH_PING_TIMEOUT_S`, `AGENT_ENABLED`, `CONFLUENCE_API_KEY_PROVIDER`, `GDRIVE_FOLDER_ID`, `GDRIVE_OAUTH_PROVIDER`, `GDRIVE_OAUTH_SCOPES`.
+Local docker compose uses root `.env.example` → `.env` only. Do **not** scrape `.env.example` for AgentBase runtime — CLI and runtime vars live in separate deploy files.
+
+On AgentBase, `APP_ENV=agentbase`. Platform injects `GREENNODE_API_KEY` when `LLM_API_KEY` is unset.
+
+### Forbidden in AgentBase runtime env
+
+AgentBase **rejects** these if set in runtime configuration (CLI OAuth or platform-injected):
+
+| Variable | Reason |
+|---|---|
+| `GREENNODE_CLIENT_ID` | IAM OAuth — operator shell / `deploy/operator-cli.env` only |
+| `GREENNODE_CLIENT_SECRET` | IAM OAuth — operator shell / `deploy/operator-cli.env` only |
+| `GREENNODE_AGENT_IDENTITY` | Registered agent identity — platform injects at deploy |
+
+Also **do not set** (platform injects; setting duplicates or conflicts):
+
+- `GREENNODE_API_KEY`, `GREENNODE_IDENTITY_URL`, `GREENNODE_MEMORY_URL`, `GREENNODE_AGENT_ID`
+
+`scripts/validate-runtime-env.sh` fails CI/pre-deploy if the three rejected keys appear uncommented in runtime env files.
+
+### PUBLIC MVP security
+
+Set `GATEWAY_TRUST_REQUIRED=false` in runtime env so the same-origin SPA can send identity headers. VPC/gateway-fronted deploys may omit or set `true`.
+
+Key ops tunables: `INDEX_DIR`, `GRAPH_BUDGET_S`, `BRANCH_TIMEOUT_S`, `LLM_REQUEST_TIMEOUT_S`, `HEALTH_PING_TIMEOUT_S`, `AGENT_ENABLED`, `GATEWAY_TRUST_REQUIRED`, `CONFLUENCE_API_KEY_PROVIDER`, `GDRIVE_FOLDER_ID`, `GDRIVE_OAUTH_PROVIDER`, `GDRIVE_OAUTH_SCOPES`.
 
 ## Out of scope (Phase 2)
 

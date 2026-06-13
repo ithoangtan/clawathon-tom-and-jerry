@@ -204,11 +204,12 @@ class Settings(BaseSettings):
         default=True,
         description="Kill-switch: when false, chat/sync endpoints return 503",
     )
-    gateway_trust_required: bool = Field(
-        default=False,
+    gateway_trust_required: bool | None = Field(
+        default=None,
         description=(
             "When true, reject client-supplied X-GreenNode-AgentBase-* identity headers "
-            "unless accompanied by a gateway trust marker"
+            "unless accompanied by a gateway trust marker. "
+            "Unset: false for APP_ENV=local, true for APP_ENV=agentbase."
         ),
     )
     gateway_trust_secret: str = Field(
@@ -295,9 +296,9 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _apply_agentbase_security_defaults(self) -> "Settings":
-        """Production defaults: require gateway trust when deployed on AgentBase."""
-        if self.is_agentbase and not self.gateway_trust_required:
-            object.__setattr__(self, "gateway_trust_required", True)
+        """Default gateway trust from APP_ENV when GATEWAY_TRUST_REQUIRED is unset."""
+        if self.gateway_trust_required is None:
+            object.__setattr__(self, "gateway_trust_required", self.is_agentbase)
         return self
 
     @model_validator(mode="after")

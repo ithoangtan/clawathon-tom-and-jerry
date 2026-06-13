@@ -23,6 +23,8 @@ frontend/node_modules/
 .env
 .env.local
 .env.*.local
+deploy/.runtime.env
+deploy/operator-cli.env
 *-sa.json
 *.key
 *.pem
@@ -60,3 +62,4 @@ index/*
 .coverage
 htmlcov/
 coverage.xml
+.agentbase/

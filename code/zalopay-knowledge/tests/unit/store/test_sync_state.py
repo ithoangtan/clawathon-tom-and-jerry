@@ -3,7 +3,11 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from app.store.meta import MetaStore
-from app.store.sync_state import SyncOrchestrator
+from app.store.sync_state import (
+    DepartmentSyncResult,
+    SyncOrchestrator,
+    SyncedContentSummary,
+)
 
 from tests.unit.store.helpers import make_chunk_row
 
@@ -139,3 +143,66 @@ class TestSyncOrchestratorMetaIntegration:
     ) -> None:
         sources = {s["source"] for s in sync_orchestrator.status_snapshot()}
         assert sources == {"confluence", "gdrive"}
+
+
+class TestSyncOrchestratorAdmin:
+    def test_admin_status_pending_when_never_synced(
+        self, sync_orchestrator: SyncOrchestrator
+    ) -> None:
+        snapshot = sync_orchestrator.admin_status_snapshot()
+        assert snapshot["jobs"]["confluence"]["status"] == "pending"
+        assert snapshot["departments_indexed"]["risk"]["has_data"] is False
+
+    def test_admin_status_running_and_department_results(
+        self, sync_orchestrator: SyncOrchestrator
+    ) -> None:
+        sync_orchestrator.start("confluence", department="risk")
+        sync_orchestrator.record_department_result(
+            "confluence",
+            DepartmentSyncResult(
+                department="risk",
+                space_key="RISK",
+                status="running",
+                page_count=0,
+            ),
+        )
+
+        snapshot = sync_orchestrator.admin_status_snapshot()
+        conf = snapshot["jobs"]["confluence"]
+        assert conf["status"] == "running"
+        assert conf["target_department"] == "risk"
+        assert conf["departments"][0]["department"] == "risk"
+        assert conf["job_id"] is not None
+
+    def test_history_records_finished_job(self, sync_orchestrator: SyncOrchestrator) -> None:
+        sync_orchestrator.start("confluence")
+        sync_orchestrator.record_department_result(
+            "confluence",
+            DepartmentSyncResult(
+                department="risk",
+                space_key="RISK",
+                status="success",
+                page_count=2,
+                chunk_count=6,
+                synced_items=[
+                    SyncedContentSummary(
+                        source_id="1",
+                        title="Risk PRD",
+                        url="https://example.com/1",
+                    )
+                ],
+            ),
+        )
+        sync_orchestrator.finish("confluence", success=True, doc_count=2, chunk_count=6)
+
+        history = sync_orchestrator.history_snapshot(limit=5)
+        assert len(history) == 1
+        assert history[0]["status"] == "success"
+        assert history[0]["departments"][0]["synced_items"][0]["title"] == "Risk PRD"
+
+    def test_current_job_id_while_running(self, sync_orchestrator: SyncOrchestrator) -> None:
+        sync_orchestrator.start("gdrive")
+        job_id = sync_orchestrator.current_job_id("gdrive")
+        assert job_id is not None
+        sync_orchestrator.finish("gdrive", success=True, doc_count=1, chunk_count=1)
+        assert sync_orchestrator.current_job_id("gdrive") == job_id

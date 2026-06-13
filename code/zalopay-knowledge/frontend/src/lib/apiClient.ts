@@ -1,4 +1,7 @@
 import type {
+  AdminSyncRequest,
+  AdminSyncResponse,
+  AdminSyncStatus,
   ChatRequest,
   ChatResponse,
   ChatStreamEvent,
@@ -198,5 +201,17 @@ export const api = {
 
   dashboard(): Promise<DashboardData> {
     return request<DashboardData>("/api/dashboard", { method: "GET" });
+  },
+
+  adminSync(body: AdminSyncRequest, ctx: UserContext): Promise<AdminSyncResponse> {
+    return request<AdminSyncResponse>(
+      "/api/admin/sync",
+      { method: "POST", body: JSON.stringify(body) },
+      ctx,
+    );
+  },
+
+  adminSyncStatus(): Promise<AdminSyncStatus> {
+    return request<AdminSyncStatus>("/api/admin/sync/status", { method: "GET" });
   },
 };

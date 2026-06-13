@@ -139,8 +139,37 @@ class TestGatewayTrust:
         from app.config import Settings, get_settings
 
         get_settings.cache_clear()
-        cfg = Settings()
+        # Ignore workspace .env so we test the APP_ENV default, not local dev overrides.
+        cfg = Settings(_env_file=None)
         assert cfg.gateway_trust_required is True
+
+    def test_agentbase_env_respects_explicit_gateway_trust_false(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("APP_ENV", "agentbase")
+        monkeypatch.setenv("GATEWAY_TRUST_REQUIRED", "false")
+        from app.config import Settings, get_settings
+
+        get_settings.cache_clear()
+        cfg = Settings()
+        assert cfg.gateway_trust_required is False
+
+    def test_local_env_enforces_gateway_trust_when_explicitly_required(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, ready_retriever: None
+    ) -> None:
+        _ = ready_retriever
+        monkeypatch.setenv("APP_ENV", "local")
+        monkeypatch.setenv("GATEWAY_TRUST_REQUIRED", "true")
+        from app.config import get_settings
+
+        get_settings.cache_clear()
+
+        resp = client.post(
+            "/chat",
+            json={"question": "hello"},
+            headers=AUTH_HEADERS,
+        )
+        assert resp.status_code == 403
 
 
 class TestKillSwitch:

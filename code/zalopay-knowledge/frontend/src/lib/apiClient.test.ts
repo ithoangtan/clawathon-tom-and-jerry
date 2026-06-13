@@ -185,6 +185,48 @@ describe("apiClient", () => {
     expect(calls[0]?.[0]).toBe("/sync/status");
     expect(calls[1]?.[0]).toBe("/api/dashboard");
   });
+
+  it("calls admin sync endpoints", async () => {
+    const adminStatus = {
+      running: false,
+      departments: [],
+      recent_jobs: [],
+      sources: [],
+    };
+    const adminStart = {
+      started: true,
+      message: "Sync started",
+      source: "confluence" as const,
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(adminStart),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(adminStatus),
+        }),
+    );
+
+    await api.adminSync({ source: "confluence", department: "risk" }, ctx);
+    await expect(api.adminSyncStatus()).resolves.toEqual(adminStatus);
+
+    const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls[0]?.[0]).toBe("/api/admin/sync");
+    expect(calls[1]?.[0]).toBe("/api/admin/sync/status");
+
+    const [, init] = calls[0] as [string, RequestInit];
+    expect(init.body).toBe(JSON.stringify({ source: "confluence", department: "risk" }));
+    const headers = init.headers as Record<string, string>;
+    expect(headers["X-GreenNode-AgentBase-User-Id"]).toBe(ctx.userId);
+  });
 });
 
 describe("parseSseBuffer", () => {

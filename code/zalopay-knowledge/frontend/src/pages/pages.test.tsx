@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatPage } from "./ChatPage";
 import { DashboardPage } from "./DashboardPage";
 import { SettingsPage } from "./SettingsPage";
+import { AdminPage } from "./AdminPage";
 import { renderWithUser } from "@/test/test-utils";
 
 vi.mock("@/hooks/useChat", () => ({
@@ -63,6 +64,20 @@ vi.mock("@/hooks/useDashboard", () => ({
 vi.mock("@/hooks/useSyncStatus", () => ({
   useSyncStatus: () => ({
     status: { sources: [] },
+    error: null,
+    loading: false,
+    refresh: vi.fn(),
+  }),
+}));
+
+vi.mock("@/hooks/useAdminSyncStatus", () => ({
+  useAdminSyncStatus: () => ({
+    status: {
+      running: false,
+      departments: [],
+      recent_jobs: [],
+      sources: [],
+    },
     error: null,
     loading: false,
     refresh: vi.fn(),
@@ -150,5 +165,15 @@ describe("SettingsPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Knowledge sync")).toBeInTheDocument();
     expect(screen.getByText("Runtime config")).toBeInTheDocument();
+  });
+});
+
+describe("AdminPage", () => {
+  it("renders admin sync controls and status sections", () => {
+    renderWithUser(<AdminPage />);
+    expect(screen.getByRole("heading", { name: "Knowledge sync" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sync all departments" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Recent sync jobs" })).toBeInTheDocument();
+    expect(screen.getByText("No sync jobs yet.")).toBeInTheDocument();
   });
 });

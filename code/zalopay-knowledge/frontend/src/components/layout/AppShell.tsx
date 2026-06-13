@@ -7,6 +7,7 @@ import { LocaleEffect } from "@/components/layout/LocaleEffect";
 import { TutorialHelpButton } from "@/components/layout/TutorialHelpButton";
 import {
   Brain,
+  Database,
   LayoutDashboard,
   MessageSquare,
   Plus,
@@ -24,6 +25,7 @@ import { NavLink } from "react-router-dom";
 const NAV_ICONS = {
   "/": MessageSquare,
   "/dashboard": LayoutDashboard,
+  "/admin": Database,
   "/settings": Settings,
 } as const;
 
@@ -109,6 +111,7 @@ export function Nav() {
   const links: { to: keyof typeof NAV_ICONS; label: string; end?: boolean }[] = [
     { to: "/", label: t("navChat", locale), end: true },
     { to: "/dashboard", label: t("navDashboard", locale) },
+    { to: "/admin", label: t("navAdmin", locale) },
     { to: "/settings", label: t("navSettings", locale) },
   ];
 

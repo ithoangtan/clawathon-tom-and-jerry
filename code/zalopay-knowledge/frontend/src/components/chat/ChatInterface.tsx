@@ -10,7 +10,7 @@ import { PipelineProgress } from "@/components/chat/PipelineProgress";
 import { UserMessage } from "@/components/chat/UserMessage";
 import { ErrorState } from "@/components/ui/StateViews";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { t } from "@/lib/i18n";
+import { t, indexNotReadyMessage } from "@/lib/i18n";
 import { classNames } from "@/lib/format";
 import { useChat } from "@/hooks/useChat";
 import { useHealth } from "@/hooks/useHealth";
@@ -18,6 +18,7 @@ import { useSmoothScroll } from "@/hooks/useSmoothScroll";
 import { useUserStore } from "@/store/userStore";
 import type { Citation, Department } from "@/lib/types";
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 const EXAMPLE_QUESTIONS = {
   en: [
@@ -148,7 +149,10 @@ export function ChatInterface() {
           />
           {!indexReady && (
             <p className="mt-2 text-xs text-amber-700" role="status">
-              {t("indexNotReady", locale)}
+              {indexNotReadyMessage(locale, targetAutoRoute, targetDepartments)}{" "}
+              <Link to="/admin" className="font-medium text-brand underline-offset-2 hover:underline">
+                {t("indexNotReadyAdminLink", locale)}
+              </Link>
             </p>
           )}
         </div>

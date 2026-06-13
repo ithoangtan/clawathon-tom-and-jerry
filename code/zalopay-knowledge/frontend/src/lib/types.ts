@@ -171,6 +171,60 @@ export interface SyncStatus {
   sources: SourceStatus[];
 }
 
+// ── Admin sync ────────────────────────────────────────────────────────────────
+
+/** Per-department index status for admin dashboard. */
+export interface AdminDepartmentSyncStatus {
+  department: Department;
+  /** Confluence space key when source is confluence. */
+  space_key?: string | null;
+  state: "running" | "idle" | "error";
+  page_count: number;
+  doc_count: number;
+  chunk_count: number;
+  last_success_at?: string | null;
+  freshness_hours?: number | null;
+  errors: string[];
+  progress?: Record<string, unknown> | null;
+}
+
+/** One historical or in-flight admin sync job. */
+export interface AdminSyncJob {
+  id: string;
+  source: "confluence" | "gdrive";
+  department?: Department | null;
+  state: "running" | "success" | "failure";
+  started_at: string;
+  finished_at?: string | null;
+  pages_synced?: number | null;
+  message?: string | null;
+  errors?: string[];
+}
+
+/** Body of GET /api/admin/sync/status */
+export interface AdminSyncStatus {
+  running: boolean;
+  departments: AdminDepartmentSyncStatus[];
+  recent_jobs: AdminSyncJob[];
+  /** Global source rollup (mirrors GET /sync/status). */
+  sources: SourceStatus[];
+}
+
+/** Body of POST /api/admin/sync */
+export interface AdminSyncRequest {
+  department?: Department | null;
+  source?: "confluence" | "gdrive";
+}
+
+/** Body returned by POST /api/admin/sync */
+export interface AdminSyncResponse {
+  started: boolean;
+  message: string;
+  job_id?: string | null;
+  department?: Department | null;
+  source: "confluence" | "gdrive";
+}
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 /** One row in the query history table on the Dashboard. */

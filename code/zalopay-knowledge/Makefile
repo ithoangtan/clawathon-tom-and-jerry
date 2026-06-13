@@ -1,4 +1,4 @@
-.PHONY: up down logs build docker-build docker-build-amd64 fe-dev fe-build test sync-confluence sync-gdrive
+.PHONY: up down logs build docker-build docker-build-amd64 validate-runtime-env fe-dev fe-build test sync-confluence sync-gdrive
 
 # ── Docker Compose ──────────────────────────────────────────────────────────
 
@@ -25,6 +25,10 @@ docker-build:
 ## Build linux/amd64 image for AgentBase deploy pipeline
 docker-build-amd64:
 	docker build --platform linux/amd64 -t zalopay-knowledge:test .
+
+## Validate AgentBase runtime env file (no reserved GREENNODE_* keys)
+validate-runtime-env:
+	bash scripts/validate-runtime-env.sh deploy/agentbase-runtime.env.example deploy/.runtime.env
 
 # ── Frontend ────────────────────────────────────────────────────────────────
 

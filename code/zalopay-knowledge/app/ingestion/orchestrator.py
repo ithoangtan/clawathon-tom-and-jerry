@@ -14,7 +14,7 @@ from app.ingestion.gdrive import GDriveClient
 from app.ingestion.indexer import IndexBuilder
 from app.ingestion.sync_hash import page_content_hash, resolve_document_chunks
 from app.store.meta import MetaStore
-from app.store.sync_state import SyncOrchestrator
+from app.store.sync_state import DepartmentSyncResult, SyncOrchestrator, SyncedContentSummary
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +47,17 @@ class SyncService:
     def orchestrator(self) -> SyncOrchestrator:
         return self._orchestrator
 
-    def trigger_confluence(self, on_complete: Callable[[], None] | None = None) -> bool:
-        if not self._orchestrator.start("confluence"):
+    def trigger_confluence(
+        self,
+        on_complete: Callable[[], None] | None = None,
+        *,
+        department: str | None = None,
+    ) -> bool:
+        if not self._orchestrator.start("confluence", department=department):
             return False
         threading.Thread(
             target=self._run_confluence,
-            kwargs={"on_complete": on_complete},
+            kwargs={"on_complete": on_complete, "department": department},
             daemon=True,
         ).start()
         return True
@@ -67,7 +72,12 @@ class SyncService:
         ).start()
         return True
 
-    def _run_confluence(self, on_complete: Callable[[], None] | None = None) -> None:
+    def _run_confluence(
+        self,
+        on_complete: Callable[[], None] | None = None,
+        *,
+        department: str | None = None,
+    ) -> None:
         try:
             if not self._confluence.configured():
                 raise ValueError("Confluence is not configured")
@@ -75,8 +85,20 @@ class SyncService:
             total_docs = 0
             total_chunks = 0
             space_map = self._cfg.confluence_space_map
+            if department:
+                if department not in space_map:
+                    raise ValueError(
+                        f"Department {department!r} has no Confluence space configured"
+                    )
+                space_map = {department: space_map[department]}
 
             for dept, space_key in space_map.items():
+                dept_result = DepartmentSyncResult(
+                    department=dept,
+                    space_key=space_key,
+                    status="running",
+                )
+                self._orchestrator.record_department_result("confluence", dept_result)
                 self._orchestrator.update_progress(
                     "confluence",
                     {"space": space_key, "department": dept},
@@ -84,6 +106,8 @@ class SyncService:
                 pages = self._confluence.list_pages(space_key)
                 dept_chunks: list[dict] = []
                 source_records: list[dict[str, str | None]] = []
+                synced_items: list[SyncedContentSummary] = []
+                page_errors: list[str] = []
                 for i, page in enumerate(pages):
                     page_id = str(page.get("id", ""))
                     if not page_id:
@@ -92,10 +116,18 @@ class SyncService:
                         text, meta = self._confluence.fetch_page_body(page_id)
                     except Exception as exc:  # noqa: BLE001
                         logger.warning("Skip page %s: %s", page_id, exc)
+                        page_errors.append(f"page {page_id}: {exc}")
                         continue
                     page_title = meta.get("title") or page.get("title", "")
                     page_url = meta.get("url", "")
                     page_labels = meta.get("labels") or []
+                    synced_items.append(
+                        SyncedContentSummary(
+                            source_id=page_id,
+                            title=page_title or page_id,
+                            url=page_url or None,
+                        )
+                    )
 
                     def _build_page_chunks(
                         _text: str = text,
@@ -160,6 +192,18 @@ class SyncService:
                 self._indexer._meta.record_source_hashes(dept, source_records)
                 total_docs += len(pages)
                 total_chunks += count
+                self._orchestrator.record_department_result(
+                    "confluence",
+                    DepartmentSyncResult(
+                        department=dept,
+                        space_key=space_key,
+                        status="success",
+                        page_count=len(pages),
+                        chunk_count=count,
+                        synced_items=synced_items,
+                        errors=page_errors[-5:],
+                    ),
+                )
 
             self._indexer.reload_retriever()
             self._orchestrator.finish(

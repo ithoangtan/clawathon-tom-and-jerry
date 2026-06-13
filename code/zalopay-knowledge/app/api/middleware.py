@@ -21,6 +21,8 @@ _KILL_SWITCH_ALLOWLIST = frozenset(
         "/health/ready",
         "/sync/status",
         "/api/dashboard",
+        "/api/admin/sync/status",
+        "/api/admin/sync/history",
         "/docs",
         "/openapi.json",
         "/redoc",
