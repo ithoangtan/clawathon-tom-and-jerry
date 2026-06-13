@@ -1,6 +1,5 @@
 import { ScrollablePage } from "@/components/layout/ScrollablePage";
 import { ConfigPanel } from "@/components/settings/ConfigPanel";
-import { SyncControls } from "@/components/settings/SyncControls";
 import { UserIdentityForm } from "@/components/settings/UserIdentityForm";
 import { t } from "@/lib/i18n";
 import { useHealth } from "@/hooks/useHealth";
@@ -20,7 +19,6 @@ export function SettingsPage() {
 
       <div className="space-y-6">
         <UserIdentityForm />
-        <SyncControls />
         <ConfigPanel health={health} />
       </div>
     </div>

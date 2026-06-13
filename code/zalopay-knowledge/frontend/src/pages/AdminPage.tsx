@@ -1,6 +1,6 @@
 import { ScrollablePage } from "@/components/layout/ScrollablePage";
-import { AdminSyncControls } from "@/components/admin/AdminSyncControls";
-import { AdminSyncStatusPanel } from "@/components/admin/AdminSyncStatusPanel";
+import { ConfluenceSyncControls, GDriveSyncControls } from "@/components/admin/AdminSyncControls";
+import { DepartmentStatusSection, RecentJobsSection } from "@/components/admin/AdminSyncStatusPanel";
 import { Database } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import { useUserStore } from "@/store/userStore";
@@ -30,8 +30,22 @@ export function AdminPage() {
         </div>
       </header>
 
-      <AdminSyncControls />
-      <AdminSyncStatusPanel />
+      <section className="space-y-6" aria-labelledby="confluence-section-heading">
+        <h3 id="confluence-section-heading" className="section-title">
+          Confluence
+        </h3>
+        <ConfluenceSyncControls />
+        <DepartmentStatusSection />
+      </section>
+
+      <section className="space-y-6" aria-labelledby="gdrive-section-heading">
+        <h3 id="gdrive-section-heading" className="section-title">
+          Google Drive PDFs
+        </h3>
+        <GDriveSyncControls />
+      </section>
+
+      <RecentJobsSection />
     </div>
     </ScrollablePage>
   );

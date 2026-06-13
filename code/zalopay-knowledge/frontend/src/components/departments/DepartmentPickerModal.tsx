@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/Button";
 import { Check, Search, X } from "@/components/ui/icons";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { useAdminSyncStatus } from "@/hooks/useAdminSyncStatus";
 import {
   departmentDescription,
   departmentHeadManager,
@@ -34,9 +35,16 @@ export function DepartmentPickerModal({
   departments = DEPARTMENTS,
 }: DepartmentPickerModalProps) {
   const locale = useUserStore((s) => s.locale);
+  const { status: syncStatus } = useAdminSyncStatus();
   const dialogRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [expandedKey, setExpandedKey] = useState<Department | null>(null);
+
+  function hasIndexedData(deptKey: Department): boolean {
+    if (!syncStatus) return true;
+    const deptStatus = syncStatus.departments.find((d) => d.department === deptKey);
+    return !deptStatus || deptStatus.doc_count > 0;
+  }
 
   useFocusTrap(open, dialogRef);
 
@@ -74,6 +82,7 @@ export function DepartmentPickerModal({
   );
 
   function toggleDepartment(dept: Department, el?: HTMLButtonElement) {
+    if (!hasIndexedData(dept)) return;
     if (selected.includes(dept)) {
       onChange(selected.filter((d) => d !== dept));
       return;
@@ -162,6 +171,7 @@ export function DepartmentPickerModal({
             filtered.map((dept) => {
               const isSelected = selected.includes(dept.key);
               const isExpanded = expandedKey === dept.key;
+              const indexed = hasIndexedData(dept.key);
               const name = departmentMetaLabel(dept, locale);
               const head = departmentHeadManager(dept, locale);
               const snippet = descriptionSnippet(departmentDescription(dept, locale));
@@ -172,6 +182,7 @@ export function DepartmentPickerModal({
                   className={classNames(
                     "dept-picker-row border-b border-border last:border-b-0",
                     isSelected && "bg-brand/5",
+                    !indexed && "opacity-70",
                   )}
                 >
                   <div className="flex items-start gap-2 px-3 py-2.5 sm:px-4">
@@ -202,14 +213,17 @@ export function DepartmentPickerModal({
                     <button
                       type="button"
                       onClick={(e) => toggleDepartment(dept.key, e.currentTarget)}
+                      disabled={!indexed}
                       className={classNames(
                         "dept-picker-quick-add mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border transition-colors",
                         isSelected
                           ? "border-transparent text-white"
-                          : "border-border bg-surface-glass text-content-secondary hover:border-brand/40 hover:bg-brand/10 hover:text-brand",
+                          : !indexed
+                            ? "cursor-not-allowed border-border bg-surface-glass text-content-muted"
+                            : "border-border bg-surface-glass text-content-secondary hover:border-brand/40 hover:bg-brand/10 hover:text-brand",
                       )}
                       style={
-                        isSelected ? { backgroundColor: dept.accent_color } : undefined
+                        isSelected && indexed ? { backgroundColor: dept.accent_color } : undefined
                       }
                       aria-label={
                         isSelected
@@ -239,15 +253,23 @@ export function DepartmentPickerModal({
                       <p className="text-sm leading-relaxed text-content-secondary">
                         {departmentDescription(dept, locale)}
                       </p>
-                      <Button
-                        variant="secondary"
-                        className="mt-3 !px-3 !py-1.5 text-xs"
-                        onClick={(e) => toggleDepartment(dept.key, e.currentTarget)}
-                      >
-                        {isSelected
-                          ? t("deselectDepartmentAction", locale)
-                          : t("selectDepartmentAction", locale)}
-                      </Button>
+                      <div className="mt-3 flex items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          className="!px-3 !py-1.5 text-xs"
+                          disabled={!indexed}
+                          onClick={(e) => toggleDepartment(dept.key, e.currentTarget)}
+                        >
+                          {isSelected
+                            ? t("deselectDepartmentAction", locale)
+                            : t("selectDepartmentAction", locale)}
+                        </Button>
+                        {!indexed && (
+                          <span className="text-xs font-medium text-amber-400">
+                            ⚠ {t("departmentNoIndexWarning", locale)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

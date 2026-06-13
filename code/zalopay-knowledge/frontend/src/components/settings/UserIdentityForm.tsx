@@ -1,12 +1,18 @@
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Check } from "@/components/ui/icons";
-import { DepartmentSearchList } from "@/components/departments/DepartmentSearchList";
-import { DEPARTMENTS, ROLES, roleLabel } from "@/lib/departments";
+import { DepartmentPickerModal } from "@/components/departments/DepartmentPickerModal";
+import { DEPARTMENTS, ROLES, departmentMetaLabel, getDepartment, roleLabel } from "@/lib/departments";
+import { classNames } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import { useUserStore } from "@/store/userStore";
 import type { Department, Lang, Role } from "@/lib/types";
 import { useEffect, useState } from "react";
+
+const LANG_OPTIONS: { value: Lang; short: string; label: string }[] = [
+  { value: "en", short: "EN", label: "English" },
+  { value: "vi", short: "VI", label: "Tiếng Việt" },
+];
 
 export function UserIdentityForm() {
   const locale = useUserStore((s) => s.locale);
@@ -20,6 +26,7 @@ export function UserIdentityForm() {
   const [draftRole, setDraftRole] = useState<Role>(role);
   const [draftDept, setDraftDept] = useState<Department>(homeDept);
   const [draftLocale, setDraftLocale] = useState<Lang>(userLocale);
+  const [deptPickerOpen, setDeptPickerOpen] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -48,6 +55,9 @@ export function UserIdentityForm() {
     draftRole !== role ||
     draftDept !== homeDept ||
     draftLocale !== userLocale;
+
+  const deptMeta = DEPARTMENTS.find((d) => d.key === draftDept) ?? getDepartment(draftDept);
+  const deptName = deptMeta ? departmentMetaLabel(deptMeta, locale) : draftDept;
 
   return (
     <Card>
@@ -86,34 +96,64 @@ export function UserIdentityForm() {
           </select>
         </div>
 
-        <div className="sm:col-span-2">
-          <span className="block text-sm font-medium text-slate-700 mb-1">
-            {t("homeDept", locale)}
+        <div>
+          <span className="block text-sm font-medium text-slate-700 mb-2">
+            {t("locale", locale)}
           </span>
-          <DepartmentSearchList
-            selected={[draftDept]}
-            onChange={(depts) => {
-              if (depts[0]) setDraftDept(depts[0]);
-            }}
-            multiple={false}
-            departments={DEPARTMENTS}
-            maxListHeightClass="max-h-44"
-          />
+          <div
+            role="group"
+            aria-label={t("locale", locale)}
+            className="inline-flex items-center rounded-lg border border-border bg-surface-glass p-0.5"
+          >
+            {LANG_OPTIONS.map((opt) => {
+              const active = draftLocale === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={active}
+                  aria-label={opt.label}
+                  onClick={() => setDraftLocale(opt.value)}
+                  className={classNames(
+                    "min-w-[2.5rem] rounded-md px-3 py-1.5 text-xs font-semibold tracking-wide transition-all duration-fast",
+                    active
+                      ? "bg-brand text-white shadow-sm"
+                      : "text-content-secondary hover:bg-brand-light hover:text-content-primary",
+                  )}
+                >
+                  {opt.short}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div>
-          <label htmlFor="locale" className="block text-sm font-medium text-slate-700 mb-1">
-            {t("locale", locale)}
-          </label>
-          <select
-            id="locale"
-            className={fieldClass}
-            value={draftLocale}
-            onChange={(e) => setDraftLocale(e.target.value as Lang)}
-          >
-            <option value="en">{t("langEn", draftLocale)}</option>
-            <option value="vi">{t("langVi", draftLocale)}</option>
-          </select>
+        <div className="sm:col-span-2">
+          <span className="block text-sm font-medium text-slate-700 mb-2">
+            {t("homeDept", locale)}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDeptPickerOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-glass px-3 py-1.5 text-sm font-medium text-content-primary transition-colors hover:border-border-strong hover:bg-surface"
+              style={{ borderLeftColor: deptMeta?.accent_color, borderLeftWidth: 3 }}
+            >
+              <span
+                className="h-2 w-2 flex-shrink-0 rounded-full"
+                style={{ backgroundColor: deptMeta?.accent_color }}
+                aria-hidden
+              />
+              {deptName}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeptPickerOpen(true)}
+              className="text-xs text-brand hover:underline"
+            >
+              {t("change", locale)}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -128,6 +168,19 @@ export function UserIdentityForm() {
           </span>
         )}
       </div>
+
+      <DepartmentPickerModal
+        open={deptPickerOpen}
+        onClose={() => setDeptPickerOpen(false)}
+        selected={[draftDept]}
+        onChange={(depts) => {
+          const newDept = depts.find((d) => d !== draftDept) ?? depts[0];
+          if (newDept) {
+            setDraftDept(newDept);
+            setDeptPickerOpen(false);
+          }
+        }}
+      />
     </Card>
   );
 }

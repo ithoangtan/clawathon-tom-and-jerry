@@ -8,7 +8,7 @@ import { departmentLabel, getDepartment } from "@/lib/departments";
 import { sourceLabel, syncStateLabel, t } from "@/lib/i18n";
 import { useAdminSyncStatus } from "@/hooks/useAdminSyncStatus";
 import { useUserStore } from "@/store/userStore";
-import type { AdminDepartmentSyncStatus, AdminSyncJob, SourceStatus } from "@/lib/types";
+import type { AdminDepartmentSyncStatus, AdminSyncJob } from "@/lib/types";
 
 function jobStateLabel(state: AdminSyncJob["state"], locale: "en" | "vi"): string {
   if (state === "running") return t("adminJobRunning", locale);
@@ -22,81 +22,80 @@ function jobStateTone(state: AdminSyncJob["state"]): "info" | "success" | "dange
   return "danger";
 }
 
-export function AdminSyncStatusPanel() {
+export function DepartmentStatusSection() {
   const locale = useUserStore((s) => s.locale);
   const { status, error, loading, refresh } = useAdminSyncStatus();
 
-  if (loading && !status) {
-    return <LoadingSpinner />;
-  }
-
-  if (error) {
-    return <ErrorState message={error} onRetry={refresh} />;
-  }
+  if (loading && !status) return <LoadingSpinner />;
+  if (error) return <ErrorState message={error} onRetry={refresh} />;
 
   const departments = status?.departments ?? [];
-  const jobs = status?.recent_jobs ?? [];
-  const sources = status?.sources ?? [];
+  if (departments.length === 0) return null;
 
   return (
+    <section aria-labelledby="admin-dept-heading" className="space-y-4">
+      <h3 id="admin-dept-heading" className="section-title">
+        {t("adminDepartmentStatus", locale)}
+      </h3>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" role="list">
+        {departments.map((dept) => (
+          <DepartmentCard key={dept.department} dept={dept} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function RecentJobsSection() {
+  const locale = useUserStore((s) => s.locale);
+  const { status, error, loading, refresh } = useAdminSyncStatus();
+
+  if (loading && !status) return <LoadingSpinner />;
+  if (error) return <ErrorState message={error} onRetry={refresh} />;
+
+  const jobs = status?.recent_jobs ?? [];
+
+  return (
+    <section aria-labelledby="admin-jobs-heading">
+      <Card>
+        <h3 id="admin-jobs-heading" className="section-title mb-0">
+          {t("adminRecentJobs", locale)}
+        </h3>
+        {jobs.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500" role="status">
+            {t("adminNoJobs", locale)}
+          </p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                  <th className="px-2 py-2 font-medium">{t("adminJobStarted", locale)}</th>
+                  <th className="px-2 py-2 font-medium">{t("adminJobSource", locale)}</th>
+                  <th className="px-2 py-2 font-medium">{t("adminJobDepartment", locale)}</th>
+                  <th className="px-2 py-2 font-medium">{t("adminJobStatus", locale)}</th>
+                  <th className="px-2 py-2 font-medium">{t("adminPages", locale)}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map((job) => (
+                  <JobRow key={job.id} job={job} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </section>
+  );
+}
+
+/** @deprecated Use DepartmentStatusSection + RecentJobsSection instead */
+export function AdminSyncStatusPanel() {
+  return (
     <div className="space-y-8">
-      {departments.length > 0 && (
-        <section aria-labelledby="admin-dept-heading" className="space-y-4">
-          <h3 id="admin-dept-heading" className="section-title">
-            {t("adminDepartmentStatus", locale)}
-          </h3>
-          <div className="grid gap-4 lg:grid-cols-3" role="list">
-            {departments.map((dept) => (
-              <DepartmentCard key={dept.department} dept={dept} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {sources.length > 0 && (
-        <section aria-labelledby="admin-source-heading" className="space-y-4">
-          <h3 id="admin-source-heading" className="section-title">
-            {t("syncStatus", locale)}
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-2" role="list">
-            {sources.map((source) => (
-              <SourceCard key={source.source} source={source} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section aria-labelledby="admin-jobs-heading">
-        <Card>
-          <h3 id="admin-jobs-heading" className="section-title mb-0">
-            {t("adminRecentJobs", locale)}
-          </h3>
-          {jobs.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500" role="status">
-              {t("adminNoJobs", locale)}
-            </p>
-          ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-2 py-2 font-medium">{t("adminJobStarted", locale)}</th>
-                    <th className="px-2 py-2 font-medium">{t("adminJobSource", locale)}</th>
-                    <th className="px-2 py-2 font-medium">{t("adminJobDepartment", locale)}</th>
-                    <th className="px-2 py-2 font-medium">{t("adminJobStatus", locale)}</th>
-                    <th className="px-2 py-2 font-medium">{t("adminPages", locale)}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {jobs.map((job) => (
-                    <JobRow key={job.id} job={job} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-      </section>
+      <DepartmentStatusSection />
+      <RecentJobsSection />
     </div>
   );
 }
@@ -171,37 +170,6 @@ function DepartmentCard({ dept }: { dept: AdminDepartmentSyncStatus }) {
   );
 }
 
-function SourceCard({ source }: { source: SourceStatus }) {
-  const locale = useUserStore((s) => s.locale);
-  const stateTone =
-    source.state === "running" ? "info" : source.state === "error" ? "danger" : "default";
-
-  return (
-    <Card role="listitem">
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="font-semibold text-slate-800">{sourceLabel(source.source, locale)}</h4>
-        <Badge tone={stateTone}>{syncStateLabel(source.state, locale)}</Badge>
-      </div>
-      <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-        <div>
-          <dt className="text-slate-500">{t("docs", locale)}</dt>
-          <dd className="font-medium">{(source.doc_count ?? 0).toLocaleString()}</dd>
-        </div>
-        <div>
-          <dt className="text-slate-500">{t("chunks", locale)}</dt>
-          <dd className="font-medium">{(source.chunk_count ?? 0).toLocaleString()}</dd>
-        </div>
-      </dl>
-      {(source.errors?.length ?? 0) > 0 && (
-        <ul className="mt-2 text-xs text-red-600" role="alert">
-          {(source.errors ?? []).map((err, i) => (
-            <li key={i}>{err}</li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  );
-}
 
 function JobRow({ job }: { job: AdminSyncJob }) {
   const locale = useUserStore((s) => s.locale);
