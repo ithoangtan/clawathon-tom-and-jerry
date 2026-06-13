@@ -25,6 +25,7 @@ Design notes that satisfy the port contract:
 """
 
 import logging
+import time
 
 from openai import (
     APIConnectionError,
@@ -77,11 +78,13 @@ class VngMaasLLM:
         """Lightweight readiness probe — must not raise."""
         if not self._cfg.effective_llm_api_key:
             return False
+        t0 = time.monotonic()
         try:
             self._client.models.list(timeout=timeout_s)
+            logger.info("MaaS ping OK (%.0fms)", (time.monotonic() - t0) * 1000)
             return True
         except Exception as exc:  # noqa: BLE001
-            logger.warning("MaaS ping failed: %s", exc)
+            logger.warning("MaaS ping failed (%.0fms): %s", (time.monotonic() - t0) * 1000, exc)
             return False
 
     def complete(
@@ -100,6 +103,12 @@ class VngMaasLLM:
             raise LLMUnavailable(
                 "MaaS API key is not configured (set LLM_API_KEY or GREENNODE_API_KEY on AgentBase)"
             )
+
+        logger.info(
+            "LLM complete model=%s tier=%s msgs=%d fmt=%s",
+            model, tier.name, len(messages), response_format,
+        )
+        t0 = time.monotonic()
 
         want_json = response_format == "json"
         effective_timeout = (
@@ -129,10 +138,14 @@ class VngMaasLLM:
                 last_exc = exc
                 if use_json:
                     logger.warning(
-                        "MaaS rejected JSON response_format for %s; retrying as text",
-                        model,
+                        "MaaS rejected JSON response_format for %s; retrying as text (%.0fms)",
+                        model, (time.monotonic() - t0) * 1000,
                     )
                     continue  # fall through to the text attempt
+                logger.error(
+                    "LLM complete model=%s bad request (%.0fms): %s",
+                    model, (time.monotonic() - t0) * 1000, exc,
+                )
                 raise LLMUnavailable(f"MaaS rejected the request: {exc}") from exc
             except (
                 APITimeoutError,
@@ -141,15 +154,29 @@ class VngMaasLLM:
                 InternalServerError,
                 APIStatusError,
             ) as exc:
+                logger.error(
+                    "LLM complete model=%s unavailable after retries (%.0fms): %s",
+                    model, (time.monotonic() - t0) * 1000, exc,
+                )
                 raise LLMUnavailable(
                     f"MaaS unavailable after retries: {exc}"
                 ) from exc
 
             degraded = retried or (want_json and not use_json)
-            return self._to_result(resp, degraded=degraded)
+            result = self._to_result(resp, degraded=degraded)
+            total_tokens = (result.usage or {}).get("total_tokens", 0)
+            logger.info(
+                "LLM complete model=%s → %d tokens degraded=%s (%.0fms)",
+                model, total_tokens, degraded, (time.monotonic() - t0) * 1000,
+            )
+            return result
 
         # Only reachable if JSON mode BadRequested and we exhausted json_modes
         # without a successful text attempt (text attempt would have returned).
+        logger.error(
+            "LLM complete model=%s exhausted all modes (%.0fms): %s",
+            model, (time.monotonic() - t0) * 1000, last_exc,
+        )
         raise LLMUnavailable(
             f"MaaS rejected the request: {last_exc}"
         ) from last_exc
@@ -179,6 +206,12 @@ class VngMaasLLM:
         resp = None
         for attempt in retrying:
             with attempt:
+                attempt_num = retrying.statistics.get("attempt_number", 1)
+                if attempt_num > 1:
+                    logger.warning(
+                        "LLM retry attempt=%d model=%s",
+                        attempt_num, kwargs.get("model", "?"),
+                    )
                 resp = self._client.chat.completions.create(**kwargs)
         retried = int(retrying.statistics.get("attempt_number", 1)) > 1
         return resp, retried

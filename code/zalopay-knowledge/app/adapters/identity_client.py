@@ -3,6 +3,7 @@ from __future__ import annotations
 """Shared AgentBase Identity client helpers for outbound credential retrieval."""
 
 import logging
+import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -29,6 +30,8 @@ def fetch_api_key_for_agent(settings: Settings, provider_name: str) -> str | Non
     if not identity_runtime_ready(settings) or not provider:
         return None
 
+    logger.info("AgentBase Identity fetch_api_key provider=%s identity=%s", provider, identity)
+    t0 = time.monotonic()
     try:
         client = get_identity_client()
         result = client.get_api_key_for_agent_identity(
@@ -37,10 +40,20 @@ def fetch_api_key_for_agent(settings: Settings, provider_name: str) -> str | Non
         )
         api_key = (getattr(result, "apikey", None) or "").strip()
         if api_key:
-            logger.info("API key resolved via Identity provider %s", provider)
+            logger.info(
+                "AgentBase Identity fetch_api_key provider=%s → OK (%.0fms)",
+                provider, (time.monotonic() - t0) * 1000,
+            )
             return api_key
+        logger.warning(
+            "AgentBase Identity fetch_api_key provider=%s returned empty key (%.0fms)",
+            provider, (time.monotonic() - t0) * 1000,
+        )
     except ImportError:
         logger.warning("greennode-agentbase not installed — cannot fetch Identity API key")
     except Exception:
-        logger.exception("Failed to fetch API key from Identity provider %s", provider)
+        logger.exception(
+            "AgentBase Identity fetch_api_key provider=%s failed (%.0fms)",
+            provider, (time.monotonic() - t0) * 1000,
+        )
     return None

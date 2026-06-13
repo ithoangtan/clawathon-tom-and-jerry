@@ -22,6 +22,7 @@ installed ``greennode-agent-bridge`` version during ``preflight``.
 """
 
 import logging
+import time
 from typing import Callable, Optional
 
 from app.config import Settings, get_settings
@@ -48,17 +49,30 @@ def make_agentbase_recall(settings: Settings | None = None) -> RecallFn:
         if not user_id:
             return None
 
+        logger.info("AgentBase Memory recall user_id=%s", user_id)
+        t0 = time.monotonic()
         from greennode_agent_bridge.memory import MemoryClient  # lazy, deploy-only
 
-        client = MemoryClient(memory_id=cfg.memory_id)
-        records = client.search(
-            actor_id=user_id,
-            record_types=["USER_PREFERENCE", "CUSTOM"],
-            limit=5,
-        )
-        prefs = [r.get("content") for r in (records or []) if r.get("content")]
-        if not prefs:
-            return None
-        return "\n".join(prefs)
+        try:
+            client = MemoryClient(memory_id=cfg.memory_id)
+            records = client.search(
+                actor_id=user_id,
+                record_types=["USER_PREFERENCE", "CUSTOM"],
+                limit=5,
+            )
+            prefs = [r.get("content") for r in (records or []) if r.get("content")]
+            logger.info(
+                "AgentBase Memory recall user_id=%s → %d prefs (%.0fms)",
+                user_id, len(prefs), (time.monotonic() - t0) * 1000,
+            )
+            if not prefs:
+                return None
+            return "\n".join(prefs)
+        except Exception as exc:
+            logger.error(
+                "AgentBase Memory recall user_id=%s failed (%.0fms): %s",
+                user_id, (time.monotonic() - t0) * 1000, exc,
+            )
+            raise
 
     return recall

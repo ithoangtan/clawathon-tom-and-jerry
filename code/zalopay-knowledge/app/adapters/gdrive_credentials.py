@@ -8,6 +8,7 @@ deploy: ``docs/DEPLOY-READINESS.md`` (OAuth provider ``identity-google-space``).
 
 import json
 import logging
+import time
 from typing import Any
 
 from app.adapters.identity_client import fetch_api_key_for_agent, get_identity_client, identity_runtime_ready
@@ -74,6 +75,8 @@ def _fetch_oauth_3lo_token(settings: Settings) -> str | None:
     if not provider or not identity:
         return None
 
+    logger.info("AgentBase Identity get_3lo_token provider=%s identity=%s", provider, identity)
+    t0 = time.monotonic()
     try:
         from greennode_agentbase.identity import Get3loTokenRequest
 
@@ -88,17 +91,24 @@ def _fetch_oauth_3lo_token(settings: Settings) -> str | None:
         )
         token = (getattr(result, "access_token", None) or "").strip()
         if token:
-            logger.info("GDrive OAuth 3LO token resolved via Identity provider %s", provider)
+            logger.info(
+                "AgentBase Identity get_3lo_token provider=%s → OK (%.0fms)",
+                provider, (time.monotonic() - t0) * 1000,
+            )
             return token
         auth_url = getattr(result, "authorization_url", None)
         if auth_url:
             logger.warning(
-                "GDrive OAuth not yet authorized — admin must visit: %s", auth_url
+                "GDrive OAuth not yet authorized (%.0fms) — admin must visit: %s",
+                (time.monotonic() - t0) * 1000, auth_url,
             )
     except ImportError:
         logger.warning("greennode-agentbase not installed — cannot fetch GDrive OAuth token")
     except Exception:
-        logger.exception("Failed to fetch GDrive OAuth 3LO token from Identity")
+        logger.exception(
+            "AgentBase Identity get_3lo_token provider=%s failed (%.0fms)",
+            provider, (time.monotonic() - t0) * 1000,
+        )
     return None
 
 

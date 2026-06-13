@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import logging
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -71,23 +72,51 @@ class GDriveClient:
             )
         else:
             raise ValueError(f"Unsupported GDrive credential kind: {kind}")
+        logger.info("GDrive service initialized kind=%s", kind)
         return self._service
 
     def list_pdfs(self) -> list[dict[str, Any]]:
-        service = self._get_service()
         folder_id = self._settings.gdrive_folder_id
-        q = f"'{folder_id}' in parents and mimeType='application/pdf' and trashed=false"
-        results = (
-            service.files()
-            .list(q=q, fields="files(id, name, modifiedTime, webViewLink)", pageSize=100)
-            .execute()
-        )
-        return results.get("files", [])
+        logger.info("GDrive list_pdfs folder=%s", folder_id)
+        t0 = time.monotonic()
+        try:
+            service = self._get_service()
+            q = f"'{folder_id}' in parents and mimeType='application/pdf' and trashed=false"
+            results = (
+                service.files()
+                .list(q=q, fields="files(id, name, modifiedTime, webViewLink)", pageSize=100)
+                .execute()
+            )
+            files = results.get("files", [])
+            logger.info(
+                "GDrive list_pdfs folder=%s → %d PDFs (%.0fms)",
+                folder_id, len(files), (time.monotonic() - t0) * 1000,
+            )
+            return files
+        except Exception as exc:
+            logger.error(
+                "GDrive list_pdfs folder=%s failed (%.0fms): %s",
+                folder_id, (time.monotonic() - t0) * 1000, exc,
+            )
+            raise
 
     def download_pdf(self, file_id: str) -> bytes:
-        service = self._get_service()
-        data = service.files().get_media(fileId=file_id).execute()
-        return data
+        logger.info("GDrive download_pdf file_id=%s", file_id)
+        t0 = time.monotonic()
+        try:
+            service = self._get_service()
+            data = service.files().get_media(fileId=file_id).execute()
+            logger.info(
+                "GDrive download_pdf file_id=%s → %d bytes (%.0fms)",
+                file_id, len(data), (time.monotonic() - t0) * 1000,
+            )
+            return data
+        except Exception as exc:
+            logger.error(
+                "GDrive download_pdf file_id=%s failed (%.0fms): %s",
+                file_id, (time.monotonic() - t0) * 1000, exc,
+            )
+            raise
 
     def extract_text(self, pdf_bytes: bytes) -> list[tuple[int, str]]:
         reader = PdfReader(io.BytesIO(pdf_bytes))

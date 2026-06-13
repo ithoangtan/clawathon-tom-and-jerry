@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import Any
 
 import httpx
@@ -43,69 +44,113 @@ class ConfluenceClient:
         if not self.configured():
             raise ValueError("Confluence credentials are not configured")
 
+        logger.info("Confluence list_pages space=%r", space_key)
+        t0 = time.monotonic()
         pages: list[dict[str, Any]] = []
         cursor: str | None = None
-        with httpx.Client(timeout=self._timeout) as client:
-            while True:
-                params: dict[str, Any] = {"limit": limit, "space-id": space_key}
-                if cursor:
-                    params["cursor"] = cursor
-                # v2 spaces/{id}/pages — space_key used as key filter via CQL fallback
-                url = f"{self._base}/api/v2/pages"
-                params["space-key"] = space_key
-                resp = client.get(url, params=params, auth=self._auth())
-                if resp.status_code == 404:
-                    # Fallback: search API with CQL
-                    return self._search_space_pages(client, space_key)
-                resp.raise_for_status()
-                data = resp.json()
-                pages.extend(data.get("results", []))
-                cursor = (data.get("_links") or {}).get("next")
-                if not cursor or len(data.get("results", [])) < limit:
-                    break
+        try:
+            with httpx.Client(timeout=self._timeout) as client:
+                while True:
+                    params: dict[str, Any] = {"limit": limit, "space-id": space_key}
+                    if cursor:
+                        params["cursor"] = cursor
+                    # v2 spaces/{id}/pages — space_key used as key filter via CQL fallback
+                    url = f"{self._base}/api/v2/pages"
+                    params["space-key"] = space_key
+                    resp = client.get(url, params=params, auth=self._auth())
+                    if resp.status_code == 404:
+                        # Fallback: search API with CQL
+                        result = self._search_space_pages(client, space_key)
+                        logger.info(
+                            "Confluence list_pages space=%r → %d pages via CQL (%.0fms)",
+                            space_key, len(result), (time.monotonic() - t0) * 1000,
+                        )
+                        return result
+                    resp.raise_for_status()
+                    data = resp.json()
+                    pages.extend(data.get("results", []))
+                    cursor = (data.get("_links") or {}).get("next")
+                    if not cursor or len(data.get("results", [])) < limit:
+                        break
+        except Exception as exc:
+            logger.error(
+                "Confluence list_pages space=%r failed (%.0fms): %s",
+                space_key, (time.monotonic() - t0) * 1000, exc,
+            )
+            raise
+        logger.info(
+            "Confluence list_pages space=%r → %d pages (%.0fms)",
+            space_key, len(pages), (time.monotonic() - t0) * 1000,
+        )
         return pages
 
     def _search_space_pages(self, client: httpx.Client, space_key: str) -> list[dict[str, Any]]:
         cql = f'space="{space_key}" and type=page'
-        resp = client.get(
-            f"{self._base}/rest/api/content/search",
-            params={"cql": cql, "limit": 50, "expand": "version"},
-            auth=self._auth(),
-        )
-        if resp.status_code == 404:
-            logger.warning(
-                "Confluence space %r not found (404) — skipping. "
-                "Check CONFLUENCE_SPACES env var for the correct space key.",
-                space_key,
+        t0 = time.monotonic()
+        try:
+            resp = client.get(
+                f"{self._base}/rest/api/content/search",
+                params={"cql": cql, "limit": 50, "expand": "version"},
+                auth=self._auth(),
             )
-            return []
-        resp.raise_for_status()
-        return resp.json().get("results", [])
+            if resp.status_code == 404:
+                logger.warning(
+                    "Confluence space %r not found (404) — skipping. "
+                    "Check CONFLUENCE_SPACES env var for the correct space key.",
+                    space_key,
+                )
+                return []
+            resp.raise_for_status()
+            results = resp.json().get("results", [])
+            logger.info(
+                "Confluence search space=%r → %d pages (%.0fms)",
+                space_key, len(results), (time.monotonic() - t0) * 1000,
+            )
+            return results
+        except Exception as exc:
+            logger.error(
+                "Confluence search space=%r failed (%.0fms): %s",
+                space_key, (time.monotonic() - t0) * 1000, exc,
+            )
+            raise
 
     def fetch_page_body(self, page_id: str) -> tuple[str, dict[str, Any]]:
         """Return (plain_text, metadata) for a page."""
-        with httpx.Client(timeout=self._timeout) as client:
-            resp = client.get(
-                f"{self._base}/api/v2/pages/{page_id}",
-                params={"body-format": "storage"},
-                auth=self._auth(),
+        logger.info("Confluence fetch_page page_id=%s", page_id)
+        t0 = time.monotonic()
+        try:
+            with httpx.Client(timeout=self._timeout) as client:
+                resp = client.get(
+                    f"{self._base}/api/v2/pages/{page_id}",
+                    params={"body-format": "storage"},
+                    auth=self._auth(),
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                storage = (
+                    data.get("body", {}).get("storage", {}).get("value", "")
+                )
+                text = _storage_to_text(storage)
+                meta = {
+                    "title": data.get("title", ""),
+                    "url": _page_url(self._base, data),
+                    "last_modified": (data.get("version") or {}).get("createdAt"),
+                    "version": (data.get("version") or {}).get("number"),
+                    "source": page_id,
+                    "author": _extract_author(data),
+                    "labels": _extract_labels(data),
+                }
+                logger.info(
+                    "Confluence fetch_page page_id=%s title=%r chars=%d (%.0fms)",
+                    page_id, meta["title"], len(text), (time.monotonic() - t0) * 1000,
+                )
+                return text, meta
+        except Exception as exc:
+            logger.error(
+                "Confluence fetch_page page_id=%s failed (%.0fms): %s",
+                page_id, (time.monotonic() - t0) * 1000, exc,
             )
-            resp.raise_for_status()
-            data = resp.json()
-            storage = (
-                data.get("body", {}).get("storage", {}).get("value", "")
-            )
-            text = _storage_to_text(storage)
-            meta = {
-                "title": data.get("title", ""),
-                "url": _page_url(self._base, data),
-                "last_modified": (data.get("version") or {}).get("createdAt"),
-                "version": (data.get("version") or {}).get("number"),
-                "source": page_id,
-                "author": _extract_author(data),
-                "labels": _extract_labels(data),
-            }
-            return text, meta
+            raise
 
 
 def _page_url(base: str, page: dict[str, Any]) -> str:
