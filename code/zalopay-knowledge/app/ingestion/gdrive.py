@@ -10,6 +10,11 @@ from typing import Any
 
 from pypdf import PdfReader
 
+from app.adapters.gdrive_credentials import (
+    GDRIVE_READONLY_SCOPE,
+    gdrive_identity_ready,
+    resolve_gdrive_credentials,
+)
 from app.config import Settings
 
 logger = logging.getLogger(__name__)
@@ -23,28 +28,49 @@ class GDriveClient:
         self._service = None
 
     def configured(self) -> bool:
-        return bool(
-            self._settings.gdrive_folder_id
-            and (self._settings.gdrive_sa_json_path or self._settings.gdrive_api_key)
-        )
+        if not self._settings.gdrive_folder_id:
+            return False
+        if self._settings.is_agentbase:
+            if gdrive_identity_ready(self._settings):
+                return True
+            return bool(self._settings.gdrive_sa_json_path or self._settings.gdrive_api_key)
+        return bool(self._settings.gdrive_sa_json_path or self._settings.gdrive_api_key)
 
     def _get_service(self):
         if self._service is not None:
             return self._service
         from googleapiclient.discovery import build
 
-        if self._settings.gdrive_sa_json_path:
+        creds_spec = resolve_gdrive_credentials(self._settings)
+        kind = creds_spec["kind"]
+
+        if kind == "oauth_token":
+            from google.oauth2.credentials import Credentials
+
+            creds = Credentials(token=creds_spec["token"])
+            self._service = build("drive", "v3", credentials=creds, cache_discovery=False)
+        elif kind == "service_account_info":
+            from google.oauth2 import service_account
+
+            creds = service_account.Credentials.from_service_account_info(
+                creds_spec["info"],
+                scopes=[GDRIVE_READONLY_SCOPE],
+            )
+            self._service = build("drive", "v3", credentials=creds, cache_discovery=False)
+        elif kind == "service_account_file":
             from google.oauth2 import service_account
 
             creds = service_account.Credentials.from_service_account_file(
-                self._settings.gdrive_sa_json_path,
-                scopes=["https://www.googleapis.com/auth/drive.readonly"],
+                creds_spec["path"],
+                scopes=[GDRIVE_READONLY_SCOPE],
             )
             self._service = build("drive", "v3", credentials=creds, cache_discovery=False)
-        elif self._settings.gdrive_api_key:
-            self._service = build("drive", "v3", developerKey=self._settings.gdrive_api_key)
+        elif kind == "api_key":
+            self._service = build(
+                "drive", "v3", developerKey=creds_spec["key"], cache_discovery=False
+            )
         else:
-            raise ValueError("Google Drive credentials are not configured")
+            raise ValueError(f"Unsupported GDrive credential kind: {kind}")
         return self._service
 
     def list_pdfs(self) -> list[dict[str, Any]]:

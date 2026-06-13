@@ -48,7 +48,7 @@
 - FR-5.4 Weekly full reconcile detects drift between source and index.
 - FR-5.5 Sync runs as a separate scheduled job (not inside the request path); failures alert operators and leave the previous index serving.
 - FR-5.6 **Token efficiency (G4):** sync uses zero LLM calls — change detection via version number + content hash; chunk-level diff so only changed chunks are re-embedded; embeddings computed locally (no MaaS tokens); doc-type classification by space/label/path rules, with a one-time small-model fallback only for new unclassifiable pages.
-- FR-5.7 PDF ingestion: MVP reads PDFs from Google Drive (SharePoint simulation); production reads from SharePoint. Both feed the same text-extraction (OCR where needed) → chunk/metadata pipeline. Non-extractable files are indexed by title/metadata only and flagged.
+- FR-5.7 PDF ingestion: MVP reads PDFs from Google Drive (SharePoint simulation); production reads from SharePoint. Both feed the same text-extraction (OCR where needed) → chunk/metadata pipeline. Non-extractable files are indexed by title/metadata only and flagged. **GDrive auth on AgentBase:** OAuth provider `identity-google-space` via Identity (M2M); local dev uses `GDRIVE_SA_JSON_PATH` or `GDRIVE_API_KEY` (see `04-SKILLS-TOOLS-INTEGRATIONS.md` §5).
 
 ### FR-6 Channels
 - FR-6.1 `POST /invocations` (SDK convention) as the canonical API; `POST /chat` thin alias for manual testing.

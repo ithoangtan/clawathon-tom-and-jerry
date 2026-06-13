@@ -91,7 +91,7 @@ PDF/SharePoint (phase 2) enter at stage 3 after extraction (OCR where needed), c
 | Concern | AgentBase module | Specifics |
 |---|---|---|
 | Compute, scaling, rollback | **Agent Runtime** | Image from vCR; port 8080; `GET /health`; flavor `1x1-general` → resize on OOM; autoscale min 2 / max 10 @ CPU 50% (prod); every PATCH = immutable version; DEFAULT endpoint tracks latest; rollback = pin endpoint to older version; canary = second endpoint pinned to new version |
-| Identity & secrets | **Access Control / Agent Identity** | Auto-injected `GREENNODE_CLIENT_ID/SECRET`, `GREENNODE_AGENT_IDENTITY`; Confluence/GitLab/Teams credentials stored on the identity (API key / OAuth2), retrieved via SDK — never in image or `.env` in prod |
+| Identity & secrets | **Access Control / Agent Identity** | Auto-injected `GREENNODE_CLIENT_ID/SECRET`, `GREENNODE_AGENT_IDENTITY`; outbound creds in Access Control Outbound Auth — **Confluence:** `identity-confluence-zalopay-knowledge` (apikey); **GDrive:** `identity-google-space` (OAuth, Included Google). Resolved in `app/adapters/*_credentials.py` — never in image or `.env` secrets in prod |
 | Conversation + learning | **Memory** | STM events (checkpointer) + LTM records (semantic search 5–200 results, scoreThreshold 0–1) |
 | LLM serving | **MaaS / AgentBase LLM** | `LLM_BASE_URL=https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1`; key via `/agentbase-llm api-keys create`; chosen models must be `modelStatus = ENABLED` |
 | Governed source access | **MCP Governance** | MCP Gateway (Private mode) fronting Confluence/GitLab/Drive MCP servers in VPC; inbound auth IAM/JWT; outbound APIKEY/OAuth2; **Policy Groups** with exact-action ALLOW/DENY statements per department resource |
@@ -108,7 +108,7 @@ PDF/SharePoint (phase 2) enter at stage 3 after extraction (OCR where needed), c
 | Scaffold | `/agentbase-wizard init zalopay-knowledge --langgraph` | Generates SDK-correct `main.py` (LangGraph + memory variant), Dockerfile, requirements; Python ≥3.10; files in CWD |
 | LLM | `/agentbase-llm` | Create API key (auto-saves `LLM_API_KEY`), set `LLM_BASE_URL`, pick ENABLED Qwen/MiniMax models, set rate limits |
 | Memory | `/agentbase-memory` | Create store + LTMS strategies; `MEMORY_ID` to env via `save_env_var.sh` |
-| Identity/auth | `/agentbase-identity` | Create identity; store Confluence token (apikey), Teams secret; OAuth2 for Drive later |
+| Identity/auth | `/agentbase-identity` | Outbound Auth: Confluence apikey `identity-confluence-zalopay-knowledge`; GDrive OAuth `identity-google-space` (Included Google, M2M `drive.readonly`) — `app/adapters/confluence_credentials.py`, `app/adapters/gdrive_credentials.py` |
 | Test | `/agentbase-wizard test validate → local → docker → preflight` | Static contract checks, local server + contract tests, containerized test (`--platform linux/amd64` on Apple Silicon) |
 | Deploy | `/agentbase-deploy` | build → push (vCR robot creds) → create/PATCH runtime → poll `ACTIVE` |
 | Govern | `/agentbase-gateway`, `/agentbase-policy` | Create Private gateway, routes to VPC MCP servers, bind Policy Group with per-dept statements |

@@ -65,7 +65,11 @@ class Settings(BaseSettings):
 
     confluence_base_url: str = Field(default="", description="https://<site>.atlassian.net/wiki")
     confluence_email: str = Field(default="", description="Atlassian account email for Basic auth")
-    confluence_api_token: str = Field(default="", description="Atlassian API token")
+    confluence_api_token: str = Field(default="", description="Atlassian API token (local dev)")
+    confluence_api_key_provider: str = Field(
+        default="identity-confluence-zalopay-knowledge",
+        description="AgentBase Identity apikey provider for Confluence token on APP_ENV=agentbase",
+    )
 
     # Space keys — one per department
     confluence_space_risk: str = Field(default="", description="Space key for Risk department")
@@ -86,6 +90,37 @@ class Settings(BaseSettings):
     )
     gdrive_folder_id: str = Field(
         default="", description="Drive folder ID to sync PDFs from"
+    )
+    gdrive_oauth_provider: str = Field(
+        default="identity-google-space",
+        description=(
+            "AgentBase Identity OAuth2 provider for Google Drive "
+            "(Outbound Auth name in Access Control console)."
+        ),
+    )
+    gdrive_oauth_scopes: str = Field(
+        default="https://www.googleapis.com/auth/drive.readonly",
+        description="Comma-separated OAuth scopes for GDrive M2M token",
+    )
+    gdrive_sa_provider: str = Field(
+        default="",
+        description=(
+            "Optional AgentBase Identity apikey provider storing service-account JSON. "
+            "Leave empty when using OAuth only."
+        ),
+    )
+
+    # ── AgentBase platform (auto-injected) ────────────────────────────────────
+
+    greennode_agent_identity: str = Field(
+        default="",
+        validation_alias="GREENNODE_AGENT_IDENTITY",
+        description="Agent identity name on AgentBase (auto-injected at deploy)",
+    )
+    greennode_identity_url: str = Field(
+        default="",
+        validation_alias="GREENNODE_IDENTITY_URL",
+        description="Identity service URL (auto-injected at deploy)",
     )
 
     # ── Index & retrieval ────────────────────────────────────────────────────
@@ -196,6 +231,15 @@ class Settings(BaseSettings):
     )
 
     # ── Computed properties ───────────────────────────────────────────────────
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def gdrive_oauth_scope_list(self) -> list[str]:
+        """Parsed OAuth scopes for GDrive Identity M2M requests."""
+        raw = (self.gdrive_oauth_scopes or "").strip()
+        if not raw:
+            return ["https://www.googleapis.com/auth/drive.readonly"]
+        return [part.strip() for part in raw.split(",") if part.strip()]
 
     @computed_field  # type: ignore[misc]
     @property

@@ -58,6 +58,18 @@ class TestPageMetadataHelpers:
 
 
 class TestConfluenceClient:
+    def test_configured_on_agentbase_with_identity_provider(self, tmp_path):
+        settings = Settings(
+            app_env="agentbase",
+            greennode_agent_identity="zalopay-knowledge",
+            confluence_api_key_provider="identity-confluence-zalopay-knowledge",
+            confluence_base_url="https://acme.atlassian.net",
+            confluence_email="bot@example.com",
+            index_dir=str(tmp_path / "index"),
+        )
+        client = ConfluenceClient(settings)
+        assert client.configured() is True
+
     def test_configured_when_credentials_present(self, confluence_settings: Settings):
         client = ConfluenceClient(confluence_settings)
         assert client.configured() is True
@@ -82,7 +94,13 @@ class TestConfluenceClient:
         assert client._base == "https://acme.atlassian.net/wiki"
 
     def test_list_pages_raises_when_not_configured(self, tmp_path):
-        settings = Settings(index_dir=str(tmp_path / "index"))
+        settings = Settings(
+            app_env="local",
+            confluence_base_url="",
+            confluence_email="",
+            confluence_api_token="",
+            index_dir=str(tmp_path / "index"),
+        )
         client = ConfluenceClient(settings)
         with pytest.raises(ValueError, match="not configured"):
             client.list_pages("RISK")

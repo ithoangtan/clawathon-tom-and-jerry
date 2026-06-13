@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 from bs4 import BeautifulSoup
 
+from app.adapters.confluence_credentials import confluence_identity_ready, resolve_confluence_api_token
 from app.config import Settings
 
 logger = logging.getLogger(__name__)
@@ -18,15 +19,24 @@ class ConfluenceClient:
     """Minimal Confluence Cloud v2 reader (MVP — direct REST, no MCP)."""
 
     def __init__(self, settings: Settings) -> None:
+        self._settings = settings
         base = (settings.confluence_base_url or "").rstrip("/")
         if not base.endswith("/wiki"):
             base = f"{base}/wiki" if base else ""
         self._base = base
-        self._auth = (settings.confluence_email, settings.confluence_api_token)
         self._timeout = 30.0
 
+    def _auth(self) -> tuple[str, str]:
+        email = (self._settings.confluence_email or "").strip()
+        token = resolve_confluence_api_token(self._settings)
+        return (email, token)
+
     def configured(self) -> bool:
-        return bool(self._base and self._auth[0] and self._auth[1])
+        if not self._base or not (self._settings.confluence_email or "").strip():
+            return False
+        if self._settings.is_agentbase and confluence_identity_ready(self._settings):
+            return True
+        return bool((self._settings.confluence_api_token or "").strip())
 
     def list_pages(self, space_key: str, *, limit: int = 50) -> list[dict[str, Any]]:
         """List pages in a space (paginated)."""
@@ -43,7 +53,7 @@ class ConfluenceClient:
                 # v2 spaces/{id}/pages — space_key used as key filter via CQL fallback
                 url = f"{self._base}/api/v2/pages"
                 params["space-key"] = space_key
-                resp = client.get(url, params=params, auth=self._auth)
+                resp = client.get(url, params=params, auth=self._auth())
                 if resp.status_code == 404:
                     # Fallback: search API with CQL
                     return self._search_space_pages(client, space_key)
@@ -60,7 +70,7 @@ class ConfluenceClient:
         resp = client.get(
             f"{self._base}/rest/api/content/search",
             params={"cql": cql, "limit": 50, "expand": "version"},
-            auth=self._auth,
+            auth=self._auth(),
         )
         resp.raise_for_status()
         return resp.json().get("results", [])
@@ -71,7 +81,7 @@ class ConfluenceClient:
             resp = client.get(
                 f"{self._base}/api/v2/pages/{page_id}",
                 params={"body-format": "storage"},
-                auth=self._auth,
+                auth=self._auth(),
             )
             resp.raise_for_status()
             data = resp.json()

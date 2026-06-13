@@ -141,7 +141,7 @@
 - [ ] 🟢 **[MUST]** `X-GreenNode-AgentBase-*` headers set ONLY by trusted gateway; rejected if client-supplied. Verify early — retrofitting auth is painful.
 - [ ] 🟢 **[MUST]** Audit log: who asked what, what was retrieved, what was returned (basic in MVP).
 - [ ] 🟢 **[MUST]** Kill-switch / feature flag to disable the agent instantly.
-- [ ] 🟢 **[MUST]** Secrets not in image (AgentBase Identity); no hardcoded credentials.
+- [ ] 🟢 **[MUST]** Secrets not in image (AgentBase Identity); no hardcoded credentials. **Outbound Auth names:** Confluence `identity-confluence-zalopay-knowledge` (apikey), GDrive `identity-google-space` (OAuth); runtime env holds provider names + `CONFLUENCE_EMAIL` / `GDRIVE_FOLDER_ID` only.
 - [ ] 🟢 **[NICE]** Pin dependencies.
 - [ ] 🔵 **[MUST]** Red-team pass (injection, jailbreak, ACL bypass, PII leak) = hard GA gate.
 - [ ] 🔵 **[MUST]** Threat-model + red-team the RAG confused-deputy / IDOR.

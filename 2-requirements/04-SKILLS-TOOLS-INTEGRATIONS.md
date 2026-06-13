@@ -40,11 +40,11 @@ Endpoint: `https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1` (`LLM_BASE_URL`),
 
 | System | Phase | Access path | Auth (stored in Agent Identity) |
 |---|---|---|---|
-| Confluence (source of truth) | 1 (3 personal spaces) / 2 (all) | MVP: REST v2 direct over the personal Confluence instance. Prod: via MCP Gateway route into VPC | Service-account bearer token (apikey credential) |
+| Confluence (source of truth) | 1 (3 personal spaces) / 2 (all) | MVP: REST v2 direct over the personal Confluence instance. Prod: via MCP Gateway route into VPC | **MVP AgentBase:** apikey provider `identity-confluence-zalopay-knowledge` (+ `CONFLUENCE_EMAIL` in runtime env). **Local dev:** `CONFLUENCE_API_TOKEN` in `.env` |
 | Microsoft Teams | 2 (webhook + full bot) | Webhook route on the runtime; Bot Framework registration on Zalopay tenant | Bot app ID + secret (apikey credential); webhook signature verification |
 | GitLab | 2 | MCP Gateway route; index README/docs/comments via sync job | Project access token |
 | SharePoint | 2 | MCP Gateway route; OAuth2 (2LO admin-granted); document text extraction in sync job | OAuth2 credential on identity |
-| PDF stores | 1 (Google Drive, SharePoint simulation) / 2 (SharePoint, full) | Sync-job extraction (pypdf/OCR) → same chunk pipeline; citation = file name + page | Per-store credential on identity |
+| PDF stores | 1 (Google Drive, SharePoint simulation) / 2 (SharePoint, full) | Sync-job extraction (pypdf/OCR) → same chunk pipeline; citation = file name + page | **GDrive (MVP):** OAuth provider `identity-google-space` (Included Google, M2M `drive.readonly`). **Local dev:** `GDRIVE_SA_JSON_PATH` or `GDRIVE_API_KEY`. **SharePoint (Phase 2):** OAuth2 credential on identity |
 | Zalo (optional channel) | 2+ | OpenClaw instance (Telegram/Zalo template) calling the runtime endpoint | Bot token via OpenClaw pairing flow |
 
 Integration rules: the request path never calls Confluence live (retrieval hits the index only — keeps latency and rate limits sane); the sync job is the only Confluence client; per FR-5.1 respect ~100 req/min, batch ≤50, exponential backoff ≤5 retries.
@@ -57,7 +57,14 @@ Integration rules: the request path never calls Confluence live (retrieval hits 
 | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_MODEL_SMALL` | `/agentbase-llm` + `save_env_var.sh` | key: yes |
 | `MEMORY_ID` | `/agentbase-memory create` | no |
 | `CONFLUENCE_URL`, `CONFLUENCE_SPACES` | config | no |
-| `CONFLUENCE_TOKEN` | MVP only (`save_env_var.sh --value-file`); prod → Agent Identity retrieval | yes |
+| `CONFLUENCE_TOKEN` | MVP local only (`CONFLUENCE_API_TOKEN` in `.env`); prod → Identity apikey | yes |
+| `CONFLUENCE_API_KEY_PROVIDER` | `/agentbase-identity` Outbound Auth API Key, default `identity-confluence-zalopay-knowledge` | no |
+| `CONFLUENCE_EMAIL`, `CONFLUENCE_BASE_URL`, space keys | config | no |
+| `GDRIVE_FOLDER_ID` | config (folder to sync) | no |
+| `GDRIVE_OAUTH_PROVIDER` | `/agentbase-identity` Outbound Auth OAuth, default `identity-google-space` | no |
+| `GDRIVE_OAUTH_SCOPES` | config, default `https://www.googleapis.com/auth/drive.readonly` | no |
+| `GDRIVE_SA_PROVIDER` | optional apikey provider (SA JSON); leave empty for OAuth-only | yes (SA JSON body) |
+| `GDRIVE_SA_JSON_PATH` / `GDRIVE_API_KEY` | **local dev only** — not in prod image | yes |
 | `TEAMS_APP_ID` / `TEAMS_APP_SECRET` | identity (prod) | yes |
 | `INDEX_URL` (prod) | VPC index endpoint | no |
 | `GRADE_THRESHOLD`, `TOPK`, `BRANCH_TIMEOUT_S` | tunables with defaults (0.5 / 8 / 20) | no |

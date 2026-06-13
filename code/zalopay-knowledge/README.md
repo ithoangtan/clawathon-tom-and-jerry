@@ -50,7 +50,9 @@ Ingestion (triggered by Sync button):
 - 4 GB RAM free (embedding model + FAISS)
 - VNG MaaS API key with at least one Qwen/MiniMax model enabled
 - Confluence Cloud API token (for the spaces you want to index)
-- Google Drive service-account JSON **or** API key (for PDF sync)
+- **Google Drive (local dev):** service-account JSON (`GDRIVE_SA_JSON_PATH`) **or** API key (`GDRIVE_API_KEY`) + `GDRIVE_FOLDER_ID`
+- **Google Drive (AgentBase):** Outbound Auth OAuth `identity-google-space` (`GDRIVE_OAUTH_PROVIDER`); secrets in Access Control — not in image
+- **Confluence (AgentBase):** Outbound Auth apikey `identity-confluence-zalopay-knowledge` (`CONFLUENCE_API_KEY_PROVIDER`) + `CONFLUENCE_EMAIL`
 
 ---
 
@@ -64,7 +66,7 @@ cd code/zalopay-knowledge
 # 2. Copy and fill environment variables
 cp .env.example .env
 #    Edit .env — fill LLM_API_KEY, SMALL_MODEL, MAIN_MODEL,
-#    CONFLUENCE_* and GDRIVE_* values at minimum.
+#    CONFLUENCE_* and GDRIVE_* (local: SA path or API key + folder ID).
 
 # 3. Build and start
 docker compose up --build
@@ -140,9 +142,10 @@ cd frontend && npm test
 See `docs/DEPLOY-READINESS.md` for the exact swap checklist.  In short:
 
 1. Set `APP_ENV=agentbase` in the AgentBase environment config.
-2. The platform auto-injects `GREENNODE_*` vars (MaaS key override, identity URL, memory URL).
-3. `deps.py` picks `checkpointer_agentbase.py` and the AgentBase entrypoint in `main.py`.
-4. No changes to graph nodes, prompts, or ingestion code.
+2. The platform auto-injects `GREENNODE_*` vars (MaaS key override, identity URL, memory URL, `GREENNODE_AGENT_IDENTITY`).
+3. Register **Outbound Auth** in Access Control: Confluence apikey `identity-confluence-zalopay-knowledge`, GDrive OAuth `identity-google-space`; bind to agent identity (see `deploy/agentbase-runtime.env.example`).
+4. `app/adapters/confluence_credentials.py` and `app/adapters/gdrive_credentials.py` resolve tokens at sync time.
+5. `deps.py` picks AgentBase checkpointer/recall; no changes to graph nodes or prompts.
 
 ---
 

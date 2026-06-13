@@ -313,7 +313,8 @@ class SyncService:
                         break
                 if not all_chunks:
                     raise ValueError(
-                        "Google Drive is not configured and no local PDFs in corpus/pdfs/"
+                        "Google Drive is not configured (set GDRIVE_FOLDER_ID + Identity "
+                        "identity-google-space or local GDRIVE_* creds) and no local PDFs in corpus/pdfs/"
                     )
 
             removed = self._indexer.tombstone_removed_urls(

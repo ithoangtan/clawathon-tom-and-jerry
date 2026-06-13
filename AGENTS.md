@@ -11,6 +11,7 @@
 - Docker deploy: one public URL serves the web UI at `/`; API calls (`POST /chat`, `/invocations`, etc.) share the same host.
 - Add unit tests across modules; parallel agents for test writing are welcome.
 - When asking for stack overviews, focus on BE/AI/core only—skip test and UI unless requested.
+- Frontend UI should support English and Vietnamese (labels/chrome only; Q&A follows the user's language).
 
 ## Learned Workspace Facts
 
@@ -22,3 +23,8 @@
 - Dashboard metrics API is `GET /api/dashboard` (not `/dashboard`) to avoid SPA route collision.
 - MVP sync is manual; pipeline is designed for Phase 2 scheduled runs.
 - Refusal when evidence is insufficient is a success path, not a failure.
+- Engineering checklist for MVP MUST items: `2-requirements/08-KNOWLEDGE_AI_AGENT_CHECKLIST_AGAIN.md`.
+- `GATEWAY_TRUST_*` env vars are app-owned security config, not AgentBase platform defaults; set via runtime env.
+- `MEMORY_ID` is the AgentBase Memory store ID for STM checkpointer and LTMS recall when `APP_ENV=agentbase`.
+- MVP index target ~1000 pages; production PDFs on SharePoint (MVP simulates via GDrive).
+- GDrive on AgentBase: Outbound Auth OAuth `identity-google-space` (`app/adapters/gdrive_credentials.py`). Confluence: apikey `identity-confluence-zalopay-knowledge` (`app/adapters/confluence_credentials.py`). Local dev: `CONFLUENCE_API_TOKEN`, `GDRIVE_*` env.

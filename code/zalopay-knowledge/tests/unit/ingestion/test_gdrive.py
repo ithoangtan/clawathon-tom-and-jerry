@@ -39,6 +39,26 @@ class TestGDriveClient:
         client = GDriveClient(settings)
         assert client.configured() is False
 
+    def test_configured_on_agentbase_with_identity_oauth(self, tmp_path):
+        settings = Settings(
+            app_env="agentbase",
+            greennode_agent_identity="zalopay-knowledge",
+            gdrive_oauth_provider="identity-google-space",
+            gdrive_folder_id="folder-abc123",
+            index_dir=str(tmp_path / "index"),
+        )
+        client = GDriveClient(settings)
+        assert client.configured() is True
+
+    def test_not_configured_on_agentbase_without_identity(self, tmp_path):
+        settings = Settings(
+            app_env="agentbase",
+            gdrive_folder_id="folder-abc123",
+            index_dir=str(tmp_path / "index"),
+        )
+        client = GDriveClient(settings)
+        assert client.configured() is False
+
     def test_list_pdfs_queries_drive_api(self, gdrive_settings: Settings):
         client = GDriveClient(gdrive_settings)
         mock_service = MagicMock()

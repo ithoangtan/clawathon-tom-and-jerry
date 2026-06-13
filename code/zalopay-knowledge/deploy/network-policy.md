@@ -15,8 +15,8 @@ layer so the runtime cannot reach the public internet by construction.
 |---|---|---|
 | `maas-llm-aiplatform-hcm.api.vngcloud.vn` | 443 | VNG MaaS LLM inference |
 | `*.atlassian.net` (Confluence sync job only) | 443 | Confluence REST API during sync |
-| `www.googleapis.com` / `drive.googleapis.com` (sync only) | 443 | Google Drive PDF sync |
-| AgentBase platform endpoints (`agentbase.api.vngcloud.vn`, identity, memory) | 443 | Platform services |
+| `www.googleapis.com` / `drive.googleapis.com` (sync only) | 443 | GDrive sync (OAuth via `identity-google-space`) |
+| AgentBase platform endpoints (`agentbase.api.vngcloud.vn`, identity, memory) | 443 | Platform services + Identity token exchange for GDrive |
 
 Sync jobs run inside the same container; if sync is moved to a separate job,
 tighten the runtime allowlist to **MaaS + AgentBase platform only**.
@@ -49,6 +49,7 @@ egress/TLS posture before GA and migrate to VPC deny-all.
 - [ ] `curl https://example.com` from inside the container fails (deny-all)
 - [ ] MaaS health/inference call succeeds over 443
 - [ ] `.env` and credential files are **not** in the built image (`docker history` / inspect)
+- [ ] GDrive OAuth client secret / SA JSON stored in AgentBase Identity only (not `GDRIVE_API_KEY` in prod runtime env)
 - [ ] `GATEWAY_TRUST_REQUIRED=true` in production with gateway injecting trust headers
 
 ## Reference

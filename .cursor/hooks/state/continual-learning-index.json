@@ -1,45 +1,429 @@
 {
   "version": 1,
   "transcripts": {
-    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/52be82e1-89a5-4f51-9f1f-e8f89cef61c6/52be82e1-89a5-4f51-9f1f-e8f89cef61c6.jsonl": {
-      "mtimeMs": 1781292033000,
-      "lastProcessedAt": "2026-06-13T00:00:00.000Z"
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/0053f2d4-3281-4119-9297-967924cd67d0.jsonl": {
+      "mtimeMs": 1781327418225,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
     },
-    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/7a734132-2ad1-4b9a-8d86-97be51a826f2/7a734132-2ad1-4b9a-8d86-97be51a826f2.jsonl": {
-      "mtimeMs": 1781292439000,
-      "lastProcessedAt": "2026-06-13T00:00:00.000Z"
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/11be7ee0-55b6-44ee-b92f-2a9005a4a374.jsonl": {
+      "mtimeMs": 1781326897221,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/3882cfc7-71f8-499b-8aeb-7a190e081257.jsonl": {
+      "mtimeMs": 1781326396288,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/43b4e244-1662-4d99-9cf5-b2c53fccb02a.jsonl": {
+      "mtimeMs": 1781326468024,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/4ba4b8c7-35e8-49fa-bebf-bcbe26df2fa9.jsonl": {
+      "mtimeMs": 1781327311748,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/5564435c-e115-404b-b5d5-0c5acf5e33b1.jsonl": {
+      "mtimeMs": 1781326767282,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/61f886dd-52b7-41bf-99de-19147266c2fe.jsonl": {
+      "mtimeMs": 1781326483909,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/73e410e5-0cbd-4a06-95cf-8fc84c880de8.jsonl": {
+      "mtimeMs": 1781327016147,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/893babff-dd40-4bdd-909c-18a44b113914.jsonl": {
+      "mtimeMs": 1781326319231,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/8b3632f8-49a9-4644-b7c0-fdde7d62c799.jsonl": {
+      "mtimeMs": 1781326330081,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/91fa3d13-27fd-4d55-8b28-89b707646fc5.jsonl": {
+      "mtimeMs": 1781326544116,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/ac62c360-63e7-4507-989b-b78aa6b0826a.jsonl": {
+      "mtimeMs": 1781326315582,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/b66822be-f982-480e-a6af-64ee8aa489c2.jsonl": {
+      "mtimeMs": 1781326432991,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/c1d9e3af-d4f0-4bc5-8386-3e5b6a203ad6.jsonl": {
+      "mtimeMs": 1781326326225,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/c4e2669f-4ad7-4fa7-9c92-2d039a583ecd.jsonl": {
+      "mtimeMs": 1781326567600,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/dfe805d9-573c-4fc7-9132-a38eea536189.jsonl": {
+      "mtimeMs": 1781327397943,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/e1fa8512-0296-435a-b9b7-0e67b0ed32f6.jsonl": {
+      "mtimeMs": 1781326623960,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/eb20f4ed-4dfb-44f1-9db4-9c93784c815a.jsonl": {
+      "mtimeMs": 1781326539222,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/subagents/fbc88c96-b9a1-4a19-9030-b2a14d310a01.jsonl": {
+      "mtimeMs": 1781327284006,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/2a302857-cede-4992-a00e-a65ee90ad81e.jsonl": {
+      "mtimeMs": 1781331540047,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/02fac439-2bf6-493d-93c0-703d5b272043.jsonl": {
+      "mtimeMs": 1781331225008,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/03865876-f2f5-479b-bad4-bdf15b0c4b0c.jsonl": {
+      "mtimeMs": 1781330747789,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/05698d7d-6cac-4dec-91c0-ec129e15bab6.jsonl": {
+      "mtimeMs": 1781331232848,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/06a2e194-cf67-4d1d-9908-7e5f64bb51a9.jsonl": {
+      "mtimeMs": 1781330894696,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/10c712b5-ed32-4a02-ae70-f746adf0628a.jsonl": {
+      "mtimeMs": 1781331092063,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/177d59a8-7e5d-43d7-8320-2a4a3899a7f8.jsonl": {
+      "mtimeMs": 1781331300414,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/2138b858-8d05-4cc0-9c2f-436b4e12a245.jsonl": {
+      "mtimeMs": 1781331489880,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/2628ee28-1856-460d-a86e-82fa55501dc1.jsonl": {
+      "mtimeMs": 1781330760343,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/46f3a513-03be-4197-9e8d-19e9987873bf.jsonl": {
+      "mtimeMs": 1781331050630,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/4b6fad44-3588-489b-abcf-6703a31687e1.jsonl": {
+      "mtimeMs": 1781331310486,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/4f651a2f-d0a7-4e96-b604-ed2d56936acb.jsonl": {
+      "mtimeMs": 1781331243076,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/53afb60c-8396-4eeb-8c39-9ab15f3d8756.jsonl": {
+      "mtimeMs": 1781330923755,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/7103fe0a-b872-40f9-8a42-52c2254ef9bc.jsonl": {
+      "mtimeMs": 1781330824872,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/97f9ae01-5d35-4ba9-8e7a-b3a57b40f58e.jsonl": {
+      "mtimeMs": 1781331530692,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/a71cce73-8070-41e9-91c6-2398c2c03ae7.jsonl": {
+      "mtimeMs": 1781331303654,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/b8582df3-047d-4320-942a-c0e1aea28778.jsonl": {
+      "mtimeMs": 1781331091584,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/ca324ee1-7ea8-464f-b5e6-c21e351853da.jsonl": {
+      "mtimeMs": 1781331299720,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/ca3ed512-5c2a-43d8-b083-2ea75160fc1a.jsonl": {
+      "mtimeMs": 1781330547305,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/d03bcbbd-91d2-4750-9173-ffa40f276509.jsonl": {
+      "mtimeMs": 1781331227441,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/d64a7902-072d-4345-b8eb-e5832c2d7ebc.jsonl": {
+      "mtimeMs": 1781331099254,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/dc52c64f-d466-4ba7-8852-df3a5a996e4a.jsonl": {
+      "mtimeMs": 1781331254372,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/de412772-cf6c-4d4c-acc0-6bc1fdb83386.jsonl": {
+      "mtimeMs": 1781330947709,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/e35faa83-05c2-4a0e-87c4-57b88be1f3ea.jsonl": {
+      "mtimeMs": 1781330828302,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/f52e8068-7b90-4b21-91ec-c52b2ea09591.jsonl": {
+      "mtimeMs": 1781331037005,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/f65bcac6-1c7a-4bea-8330-a8000e0a17e8.jsonl": {
+      "mtimeMs": 1781331116874,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/f9d4cbd0-f9a7-4a84-a422-5fac3dad8b5c.jsonl": {
+      "mtimeMs": 1781331049550,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/fa59a703-f960-419c-860d-044a2e132287.jsonl": {
+      "mtimeMs": 1781331209766,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/2a302857-cede-4992-a00e-a65ee90ad81e/subagents/fc71f675-fe33-4cd3-afe1-5630a3f01f83.jsonl": {
+      "mtimeMs": 1781330777654,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
     },
     "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/327dd9d1-a566-47f5-8dcc-2538d5b77953/327dd9d1-a566-47f5-8dcc-2538d5b77953.jsonl": {
-      "mtimeMs": 1781310709000,
-      "lastProcessedAt": "2026-06-13T00:00:00.000Z"
-    },
-    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/a86f7cca-d6fc-45e0-96ff-4653c7412ee5/a86f7cca-d6fc-45e0-96ff-4653c7412ee5.jsonl": {
-      "mtimeMs": 1781310863000,
-      "lastProcessedAt": "2026-06-13T00:00:00.000Z"
-    },
-    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/610dc034-5201-4bc1-9fbb-90239eb37801/610dc034-5201-4bc1-9fbb-90239eb37801.jsonl": {
-      "mtimeMs": 1781311796000,
-      "lastProcessedAt": "2026-06-13T00:00:00.000Z"
-    },
-    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/9668acbd-9311-4bb9-8511-53c32b955b80/9668acbd-9311-4bb9-8511-53c32b955b80.jsonl": {
-      "mtimeMs": 1781315621000,
-      "lastProcessedAt": "2026-06-13T00:00:00.000Z"
+      "mtimeMs": 1781328048326,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
     },
     "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/4ff35ca7-9d88-40f3-8d11-adf3a9488041.jsonl": {
-      "mtimeMs": 1781326234000,
-      "lastProcessedAt": "2026-06-13T00:00:00.000Z"
+      "mtimeMs": 1781326234478,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
     },
-    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/e0111122-53bd-410c-b62f-47039b25e03e/e0111122-53bd-410c-b62f-47039b25e03e.jsonl": {
-      "mtimeMs": 1781326618000,
-      "lastProcessedAt": "2026-06-13T00:00:00.000Z"
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/08059982-05d4-4791-890b-a6d2aaa7643c.jsonl": {
+      "mtimeMs": 1781325529544,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
     },
-    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/0053f2d4-3281-4119-9297-967924cd67d0/0053f2d4-3281-4119-9297-967924cd67d0.jsonl": {
-      "mtimeMs": 1781327033000,
-      "lastProcessedAt": "2026-06-13T00:00:00.000Z"
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/438ae7b0-1155-4cc3-800c-66f606b3dcda.jsonl": {
+      "mtimeMs": 1781326226099,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/4d1a0895-8dd2-4097-906e-ba3715e08be0.jsonl": {
+      "mtimeMs": 1781325537920,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/58e8ec76-e04c-4e03-a032-050fccaf8e29.jsonl": {
+      "mtimeMs": 1781325760711,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/60811e32-a9d2-458b-8768-ac433c693f26.jsonl": {
+      "mtimeMs": 1781325682153,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/78a1052a-ddf2-4c86-99f5-a496c59258ef.jsonl": {
+      "mtimeMs": 1781325651787,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/8b4d7830-50cd-4c07-b509-db587bfe73fc.jsonl": {
+      "mtimeMs": 1781325502579,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/9d0f499c-828a-4e5b-8a85-8c701a47c3fe.jsonl": {
+      "mtimeMs": 1781325489334,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/a20072f9-0e7d-425f-86c8-dc39662e314e.jsonl": {
+      "mtimeMs": 1781325131177,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/a826d923-2750-4d9f-a0ba-8324bb77c41e.jsonl": {
+      "mtimeMs": 1781325530794,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/d156dda5-6cfc-4575-b6b7-a0e04ed83e5c.jsonl": {
+      "mtimeMs": 1781325587270,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/d663e984-35ea-4cb0-9250-3f8d736a156a.jsonl": {
+      "mtimeMs": 1781325547572,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/4ff35ca7-9d88-40f3-8d11-adf3a9488041/subagents/f7cace91-69ac-4768-8fe6-7b0fa0526955.jsonl": {
+      "mtimeMs": 1781325829302,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/52be82e1-89a5-4f51-9f1f-e8f89cef61c6/52be82e1-89a5-4f51-9f1f-e8f89cef61c6.jsonl": {
+      "mtimeMs": 1781292033380,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/610dc034-5201-4bc1-9fbb-90239eb37801/610dc034-5201-4bc1-9fbb-90239eb37801.jsonl": {
+      "mtimeMs": 1781311796556,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/79509d8e-85d8-4a05-a288-58a68038719c/79509d8e-85d8-4a05-a288-58a68038719c.jsonl": {
+      "mtimeMs": 1781330990827,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/7a734132-2ad1-4b9a-8d86-97be51a826f2/7a734132-2ad1-4b9a-8d86-97be51a826f2.jsonl": {
+      "mtimeMs": 1781292439390,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/9668acbd-9311-4bb9-8511-53c32b955b80/9668acbd-9311-4bb9-8511-53c32b955b80.jsonl": {
+      "mtimeMs": 1781315621665,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/a86f7cca-d6fc-45e0-96ff-4653c7412ee5/a86f7cca-d6fc-45e0-96ff-4653c7412ee5.jsonl": {
+      "mtimeMs": 1781310863310,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
     },
     "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c0ffceee-515a-49ca-b865-7b68c0b2b72e/c0ffceee-515a-49ca-b865-7b68c0b2b72e.jsonl": {
-      "mtimeMs": 1781327072000,
-      "lastProcessedAt": "2026-06-13T00:00:00.000Z"
+      "mtimeMs": 1781327285019,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c0ffceee-515a-49ca-b865-7b68c0b2b72e/subagents/b74effb9-8cb4-4214-9123-875b443d338a.jsonl": {
+      "mtimeMs": 1781327272497,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/c2acee06-5445-489e-b6d3-9a7cc4e36dfb.jsonl": {
+      "mtimeMs": 1781330402932,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/034dd6f4-d975-4064-98ea-588a4f08f55b.jsonl": {
+      "mtimeMs": 1781328086200,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/1000ec4d-bccb-4503-8f38-d8306b4e56df.jsonl": {
+      "mtimeMs": 1781328211228,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/18334561-4ed1-49fb-b910-fff18f4644e2.jsonl": {
+      "mtimeMs": 1781328584559,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/1e34737d-c6c9-4536-bd1b-34a9f29f3373.jsonl": {
+      "mtimeMs": 1781328115853,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/23873bb1-c383-4f77-9a18-4ab7893f12ba.jsonl": {
+      "mtimeMs": 1781327999108,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/295cb29b-602c-403a-80e7-8638bd7f8c84.jsonl": {
+      "mtimeMs": 1781328646947,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/2a5b9fdd-30b2-4fb2-b280-8870ef06911d.jsonl": {
+      "mtimeMs": 1781328872803,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/2e6e5e0e-ceb8-468f-aaed-dab49ab55ed9.jsonl": {
+      "mtimeMs": 1781328509931,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/300c8e01-da23-439f-bdb1-084e0c4c435a.jsonl": {
+      "mtimeMs": 1781328245286,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/510e9b59-ac80-4eae-a1d4-a09554b01337.jsonl": {
+      "mtimeMs": 1781330145861,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/526a692a-ba81-4f48-ae2f-d871e7fb0a6f.jsonl": {
+      "mtimeMs": 1781328462253,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/6114c001-7a71-4ac3-8db4-00016d03231b.jsonl": {
+      "mtimeMs": 1781328349432,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/67bac264-0a7e-4d17-8306-f6443016063d.jsonl": {
+      "mtimeMs": 1781328134423,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/68777732-c5fa-458d-bb4f-abd5eb704a52.jsonl": {
+      "mtimeMs": 1781328214777,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/716d16b4-51bd-456a-87c9-deeda7431ce3.jsonl": {
+      "mtimeMs": 1781328411007,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/75a9cb9b-f4fc-4f53-a9b7-47c9ccb6e608.jsonl": {
+      "mtimeMs": 1781328621904,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/90ded473-61d0-488a-8d30-7452a443ee6f.jsonl": {
+      "mtimeMs": 1781328576909,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/969aee18-28fd-49f0-a4f9-2a6055ae30bb.jsonl": {
+      "mtimeMs": 1781329589899,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/9eee607a-8ac5-4f19-bacd-40e608085240.jsonl": {
+      "mtimeMs": 1781328383717,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/a11637bc-e670-4433-ac08-f9e4f9cf1af9.jsonl": {
+      "mtimeMs": 1781328543902,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/a85b5f4a-4049-499d-8388-0e64938c7ee9.jsonl": {
+      "mtimeMs": 1781328379189,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/b0deca9d-92a9-459c-b500-1df4bb52993e.jsonl": {
+      "mtimeMs": 1781330119854,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/b4388e55-e533-4a60-b8d8-c9860ae7e4c1.jsonl": {
+      "mtimeMs": 1781328564909,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/b7e01b81-7112-401a-ac14-25ce0c88126b.jsonl": {
+      "mtimeMs": 1781329827703,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/c062cc7f-6531-4a3e-ba58-a5e349329178.jsonl": {
+      "mtimeMs": 1781329572968,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/cbbdb9a4-84bb-4e89-a79d-2cd68c726dbe.jsonl": {
+      "mtimeMs": 1781328152046,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/cc303a19-11ae-450c-8199-b096f363e9e8.jsonl": {
+      "mtimeMs": 1781328509772,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/d3c651a9-60f3-4f47-8e60-9b1be8e0051c.jsonl": {
+      "mtimeMs": 1781330382958,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/c2acee06-5445-489e-b6d3-9a7cc4e36dfb/subagents/e53060f0-f73f-4fcf-89c3-09ed22a51377.jsonl": {
+      "mtimeMs": 1781328279869,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/dd0447d2-df31-40d8-bb88-025ba01fa603/dd0447d2-df31-40d8-bb88-025ba01fa603.jsonl": {
+      "mtimeMs": 1781334128640,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/e0111122-53bd-410c-b62f-47039b25e03e/e0111122-53bd-410c-b62f-47039b25e03e.jsonl": {
+      "mtimeMs": 1781326618980,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/e06e2bbf-aab2-4d15-bdbf-f30bcb35d9a2/e06e2bbf-aab2-4d15-bdbf-f30bcb35d9a2.jsonl": {
+      "mtimeMs": 1781334300561,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/e06e2bbf-aab2-4d15-bdbf-f30bcb35d9a2/subagents/8f09bab8-185d-4f10-b42c-a4e4194efa7f.jsonl": {
+      "mtimeMs": 1781334350368,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
+    },
+    "/Users/lap15800/.cursor/projects/Users-lap15800-Documents-clawathon/agent-transcripts/fc8b60d0-fb10-40f1-ade6-cd6cec11cd3a/fc8b60d0-fb10-40f1-ade6-cd6cec11cd3a.jsonl": {
+      "mtimeMs": 1781333934298,
+      "lastProcessedAt": "2026-06-13T07:06:59.000Z"
     }
   }
 }

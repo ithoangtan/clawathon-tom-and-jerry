@@ -4,7 +4,7 @@
 
 1. IAM service account with AgentBase policies; export `GREENNODE_CLIENT_ID` / `GREENNODE_CLIENT_SECRET`; verify with `get_token.sh` (the skills do this in `/agentbase-wizard` Step 1).
 2. **Request VPC peering with GreenNode support** (blocks Phase 2 Private mode — longest lead item). Deploy on Flavor runtime-s2-general-4x8 4 CPU8 GB RAM.
-3. Confluence: 3 personal spaces (Risk, Grow Enablement, Bank Partnerships) + service-account token; Google Drive sample PDF set (SharePoint simulation). (Teams app registration to IT is a Phase 2 item — request early for lead time.)
+3. Confluence: 3 personal spaces + Outbound Auth apikey `identity-confluence-zalopay-knowledge`; **Google Drive:** PDF folder + OAuth `identity-google-space` (Included Google, M2M `drive.readonly`); share folder with Google client. (Teams app registration — Phase 2.)
 4. Install skills bundle; Docker running; Python ≥3.10.
 
 ## Phase 1 — MVP
@@ -15,6 +15,7 @@ Day 1 — scaffold + grounded RAG loop:
 /agentbase-wizard init zalopay-knowledge --langgraph    # SDK-correct skeleton, CWD
 /agentbase-llm api-keys create zalopay-kb-key           # LLM_API_KEY + LLM_BASE_URL + pick ENABLED model
 /agentbase-memory create                                 # STM store (eventExpiryDuration=30) → MEMORY_ID
+/agentbase-identity                                      # Outbound Auth: identity-confluence-zalopay-knowledge + identity-google-space; bind to agent identity
 # implement: sync job (cursor → hash-skip → chunk-diff → local embed) → FAISS partitions (Risk, Grow Enablement, Bank Partnerships ≈1,000 pages total)
 #            index is PRE-BUILT offline and baked into the image / loaded at boot — never built per-request
 # implement: retrieve → grade → synthesize+cite → verify nodes for one department

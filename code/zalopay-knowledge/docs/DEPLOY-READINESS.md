@@ -26,12 +26,15 @@ export GREENNODE_CLIENT_SECRET="..."
 
 1. **LLM** — `/agentbase-llm`: create API key; enable SMALL + MAIN models; set runtime env `LLM_API_KEY` (or rely on platform `GREENNODE_API_KEY` fallback).
 2. **Memory (STM)** — `/agentbase-memory create`; set `MEMORY_ID` on runtime.
-3. **Validate** — `/agentbase-wizard test validate` → `test docker --platform linux/amd64` → `test preflight`.
-4. **Build** — `make docker-build-amd64` from project root.
-5. **Deploy** — `/agentbase-deploy` (PUBLIC MVP, flavor with enough RAM for embeddings + FAISS).
-6. **Sync** — trigger Confluence + GDrive sync via Settings; confirm `GET /health/ready` → `ready: true` (index + MaaS).
-7. **Monitor** — `/agentbase-monitor runtime-logs` and budget alert at 80%.
-8. **Teardown playbook** — `/agentbase-teardown zalopay-knowledge --dry-run` before any real cleanup.
+3. **Identity (Outbound Auth)** — Access Control console; bind to agent identity (`GREENNODE_AGENT_IDENTITY`):
+   - **Confluence** — Type API Key → `identity-confluence-zalopay-knowledge`; runtime: `CONFLUENCE_API_KEY_PROVIDER`, `CONFLUENCE_EMAIL`, `CONFLUENCE_BASE_URL`
+   - **GDrive** — Type OAuth (Included Google) → `identity-google-space`; Google Cloud: whitelist `callbackUrl`, enable Drive API, share folder; runtime: `GDRIVE_FOLDER_ID`, `GDRIVE_OAUTH_PROVIDER`, `GDRIVE_OAUTH_SCOPES`
+4. **Validate** — `/agentbase-wizard test validate` → `test docker --platform linux/amd64` → `test preflight`.
+5. **Build** — `make docker-build-amd64` from project root.
+6. **Deploy** — `/agentbase-deploy` (PUBLIC MVP, flavor with enough RAM for embeddings + FAISS).
+7. **Sync** — trigger Confluence + GDrive sync via Settings; confirm `GET /health/ready` → `ready: true` (index + MaaS).
+8. **Monitor** — `/agentbase-monitor runtime-logs` and budget alert at 80%.
+9. **Teardown playbook** — `/agentbase-teardown zalopay-knowledge --dry-run` before any real cleanup.
 
 ## Health probes
 
@@ -55,16 +58,18 @@ The Docker `HEALTHCHECK` uses `/health/live` so the container stays up during lo
 4. Unchanged page bodies skip re-chunking when `sync_sources.content_hash` matches (zero LLM tokens; local embed only on changed docs).
 5. Each department partition is rebuilt offline then atomically swapped — never serve a half-written FAISS file.
 
+**GDrive sync prerequisites (AgentBase):** `GDRIVE_FOLDER_ID`; Outbound Auth OAuth `identity-google-space` bound; egress includes `drive.googleapis.com`. **Confluence:** Outbound Auth apikey `identity-confluence-zalopay-knowledge` + `CONFLUENCE_EMAIL`. Resolution: `app/adapters/gdrive_credentials.py`, `app/adapters/confluence_credentials.py`.
+
 ## Runtime env (non-`GREENNODE_*` in env file)
 
 See `.env.example`. On AgentBase, `APP_ENV=agentbase`. Platform injects `GREENNODE_API_KEY` when `LLM_API_KEY` is unset.
 
-Key ops tunables: `INDEX_DIR`, `GRAPH_BUDGET_S`, `BRANCH_TIMEOUT_S`, `LLM_REQUEST_TIMEOUT_S`, `HEALTH_PING_TIMEOUT_S`, `AGENT_ENABLED`.
+Key ops tunables: `INDEX_DIR`, `GRAPH_BUDGET_S`, `BRANCH_TIMEOUT_S`, `LLM_REQUEST_TIMEOUT_S`, `HEALTH_PING_TIMEOUT_S`, `AGENT_ENABLED`, `CONFLUENCE_API_KEY_PROVIDER`, `GDRIVE_FOLDER_ID`, `GDRIVE_OAUTH_PROVIDER`, `GDRIVE_OAUTH_SCOPES`.
 
 ## Out of scope (Phase 2)
 
 - `/agentbase-gateway`, `/agentbase-policy` (MCP + Policy Groups)
-- `/agentbase-identity` for Confluence vault (MVP uses `.env`)
+- Confluence/GDrive already use Outbound Auth on AgentBase MVP; Phase 2 moves Confluence behind MCP Gateway
 - LTMS full strategies, VPC, Teams channel
 - Sync freshness SLA alerting, versioned index rollback, eval-as-CI-gate
 
