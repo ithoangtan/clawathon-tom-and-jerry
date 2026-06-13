@@ -1,0 +1,46 @@
+# Python virtualenv
+.venv/
+venv/
+
+# Node modules and built assets (stage 1 builds these inside Docker)
+node_modules/
+frontend/dist/
+frontend/node_modules/
+frontend/.vite/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment & secrets (injected at runtime)
+.env
+.env.local
+*-sa.json
+
+# Tests (not needed in production image)
+tests/
+
+# Corpus and index (mounted as named volumes)
+corpus/pdfs/*
+index/*
+
+# Git history
+.git/
+.gitignore
+.github/
+
+# Databases (runtime-generated)
+*.db
+*.sqlite
+*.sqlite3
+
+# Docs (optional — comment out if you want them in image)
+docs/
+
+# macOS
+.DS_Store

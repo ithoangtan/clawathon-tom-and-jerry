@@ -1,0 +1,30 @@
+[project]
+name = "zalopay-knowledge"
+version = "0.1.0"
+description = "ZaloPay Internal Knowledge Agent — citation-grounded corrective-RAG assistant"
+requires-python = ">=3.11"
+# Runtime dependencies are declared in requirements.txt, not here, to keep
+# Docker layer caching simple and to allow AgentBase to inject its own deps.
+# If you need editable installs for local dev: pip install -e . --no-deps
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "T20"]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
