@@ -29,7 +29,7 @@ Validate runtime env files before apply:
 
 ```bash
 chmod +x scripts/validate-runtime-env.sh
-scripts/validate-runtime-env.sh deploy/agentbase-runtime.env.example deploy/.runtime.env
+scripts/validate-runtime-env.sh .env
 ```
 
 ## Ordered steps
@@ -41,7 +41,7 @@ scripts/validate-runtime-env.sh deploy/agentbase-runtime.env.example deploy/.run
    - **GDrive** — Type OAuth (Included Google) → `identity-google-space`; Google Cloud: whitelist `callbackUrl`, enable Drive API, share folder; runtime: `GDRIVE_FOLDER_ID`, `GDRIVE_OAUTH_PROVIDER`, `GDRIVE_OAUTH_SCOPES`
 4. **Validate** — `/agentbase-wizard test validate` → `test docker --platform linux/amd64` → `test preflight`.
 5. **Build** — `make docker-build-amd64` from project root.
-6. **Deploy** — `/agentbase-deploy` with `--env-file deploy/.runtime.env` (PUBLIC MVP, flavor with enough RAM for embeddings + FAISS). Set `GATEWAY_TRUST_REQUIRED=false` for PUBLIC same-origin SPA.
+6. **Deploy** — `bash scripts/deploy-agent.sh` (PUBLIC MVP, flavor with enough RAM for embeddings + FAISS). Set `GATEWAY_TRUST_REQUIRED=false` in `.env` for PUBLIC same-origin SPA.
 7. **Sync** — trigger Confluence + GDrive sync via Settings; confirm `GET /health/ready` → `ready: true` (index + MaaS).
 8. **Monitor** — `/agentbase-monitor runtime-logs` and budget alert at 80%.
 9. **Teardown playbook** — `/agentbase-teardown zalopay-knowledge --dry-run` before any real cleanup.
@@ -72,9 +72,7 @@ The Docker `HEALTHCHECK` uses `/health/live` so the container stays up during lo
 
 ## Runtime env
 
-Templates: `deploy/agentbase-runtime.env.example` (minimal) and `deploy/.runtime.env` (full operator copy, gitignored).
-
-Local docker compose uses root `.env.example` → `.env` only. Do **not** scrape `.env.example` for AgentBase runtime — CLI and runtime vars live in separate deploy files.
+Template: `.env.example` → `.env` (gitignored). Used for both local docker-compose and AgentBase deploy (`bash scripts/deploy-agent.sh` passes `--env-file .env` automatically).
 
 On AgentBase, `APP_ENV=agentbase`. Platform injects `GREENNODE_API_KEY` when `LLM_API_KEY` is unset.
 

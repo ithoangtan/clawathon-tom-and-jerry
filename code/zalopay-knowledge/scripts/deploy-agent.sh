@@ -8,7 +8,7 @@
 #   bash scripts/deploy-agent.sh --dry-run        # preview only, no changes
 #
 # First-time setup:
-#   1. Copy deploy/agentbase-runtime.env.example → deploy/.runtime.env and fill secrets.
+#   1. Copy .env.example → .env and fill secrets (see variable comments in .env.example).
 #   2. Ensure IAM credentials are set (GREENNODE_CLIENT_ID + GREENNODE_CLIENT_SECRET in env,
 #      or .greennode.json in project root).
 #   3. Ensure Docker is running.
@@ -20,7 +20,7 @@ set -euo pipefail
 RUNTIME_NAME="zalopay-knowledge"
 RUNTIME_DESCRIPTION="ZaloPay Knowledge Agent"
 FLAVOR_ID="runtime-s2-general-2x8"  # 2 CPU, 8 GB
-ENV_FILE="deploy/.runtime.env"
+ENV_FILE=".env"
 PLATFORM="linux/amd64"
 
 # Path to the agentbase scripts (sibling repo — adjust if moved)
@@ -66,7 +66,7 @@ fi
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "ERROR: Env file not found: $ENV_FILE" >&2
-  echo "       Copy deploy/agentbase-runtime.env.example to deploy/.runtime.env and fill secrets." >&2
+  echo "       Copy .env.example to .env and fill in the required values." >&2
   exit 1
 fi
 

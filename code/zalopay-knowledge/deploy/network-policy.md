@@ -54,7 +54,7 @@ egress/TLS posture before GA and migrate to VPC deny-all.
 
 ## Reference
 
-- `deploy/agentbase-runtime.env.example` — production env template (kill-switch, gateway trust)
+- `.env.example` — env template (kill-switch, gateway trust)
 - `2-requirements/08-KNOWLEDGE_AI_AGENT_CHECKLIST_AGAIN.md` §5–6
 - `greennode-agentbase-skills/.claude/skills/agentbase-gateway/references/inbound-auth.md`
 - `greennode-agentbase-skills/.claude/skills/agentbase-deploy` (VPC network mode)

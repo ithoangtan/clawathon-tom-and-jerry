@@ -143,7 +143,7 @@ See `docs/DEPLOY-READINESS.md` for the exact swap checklist.  In short:
 
 1. Set `APP_ENV=agentbase` in the AgentBase environment config.
 2. The platform auto-injects `GREENNODE_*` vars (MaaS key override, identity URL, memory URL, `GREENNODE_AGENT_IDENTITY`).
-3. Register **Outbound Auth** in Access Control: Confluence apikey `identity-confluence-zalopay-knowledge`, GDrive OAuth `identity-google-space`; bind to agent identity (see `deploy/agentbase-runtime.env.example`).
+3. Register **Outbound Auth** in Access Control: Confluence apikey `identity-confluence-zalopay-knowledge`, GDrive OAuth `identity-google-space`; bind to agent identity (see `.env.example`).
 4. `app/adapters/confluence_credentials.py` and `app/adapters/gdrive_credentials.py` resolve tokens at sync time.
 5. `deps.py` picks AgentBase checkpointer/recall; no changes to graph nodes or prompts.
 

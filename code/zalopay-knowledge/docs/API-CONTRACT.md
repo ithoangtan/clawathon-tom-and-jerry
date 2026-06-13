@@ -327,7 +327,7 @@ If a sync is already running, returns `409 Conflict` with `started: false`.
 
 Trigger an asynchronous Google Drive PDF sync job.
 
-**Prerequisites:** `GDRIVE_FOLDER_ID` configured. On AgentBase, Drive credentials from Outbound Auth OAuth `identity-google-space` (M2M, `drive.readonly`). Local dev: `GDRIVE_SA_JSON_PATH` or `GDRIVE_API_KEY`. See `deploy/agentbase-runtime.env.example`.
+**Prerequisites:** `GDRIVE_FOLDER_ID` configured. On AgentBase, Drive credentials from Outbound Auth OAuth `identity-google-space` (M2M, `drive.readonly`). Local dev: `GDRIVE_SA_JSON_PATH` or `GDRIVE_API_KEY`. See `.env.example`.
 
 **Required headers:** all four `X-GreenNode-AgentBase-*` headers.
 

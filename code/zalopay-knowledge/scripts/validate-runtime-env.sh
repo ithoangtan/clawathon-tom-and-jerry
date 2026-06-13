@@ -12,7 +12,7 @@ FORBIDDEN_KEYS=(
 
 usage() {
   echo "Usage: $0 <env-file> [env-file ...]" >&2
-  echo "Example: $0 deploy/agentbase-runtime.env.example deploy/.runtime.env" >&2
+  echo "Example: $0 .env" >&2
   exit 2
 }
 
