@@ -188,11 +188,18 @@ describe("apiClient", () => {
 
   it("calls admin sync endpoints", async () => {
     const adminStatus = {
-      running: false,
-      departments: [],
-      recent_jobs: [],
-      sources: [],
+      jobs: {
+        confluence: {
+          status: "pending",
+          doc_count: 0,
+          chunk_count: 0,
+          errors: [],
+          departments: [],
+        },
+      },
+      departments_indexed: {},
     };
+    const adminHistory = { entries: [] };
     const adminStart = {
       started: true,
       message: "Sync started",
@@ -204,25 +211,52 @@ describe("apiClient", () => {
       vi
         .fn()
         .mockResolvedValueOnce({
+          ok: false,
+          status: 409,
+          json: () =>
+            Promise.resolve({
+              started: false,
+              message: "confluence sync already running",
+              source: "confluence",
+            }),
+        })
+        .mockResolvedValueOnce({
           ok: true,
-          status: 200,
+          status: 202,
           json: () => Promise.resolve(adminStart),
         })
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
           json: () => Promise.resolve(adminStatus),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(adminHistory),
         }),
     );
 
-    await api.adminSync({ source: "confluence", department: "risk" }, ctx);
+    await expect(
+      api.adminSync({ source: "confluence", department: "risk" }, ctx),
+    ).resolves.toEqual({
+      started: false,
+      message: "confluence sync already running",
+      source: "confluence",
+    });
+    await expect(
+      api.adminSync({ source: "confluence", department: "risk" }, ctx),
+    ).resolves.toEqual(adminStart);
     await expect(api.adminSyncStatus()).resolves.toEqual(adminStatus);
+    await expect(api.adminSyncHistory()).resolves.toEqual(adminHistory);
 
     const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls[0]?.[0]).toBe("/api/admin/sync");
-    expect(calls[1]?.[0]).toBe("/api/admin/sync/status");
+    expect(calls[1]?.[0]).toBe("/api/admin/sync");
+    expect(calls[2]?.[0]).toBe("/api/admin/sync/status");
+    expect(calls[3]?.[0]).toBe("/api/admin/sync/history?limit=10");
 
-    const [, init] = calls[0] as [string, RequestInit];
+    const [, init] = calls[1] as [string, RequestInit];
     expect(init.body).toBe(JSON.stringify({ source: "confluence", department: "risk" }));
     const headers = init.headers as Record<string, string>;
     expect(headers["X-GreenNode-AgentBase-User-Id"]).toBe(ctx.userId);

@@ -15,9 +15,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-
 from app.api.health import is_live, is_ready, probe_status
+from app.api.spa_static import SPAStaticFiles
 from app.api.middleware import GatewayTrustMiddleware, KillSwitchMiddleware
 from app.api.routes import router
 from app.api.schemas import HealthInfo
@@ -95,6 +94,6 @@ def create_app() -> FastAPI:
 
     dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if dist.is_dir():
-        app.mount("/", StaticFiles(directory=str(dist), html=True), name="frontend")
+        app.mount("/", SPAStaticFiles(directory=str(dist), html=True), name="frontend")
 
     return app

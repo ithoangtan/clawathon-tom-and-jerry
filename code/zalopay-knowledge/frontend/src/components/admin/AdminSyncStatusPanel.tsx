@@ -131,15 +131,15 @@ function DepartmentCard({ dept }: { dept: AdminDepartmentSyncStatus }) {
       <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
         <div>
           <dt className="text-slate-500">{t("adminPages", locale)}</dt>
-          <dd className="font-medium">{dept.page_count.toLocaleString()}</dd>
+          <dd className="font-medium">{(dept.page_count ?? 0).toLocaleString()}</dd>
         </div>
         <div>
           <dt className="text-slate-500">{t("docs", locale)}</dt>
-          <dd className="font-medium">{dept.doc_count.toLocaleString()}</dd>
+          <dd className="font-medium">{(dept.doc_count ?? 0).toLocaleString()}</dd>
         </div>
         <div>
           <dt className="text-slate-500">{t("chunks", locale)}</dt>
-          <dd className="font-medium">{dept.chunk_count.toLocaleString()}</dd>
+          <dd className="font-medium">{(dept.chunk_count ?? 0).toLocaleString()}</dd>
         </div>
       </dl>
 
@@ -160,9 +160,9 @@ function DepartmentCard({ dept }: { dept: AdminDepartmentSyncStatus }) {
         </p>
       )}
 
-      {dept.errors.length > 0 && (
+      {(dept.errors?.length ?? 0) > 0 && (
         <ul className="mt-2 text-xs text-red-600" role="alert">
-          {dept.errors.map((err, i) => (
+          {(dept.errors ?? []).map((err, i) => (
             <li key={i}>{err}</li>
           ))}
         </ul>
@@ -185,16 +185,16 @@ function SourceCard({ source }: { source: SourceStatus }) {
       <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
         <div>
           <dt className="text-slate-500">{t("docs", locale)}</dt>
-          <dd className="font-medium">{source.doc_count.toLocaleString()}</dd>
+          <dd className="font-medium">{(source.doc_count ?? 0).toLocaleString()}</dd>
         </div>
         <div>
           <dt className="text-slate-500">{t("chunks", locale)}</dt>
-          <dd className="font-medium">{source.chunk_count.toLocaleString()}</dd>
+          <dd className="font-medium">{(source.chunk_count ?? 0).toLocaleString()}</dd>
         </div>
       </dl>
-      {source.errors.length > 0 && (
+      {(source.errors?.length ?? 0) > 0 && (
         <ul className="mt-2 text-xs text-red-600" role="alert">
-          {source.errors.map((err, i) => (
+          {(source.errors ?? []).map((err, i) => (
             <li key={i}>{err}</li>
           ))}
         </ul>

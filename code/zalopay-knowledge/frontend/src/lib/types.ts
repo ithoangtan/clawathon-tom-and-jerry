@@ -173,7 +173,68 @@ export interface SyncStatus {
 
 // ── Admin sync ────────────────────────────────────────────────────────────────
 
-/** Per-department index status for admin dashboard. */
+/** Job/department lifecycle status from the backend orchestrator. */
+export type AdminJobStatusWire = "pending" | "running" | "success" | "failed";
+
+/** Per-department sync result within an admin job (wire). */
+export interface AdminDepartmentResultWire {
+  department: Department;
+  space_key?: string | null;
+  status: AdminJobStatusWire;
+  page_count?: number;
+  chunk_count?: number;
+  synced_items?: Array<{ source_id: string; title: string; url?: string | null }>;
+  errors?: string[];
+}
+
+/** Sync job status for one source (wire). */
+export interface AdminJobStatusWireBody {
+  job_id?: string | null;
+  status: AdminJobStatusWire;
+  started_at?: string | null;
+  finished_at?: string | null;
+  last_success_at?: string | null;
+  target_department?: Department | null;
+  doc_count?: number;
+  chunk_count?: number;
+  errors?: string[];
+  progress?: Record<string, unknown> | null;
+  departments?: AdminDepartmentResultWire[];
+}
+
+/** Indexed corpus snapshot for one department (wire). */
+export interface AdminDepartmentIndexWire {
+  chunk_count: number;
+  doc_count: number;
+  has_data: boolean;
+}
+
+/** Body of GET /api/admin/sync/status (wire). */
+export interface AdminSyncStatusWire {
+  jobs: Partial<Record<"confluence" | "gdrive", AdminJobStatusWireBody>>;
+  departments_indexed: Partial<Record<Department, AdminDepartmentIndexWire>>;
+}
+
+/** One row in GET /api/admin/sync/history (wire). */
+export interface AdminSyncHistoryEntryWire {
+  job_id: string;
+  source: string;
+  status: AdminJobStatusWire;
+  started_at: string;
+  finished_at?: string | null;
+  department?: Department | null;
+  doc_count?: number;
+  chunk_count?: number;
+  errors?: string[];
+  departments?: AdminDepartmentResultWire[];
+}
+
+/** Body of GET /api/admin/sync/history (wire). */
+export interface AdminSyncHistoryWire {
+  entries: AdminSyncHistoryEntryWire[];
+}
+
+/** Normalized admin sync state consumed by admin UI components. */
 export interface AdminDepartmentSyncStatus {
   department: Department;
   /** Confluence space key when source is confluence. */
@@ -201,7 +262,7 @@ export interface AdminSyncJob {
   errors?: string[];
 }
 
-/** Body of GET /api/admin/sync/status */
+/** Normalized admin sync status for UI (derived from wire + history). */
 export interface AdminSyncStatus {
   running: boolean;
   departments: AdminDepartmentSyncStatus[];

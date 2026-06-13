@@ -19,10 +19,12 @@ export function AdminSyncControls() {
   const [error, setError] = useState<string | null>(null);
   const wasRunningRef = useRef(false);
 
+  const sources = status?.sources ?? [];
+  const departments = status?.departments ?? [];
   const anyRunning =
     status?.running ||
-    status?.sources.some((s) => s.state === "running") ||
-    status?.departments.some((d) => d.state === "running");
+    sources.some((s) => s.state === "running") ||
+    departments.some((d) => d.state === "running");
 
   useEffect(() => {
     if (wasRunningRef.current && !anyRunning) {
@@ -85,9 +87,8 @@ export function AdminSyncControls() {
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
         {DEPARTMENTS.map((dept) => {
           const label = departmentMetaLabel(dept, locale);
-          const deptRunning = status?.departments.find(
-            (d) => d.department === dept.key,
-          )?.state === "running";
+          const deptRunning =
+            departments.find((d) => d.department === dept.key)?.state === "running";
           return (
             <Button
               key={dept.key}

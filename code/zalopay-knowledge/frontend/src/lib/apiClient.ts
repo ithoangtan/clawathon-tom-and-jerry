@@ -1,7 +1,8 @@
 import type {
+  AdminSyncHistoryWire,
   AdminSyncRequest,
   AdminSyncResponse,
-  AdminSyncStatus,
+  AdminSyncStatusWire,
   ChatRequest,
   ChatResponse,
   ChatStreamEvent,
@@ -69,6 +70,33 @@ async function request<T>(
 
   if (res.status === 204) {
     return undefined as T;
+  }
+
+  return (await res.json()) as T;
+}
+
+/** POST endpoints that return a JSON body on 409 Conflict (e.g. sync already running). */
+async function requestWithConflictBody<T>(
+  path: string,
+  init: RequestInit,
+  ctx?: UserContext,
+): Promise<T> {
+  const headers: HeadersInit = {
+    ...(init.headers as Record<string, string>),
+  };
+
+  if (ctx) {
+    Object.assign(headers, buildHeaders(ctx));
+  }
+
+  const res = await fetch(path, { ...init, headers });
+
+  if (res.status === 409) {
+    return (await res.json()) as T;
+  }
+
+  if (!res.ok) {
+    throw await parseError(res);
   }
 
   return (await res.json()) as T;
@@ -204,14 +232,21 @@ export const api = {
   },
 
   adminSync(body: AdminSyncRequest, ctx: UserContext): Promise<AdminSyncResponse> {
-    return request<AdminSyncResponse>(
+    return requestWithConflictBody<AdminSyncResponse>(
       "/api/admin/sync",
       { method: "POST", body: JSON.stringify(body) },
       ctx,
     );
   },
 
-  adminSyncStatus(): Promise<AdminSyncStatus> {
-    return request<AdminSyncStatus>("/api/admin/sync/status", { method: "GET" });
+  adminSyncStatus(): Promise<AdminSyncStatusWire> {
+    return request<AdminSyncStatusWire>("/api/admin/sync/status", { method: "GET" });
+  },
+
+  adminSyncHistory(limit = 10): Promise<AdminSyncHistoryWire> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    return request<AdminSyncHistoryWire>(`/api/admin/sync/history?${params}`, {
+      method: "GET",
+    });
   },
 };

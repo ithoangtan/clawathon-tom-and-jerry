@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
+import { normalizeAdminSyncPayload } from "@/lib/adminSyncAdapter";
 import { api } from "@/lib/apiClient";
 import type { AdminSyncStatus } from "@/lib/types";
+
+function isAnySyncRunning(status: AdminSyncStatus | null): boolean {
+  if (!status) return false;
+  return (
+    status.running ||
+    status.sources.some((s) => s.state === "running") ||
+    status.departments.some((d) => d.state === "running")
+  );
+}
 
 export function useAdminSyncStatus() {
   const [status, setStatus] = useState<AdminSyncStatus | null>(null);
@@ -9,8 +19,13 @@ export function useAdminSyncStatus() {
 
   const refresh = useCallback(async () => {
     try {
-      const data = await api.adminSyncStatus();
-      setStatus(data);
+      const [statusData, historyData] = await Promise.all([
+        api.adminSyncStatus(),
+        api.adminSyncHistory().catch(() => ({ entries: [] })),
+      ]);
+      setStatus(
+        normalizeAdminSyncPayload(statusData, historyData.entries ?? []),
+      );
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load admin sync status");
@@ -24,8 +39,7 @@ export function useAdminSyncStatus() {
   }, [refresh]);
 
   useEffect(() => {
-    const isRunning = status?.running || status?.sources.some((s) => s.state === "running");
-    const interval = isRunning ? 2000 : 30_000;
+    const interval = isAnySyncRunning(status) ? 2000 : 30_000;
     const id = setInterval(refresh, interval);
     return () => clearInterval(id);
   }, [status, refresh]);
