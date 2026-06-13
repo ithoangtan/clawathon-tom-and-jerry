@@ -17,7 +17,7 @@ function isAnySyncRunning(status: AdminSyncStatus | null): boolean {
 }
 
 export function useAdminSyncStatus() {
-  const scenarioKey = useMockStore((s) => s.scenario);
+  const scenarioKey = useMockStore((s) => s.syncScenario);
   const scenario = IS_DEV && scenarioKey ? SCENARIO_MAP[scenarioKey] : null;
 
   const [status, setStatus] = useState<AdminSyncStatus | null>(

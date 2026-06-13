@@ -16,8 +16,11 @@ import { useChat } from "@/hooks/useChat";
 import { useHealth } from "@/hooks/useHealth";
 import { useSmoothScroll } from "@/hooks/useSmoothScroll";
 import { useUserStore } from "@/store/userStore";
+import { useMockStore } from "@/store/mockStore";
 import type { Citation, Department } from "@/lib/types";
 import { useCallback, useEffect, useState } from "react";
+
+const IS_DEV = import.meta.env.DEV || window.location.hostname === "localhost";
 import { Link } from "react-router-dom";
 
 const EXAMPLE_QUESTIONS = {
@@ -107,7 +110,8 @@ export function ChatInterface() {
     };
   }, [inspector, isDesktop]);
 
-  const indexReady = health?.index_ready ?? false;
+  const chatScenario = useMockStore((s) => s.chatScenario);
+  const indexReady = (IS_DEV && chatScenario !== null) || (health?.index_ready ?? false);
   const examples = locale === "vi" ? EXAMPLE_QUESTIONS.vi : EXAMPLE_QUESTIONS.en;
   const isEmpty = messages.length === 0 && !loading;
 

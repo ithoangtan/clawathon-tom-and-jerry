@@ -8,7 +8,7 @@ import type { DashboardData } from "@/lib/types";
 const IS_DEV = import.meta.env.DEV || window.location.hostname === "localhost";
 
 export function useDashboard(pollMs = 30_000) {
-  const scenarioKey = useMockStore((s) => s.scenario);
+  const scenarioKey = useMockStore((s) => s.syncScenario);
 
   const [data, setData] = useState<DashboardData | null>(() => {
     if (!IS_DEV) return null;

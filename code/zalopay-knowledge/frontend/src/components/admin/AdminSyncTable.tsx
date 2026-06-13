@@ -270,7 +270,7 @@ function SyncTableRow({ row, anyRunning, loadingKey, onSync, onDetail }: RowProp
   const stateTone = source.state === "running" ? "info" : source.state === "error" ? "danger" : "default";
 
   return (
-    <tr className="group border-b border-slate-50 transition-colors hover:bg-slate-50/60 last:border-0">
+    <tr className="group border-b border-border/60 transition-colors hover:bg-surface-glass last:border-0">
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-2.5">
           <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-accent" />

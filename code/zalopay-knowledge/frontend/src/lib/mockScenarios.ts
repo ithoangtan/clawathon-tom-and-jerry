@@ -1,7 +1,113 @@
 import type {
   AdminSyncStatus,
+  ChatResponse,
   DashboardData,
+  Department,
+  HistoryItem,
 } from "@/lib/types";
+
+// ── Chat scenarios ────────────────────────────────────────────────────────────
+
+export type ChatScenarioKey =
+  | "chat_answered"
+  | "chat_partial"
+  | "chat_refused"
+  | "chat_clarifying"
+  | "chat_error";
+
+export interface ChatScenario {
+  key: ChatScenarioKey;
+  label: string;
+  description: string;
+  /** Simulated delay before response appears (ms) */
+  delayMs: number;
+  /** Null means simulate a backend error */
+  response: ChatResponse | null;
+  /** Error message when response is null */
+  error?: string;
+}
+
+export const CHAT_SCENARIOS: ChatScenario[] = [
+  {
+    key: "chat_answered",
+    label: "Trả lời đầy đủ",
+    description: "Câu trả lời tốt, confidence cao, có citations",
+    delayMs: 1200,
+    response: {
+      answer: `Theo chính sách KYC cập nhật Q2/2026, quy trình xác minh khách hàng cá nhân gồm 3 bước:\n\n1. **Thu thập định danh** — CCCD/CMND và ảnh chân dung live [1]\n2. **Đối chiếu VNeID** — tích hợp trực tiếp với cơ sở dữ liệu dân cư quốc gia [2]\n3. **Chấm điểm rủi ro** — dựa trên lịch sử giao dịch 6 tháng và danh sách đen PEP/Sanctions [1]\n\n> Khách hàng tier Vàng trở lên cần xác minh bổ sung qua video call trong vòng 24h.`,
+      citations: [
+        { title: "Chính sách KYC 2026 Q2", url: "https://confluence.zalopay.vn/KYC-2026-Q2", source_type: "confluence" },
+        { title: "Hướng dẫn tích hợp VNeID v3", url: "https://confluence.zalopay.vn/VNeID-integration-v3", source_type: "confluence" },
+      ],
+      source_departments: ["risk"],
+      confidence: 0.93,
+      feedback_id: "mock-fb-answered-001",
+      status: "answered",
+    },
+  },
+  {
+    key: "chat_partial",
+    label: "Trả lời một phần",
+    description: "Một số phòng ban không có dữ liệu liên quan",
+    delayMs: 1800,
+    response: {
+      answer: `Về SLA xử lý giao dịch hoàn tiền, phòng **Bank Partnerships** ghi nhận:\n\n- Vietcombank: T+1 ngày làm việc với giao dịch dưới 10 triệu [1]\n- ACB: T+2 đối với giao dịch quốc tế\n\n*Lưu ý: Phòng Grow Enablement không có tài liệu liên quan đến nội dung này.*`,
+      citations: [
+        { title: "SLA Ngân hàng 2026", url: "https://confluence.zalopay.vn/bank-sla-2026", source_type: "confluence" },
+      ],
+      source_departments: ["bank_partnerships"],
+      confidence: 0.61,
+      feedback_id: "mock-fb-partial-001",
+      status: "partial",
+      refusals: ["grow_enablement"],
+    },
+  },
+  {
+    key: "chat_refused",
+    label: "Từ chối trả lời",
+    description: "Câu hỏi ngoài phạm vi tài liệu nội bộ",
+    delayMs: 900,
+    response: {
+      answer: `Xin lỗi, tôi không tìm thấy thông tin liên quan đến câu hỏi này trong tài liệu nội bộ Zalopay.\n\nVui lòng liên hệ trực tiếp với phòng ban phụ trách hoặc kiểm tra lại trên Confluence.`,
+      citations: [],
+      source_departments: [],
+      confidence: 0.08,
+      feedback_id: "mock-fb-refused-001",
+      status: "refused",
+      refusal_reason: "out_of_scope",
+    },
+  },
+  {
+    key: "chat_clarifying",
+    label: "Hỏi làm rõ",
+    description: "Bot hỏi ngược lại để định tuyến chính xác hơn",
+    delayMs: 700,
+    response: {
+      answer: "",
+      citations: [],
+      source_departments: [],
+      confidence: 0.0,
+      feedback_id: "mock-fb-clarify-001",
+      status: "refused",
+      clarifying_question: {
+        prompt: "Câu hỏi của bạn liên quan đến phòng ban nào? Việc xác định đúng phòng ban sẽ giúp tôi tìm kiếm chính xác hơn.",
+        options: ["risk", "grow_enablement", "bank_partnerships"],
+      },
+    },
+  },
+  {
+    key: "chat_error",
+    label: "Lỗi backend",
+    description: "Giả lập lỗi server 500 từ API",
+    delayMs: 1500,
+    response: null,
+    error: "Internal server error: LLM service timeout after 30s (mock)",
+  },
+];
+
+export const CHAT_SCENARIO_MAP = Object.fromEntries(
+  CHAT_SCENARIOS.map((s) => [s.key, s]),
+) as Record<ChatScenarioKey, ChatScenario>;
 
 export type ScenarioKey =
   | "healthy"
@@ -27,23 +133,23 @@ const WEEK_AGO = "2026-06-07T08:00:00Z";
 
 // ── Dashboard helpers ─────────────────────────────────────────────────────────
 
-const HISTORY_HEALTHY = [
-  { ts: "2026-06-14T07:52:11Z", question: "Quy trình xử lý giao dịch hoàn tiền cho merchant là gì?", departments: ["risk"] as const, status: "answered" as const, confidence: 0.92, latency_ms: 1210 },
-  { ts: "2026-06-14T07:43:05Z", question: "SLA của đối tác ngân hàng Vietcombank là bao nhiêu?", departments: ["bank_partnerships"] as const, status: "answered" as const, confidence: 0.88, latency_ms: 1540 },
-  { ts: "2026-06-14T07:31:22Z", question: "Tiêu chí onboarding merchant mới trong Q3 2026?", departments: ["grow_enablement"] as const, status: "partial" as const, confidence: 0.61, latency_ms: 2100 },
-  { ts: "2026-06-14T07:18:44Z", question: "Chính sách KYC cho khách hàng cá nhân cập nhật mới nhất?", departments: ["risk"] as const, status: "answered" as const, confidence: 0.95, latency_ms: 980 },
-  { ts: "2026-06-14T07:05:30Z", question: "Hướng dẫn đối soát cuối ngày với ngân hàng ACB?", departments: ["bank_partnerships"] as const, status: "answered" as const, confidence: 0.84, latency_ms: 1670 },
-  { ts: "2026-06-14T06:50:17Z", question: "Chiến lược giữ chân merchant tier Gold?", departments: ["grow_enablement"] as const, status: "refused" as const, confidence: 0.12, latency_ms: 820 },
-  { ts: "2026-06-14T06:38:59Z", question: "Mức độ ưu tiên xử lý alert fraud type B2?", departments: ["risk"] as const, status: "answered" as const, confidence: 0.9, latency_ms: 1350 },
-  { ts: "2026-06-14T06:22:03Z", question: "Quy trình escalation khi merchant khiếu nại quá 48h?", departments: ["grow_enablement", "risk"] as const, status: "answered" as const, confidence: 0.79, latency_ms: 2450 },
+const HISTORY_HEALTHY: HistoryItem[] = [
+  { ts: "2026-06-14T07:52:11Z", question: "Quy trình xử lý giao dịch hoàn tiền cho merchant là gì?", departments: ["risk" as Department], status: "answered", confidence: 0.92, latency_ms: 1210 },
+  { ts: "2026-06-14T07:43:05Z", question: "SLA của đối tác ngân hàng Vietcombank là bao nhiêu?", departments: ["bank_partnerships" as Department], status: "answered", confidence: 0.88, latency_ms: 1540 },
+  { ts: "2026-06-14T07:31:22Z", question: "Tiêu chí onboarding merchant mới trong Q3 2026?", departments: ["grow_enablement" as Department], status: "partial", confidence: 0.61, latency_ms: 2100 },
+  { ts: "2026-06-14T07:18:44Z", question: "Chính sách KYC cho khách hàng cá nhân cập nhật mới nhất?", departments: ["risk" as Department], status: "answered", confidence: 0.95, latency_ms: 980 },
+  { ts: "2026-06-14T07:05:30Z", question: "Hướng dẫn đối soát cuối ngày với ngân hàng ACB?", departments: ["bank_partnerships" as Department], status: "answered", confidence: 0.84, latency_ms: 1670 },
+  { ts: "2026-06-14T06:50:17Z", question: "Chiến lược giữ chân merchant tier Gold?", departments: ["grow_enablement" as Department], status: "refused", confidence: 0.12, latency_ms: 820 },
+  { ts: "2026-06-14T06:38:59Z", question: "Mức độ ưu tiên xử lý alert fraud type B2?", departments: ["risk" as Department], status: "answered", confidence: 0.9, latency_ms: 1350 },
+  { ts: "2026-06-14T06:22:03Z", question: "Quy trình escalation khi merchant khiếu nại quá 48h?", departments: ["grow_enablement" as Department, "risk" as Department], status: "answered", confidence: 0.79, latency_ms: 2450 },
 ];
 
-const HISTORY_POOR = [
-  { ts: "2026-06-14T07:50:00Z", question: "Quy trình hoàn tiền merchant khi lỗi hệ thống?", departments: ["risk"] as const, status: "refused" as const, confidence: 0.18, latency_ms: 900 },
-  { ts: "2026-06-14T07:41:00Z", question: "SLA Vietcombank với giao dịch quốc tế?", departments: ["bank_partnerships"] as const, status: "refused" as const, confidence: 0.22, latency_ms: 1100 },
-  { ts: "2026-06-14T07:28:00Z", question: "Điều kiện onboarding merchant thương mại điện tử?", departments: ["grow_enablement"] as const, status: "partial" as const, confidence: 0.45, latency_ms: 2800 },
-  { ts: "2026-06-14T07:10:00Z", question: "Chính sách KYC cập nhật tháng 6?", departments: ["risk"] as const, status: "refused" as const, confidence: 0.09, latency_ms: 750 },
-  { ts: "2026-06-14T06:55:00Z", question: "Đối soát cuối tháng với ngân hàng BIDV?", departments: ["bank_partnerships"] as const, status: "partial" as const, confidence: 0.38, latency_ms: 3200 },
+const HISTORY_POOR: HistoryItem[] = [
+  { ts: "2026-06-14T07:50:00Z", question: "Quy trình hoàn tiền merchant khi lỗi hệ thống?", departments: ["risk" as Department], status: "refused", confidence: 0.18, latency_ms: 900 },
+  { ts: "2026-06-14T07:41:00Z", question: "SLA Vietcombank với giao dịch quốc tế?", departments: ["bank_partnerships" as Department], status: "refused", confidence: 0.22, latency_ms: 1100 },
+  { ts: "2026-06-14T07:28:00Z", question: "Điều kiện onboarding merchant thương mại điện tử?", departments: ["grow_enablement" as Department], status: "partial", confidence: 0.45, latency_ms: 2800 },
+  { ts: "2026-06-14T07:10:00Z", question: "Chính sách KYC cập nhật tháng 6?", departments: ["risk" as Department], status: "refused", confidence: 0.09, latency_ms: 750 },
+  { ts: "2026-06-14T06:55:00Z", question: "Đối soát cuối tháng với ngân hàng BIDV?", departments: ["bank_partnerships" as Department], status: "partial", confidence: 0.38, latency_ms: 3200 },
 ];
 
 // ── Scenarios ─────────────────────────────────────────────────────────────────

@@ -281,6 +281,10 @@
       box-shadow 180ms ease;
   }
 
+  .chat-input-shell textarea:focus-visible {
+    box-shadow: none;
+  }
+
   .chat-input-shell--hero {
     border-radius: 1.25rem;
     border-color: color-mix(in srgb, var(--color-border-brand) 38%, transparent);
@@ -290,22 +294,6 @@
       0 16px 40px -20px color-mix(in srgb, var(--color-brand) 22%, transparent);
   }
 
-  .chat-input-shell:focus-within {
-    border-color: color-mix(in srgb, var(--color-border-brand) 75%, transparent);
-    box-shadow:
-      var(--shadow-glass),
-      inset 0 0 0 1px color-mix(in srgb, var(--color-brand) 10%, transparent),
-      0 0 16px -4px color-mix(in srgb, var(--color-brand) 22%, transparent);
-  }
-
-  .chat-input-shell--hero:focus-within {
-    border-color: color-mix(in srgb, var(--color-border-brand) 70%, transparent);
-    box-shadow:
-      var(--shadow-glass),
-      inset 0 0 0 1px color-mix(in srgb, var(--color-brand) 12%, transparent),
-      0 0 20px -4px color-mix(in srgb, var(--color-brand) 26%, transparent),
-      0 20px 48px -16px color-mix(in srgb, var(--color-brand) 24%, transparent);
-  }
 
   .chat-input-dock {
     background: linear-gradient(

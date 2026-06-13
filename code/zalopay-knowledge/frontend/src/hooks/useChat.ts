@@ -8,10 +8,14 @@ import {
   hidePipeline,
   type PipelineProgressState,
 } from "@/lib/pipelineSteps";
+import { CHAT_SCENARIO_MAP } from "@/lib/mockScenarios";
 import { getUserContext, useUserStore } from "@/store/userStore";
 import { resolveTargetAutoRoute } from "@/lib/sessionThread";
 import { useSessionStore } from "@/store/sessionStore";
+import { useMockStore } from "@/store/mockStore";
 import type { ChatResponse, Department } from "@/lib/types";
+
+const IS_DEV = import.meta.env.DEV || window.location.hostname === "localhost";
 
 export interface ChatMessage {
   id: string;
@@ -100,6 +104,7 @@ function resetChatState(
 }
 
 export function useChat() {
+  const chatScenarioKey = useMockStore((s) => s.chatScenario);
   const sessionId = useUserStore((s) => s.sessionId);
   const sessionAction = useSessionStore((s) => s.sessionAction);
   const saveThread = useSessionStore((s) => s.saveThread);
@@ -241,8 +246,6 @@ export function useChat() {
       const trimmed = question.trim();
       if (!trimmed || loading) return;
 
-      const depts = overrideDepts ?? targetDepartments;
-      const useAutoRoute = overrideDepts === undefined ? targetAutoRoute : false;
       const now = new Date().toISOString();
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -262,6 +265,32 @@ export function useChat() {
       setPipelineProgress(createInitialPipeline());
       setError(null);
       setLastQuestion(trimmed);
+
+      // ── Mock branch (dev only) ────────────────────────────────────────────
+      if (IS_DEV && chatScenarioKey) {
+        const mockScenario = CHAT_SCENARIO_MAP[chatScenarioKey];
+        setStreamingStatus("Đang xử lý (mock)…");
+        await new Promise((r) => setTimeout(r, mockScenario.delayMs));
+        if (controller.signal.aborted) return;
+        setPipelineProgress(null);
+        setLoading(false);
+        setStreamingStatus(null);
+        if (!mockScenario.response) {
+          setError(mockScenario.error ?? "Mock error");
+          return;
+        }
+        const assistantId = `assistant-${Date.now()}`;
+        await appendAssistant(
+          mockScenario.response,
+          assistantId,
+          shouldRevealAnswerProgressively(mockScenario.response),
+        );
+        return;
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
+      const depts = overrideDepts ?? targetDepartments;
+      const useAutoRoute = overrideDepts === undefined ? targetAutoRoute : false;
 
       const body = {
         question: trimmed,
@@ -365,7 +394,7 @@ export function useChat() {
         setStreamingStatus(null);
       }
     },
-    [loading, targetDepartments, targetAutoRoute, appendAssistant],
+    [loading, targetDepartments, targetAutoRoute, appendAssistant, chatScenarioKey],
   );
 
   const retryLast = useCallback(() => {

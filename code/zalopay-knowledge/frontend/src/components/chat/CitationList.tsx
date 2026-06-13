@@ -1,16 +1,12 @@
-import { Card } from "@/components/ui/Card";
 import { StalenessBadge } from "@/components/chat/StalenessBadge";
 import { formatDate } from "@/lib/format";
-import { classNames } from "@/lib/format";
-import { attachHoverLift, useGSAP } from "@/lib/gsap";
 import { t } from "@/lib/i18n";
 import { useUserStore } from "@/store/userStore";
 import type { Citation } from "@/lib/types";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 interface CitationListProps {
   citations: Citation[];
-  /** Map citation index (1-based) to scroll/highlight */
   onCitationClick?: (index: number) => void;
   collapsible?: boolean;
 }
@@ -30,7 +26,7 @@ export function CitationList({
   return (
     <section role="region" aria-label={t("citations", locale)} className="mt-0">
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-semibold text-content-secondary">
+        <h4 className="text-xs font-medium text-content-muted uppercase tracking-wide">
           {t("citations", locale)} ({citations.length})
         </h4>
         {collapsible && citations.length > 3 && (
@@ -44,10 +40,10 @@ export function CitationList({
           </button>
         )}
       </div>
-      <ol className="space-y-2 list-none p-0 m-0">
+      <ol className="space-y-1 list-none p-0 m-0">
         {visible.map((citation, idx) => (
           <li key={`${citation.url}-${idx}`}>
-            <CitationCard
+            <CitationRow
               index={idx + 1}
               citation={citation}
               onClick={onCitationClick}
@@ -59,7 +55,7 @@ export function CitationList({
   );
 }
 
-function CitationCard({
+function CitationRow({
   index,
   citation,
   onClick,
@@ -69,107 +65,50 @@ function CitationCard({
   onClick?: (index: number) => void;
 }) {
   const locale = useUserStore((s) => s.locale);
-  const cardRef = useRef<HTMLDivElement>(null);
   const interactive = Boolean(onClick);
 
-  useGSAP(
-    () => {
-      const el = cardRef.current;
-      if (!el) return;
-      return attachHoverLift(el, { y: -3, scale: 1.008 });
-    },
-    { scope: cardRef },
-  );
-
-  function handleOpen() {
-    onClick?.(index);
-  }
-
-  const titleClass =
-    "font-medium text-brand hover:text-brand-dark line-clamp-2 transition-colors text-left";
-
-  return (
-    <div ref={cardRef}>
-      <Card
-        padding="sm"
-        className={classNames(
-          "citation-card-future",
-          interactive && "cursor-pointer",
-        )}
-      >
-        <div className="flex gap-3">
-          <span
-            className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-dark text-xs font-bold text-white shadow-sm"
-            aria-hidden
-          >
-            {index}
-          </span>
-          <div className="min-w-0 flex-1">
-            {interactive ? (
-              <button
-                type="button"
-                className={titleClass}
-                onClick={handleOpen}
-                aria-label={`${t("evidenceSelectSource", locale, { index })}: ${citation.title}`}
-              >
-                {citation.title}
-              </button>
-            ) : (
-              <a
-                href={citation.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={titleClass}
-              >
-                {citation.title}
-              </a>
-            )}
-          {interactive ? (
-            <a
-              href={citation.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 block truncate text-xs text-content-muted hover:text-brand transition-colors"
-              title={citation.url}
-              tabIndex={-1}
-            >
-              {formatCitationUrl(citation.url)}
-            </a>
-          ) : (
-            <p className="mt-1 truncate text-xs text-content-muted" title={citation.url}>
-              {formatCitationUrl(citation.url)}
-            </p>
+  const content = (
+    <div className="flex items-start gap-2 py-1.5 px-1 rounded-lg transition-colors hover:bg-surface-glass group/row">
+      <span className="flex-shrink-0 mt-0.5 flex h-4 w-4 items-center justify-center rounded text-[10px] font-bold text-content-muted bg-border/40">
+        {index}
+      </span>
+      <div className="min-w-0 flex-1">
+        <span className="text-sm font-medium text-content-secondary group-hover/row:text-brand transition-colors line-clamp-1">
+          {citation.title}
+        </span>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-xs text-content-muted truncate">{formatCitationUrl(citation.url)}</span>
+          {citation.source_type && (
+            <span className="text-[10px] uppercase tracking-wide text-content-muted/60 flex-shrink-0">{citation.source_type}</span>
           )}
-          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-content-muted">
-            {citation.section && (
-              <span>
-                <span className="text-content-muted/70">{t("citationSection", locale)}:</span>{" "}
-                {citation.section}
-              </span>
-            )}
-            {citation.page != null && (
-              <span>
-                <span className="text-content-muted/70">{t("citationPage", locale)}:</span>{" "}
-                {citation.page}
-              </span>
-            )}
-            {citation.source_type && (
-              <span className="uppercase tracking-wide">{citation.source_type}</span>
-            )}
-            {citation.last_modified && (
-              <span>
-                <span className="text-content-muted/70">{t("citationUpdated", locale)}:</span>{" "}
-                <time dateTime={citation.last_modified}>
-                  {formatDate(citation.last_modified, locale)}
-                </time>
-              </span>
-            )}
-          </div>
+          {citation.last_modified && (
+            <time className="text-xs text-content-muted/60 flex-shrink-0" dateTime={citation.last_modified}>
+              {formatDate(citation.last_modified, locale)}
+            </time>
+          )}
           <StalenessBadge citation={citation} />
         </div>
       </div>
-      </Card>
     </div>
+  );
+
+  if (interactive) {
+    return (
+      <button
+        type="button"
+        className="w-full text-left"
+        onClick={() => onClick?.(index)}
+        aria-label={`${t("evidenceSelectSource", locale, { index })}: ${citation.title}`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <a href={citation.url} target="_blank" rel="noopener noreferrer" className="block">
+      {content}
+    </a>
   );
 }
 
