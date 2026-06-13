@@ -1,6 +1,5 @@
 import { Activity } from "@/components/ui/icons";
 import { HistoryTable, MetricsGrid } from "@/components/dashboard/DashboardPanels";
-import { SyncStatusPanel } from "@/components/dashboard/SyncStatusPanel";
 import { ScrollablePage } from "@/components/layout/ScrollablePage";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/StateViews";
@@ -44,13 +43,6 @@ export function DashboardPage() {
       ) : data ? (
         <MetricsGrid data={data} />
       ) : null}
-
-      <section aria-labelledby="sync-heading" className="space-y-4">
-        <h3 id="sync-heading" className="section-title">
-          {t("syncStatus", locale)}
-        </h3>
-        <SyncStatusPanel />
-      </section>
 
       {data && (
         <section aria-labelledby="history-heading">
