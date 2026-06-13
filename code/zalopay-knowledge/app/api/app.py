@@ -13,11 +13,12 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.api.health import is_live, is_ready, probe_status
 from app.api.spa_static import SPAStaticFiles
-from app.api.middleware import GatewayTrustMiddleware, KillSwitchMiddleware
+from app.api.middleware import GatewayTrustMiddleware, KillSwitchMiddleware, RequestLoggingMiddleware
 from app.api.routes import router
 from app.api.schemas import HealthInfo
 from app.common.logging_config import setup_logging
@@ -84,6 +85,40 @@ def create_app() -> FastAPI:
     # Security runs after CORS in the stack (executes before routes on ingress).
     app.add_middleware(GatewayTrustMiddleware)
     app.add_middleware(KillSwitchMiddleware)
+    # RequestLoggingMiddleware is outermost — logs every request + all errors.
+    app.add_middleware(RequestLoggingMiddleware)
+
+    @app.exception_handler(Exception)
+    async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger.error(
+            "500 Unhandled %s on %s %s — %s",
+            type(exc).__name__,
+            request.method,
+            request.url.path,
+            exc,
+            exc_info=True,
+        )
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+    @app.exception_handler(HTTPException)
+    async def _http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+        if exc.status_code >= 500:
+            logger.error(
+                "HTTPException %d on %s %s — %s",
+                exc.status_code,
+                request.method,
+                request.url.path,
+                exc.detail,
+            )
+        elif exc.status_code >= 400:
+            logger.warning(
+                "HTTPException %d on %s %s — %s",
+                exc.status_code,
+                request.method,
+                request.url.path,
+                exc.detail,
+            )
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
     register_health_routes(app)
     app.include_router(router)

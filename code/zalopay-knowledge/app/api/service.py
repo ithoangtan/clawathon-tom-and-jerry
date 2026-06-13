@@ -295,8 +295,8 @@ def stream_chat(ctx: UserContext, request: ChatRequest) -> Iterator[dict[str, An
                 _initial_state(ctx, request, cfg),
                 _graph_config(ctx),
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.error("stream_chat fallback invoke failed: %s", exc, exc_info=True)
 
     response = state_to_response(final_state)
     latency_ms = int((time.perf_counter() - started) * 1000)

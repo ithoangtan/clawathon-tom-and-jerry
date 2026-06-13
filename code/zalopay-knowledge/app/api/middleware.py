@@ -3,6 +3,7 @@ from __future__ import annotations
 """Security middleware — gateway trust and kill-switch."""
 
 import logging
+import time
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -36,6 +37,58 @@ def _is_agent_route(path: str) -> bool:
     if path == "/" or path.startswith("/assets/"):
         return False
     return True
+
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Log every request: method, path, status code, and latency.
+
+    Errors (5xx) are logged at ERROR level so they surface clearly in monitor.
+    """
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        start = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            latency_ms = int((time.perf_counter() - start) * 1000)
+            logger.error(
+                "UNHANDLED EXCEPTION %s %s (%dms) — %s: %s",
+                request.method,
+                request.url.path,
+                latency_ms,
+                type(exc).__name__,
+                exc,
+                exc_info=True,
+            )
+            raise
+
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        status = response.status_code
+        if status >= 500:
+            logger.error(
+                "%s %s → %d (%dms)",
+                request.method,
+                request.url.path,
+                status,
+                latency_ms,
+            )
+        elif status >= 400:
+            logger.warning(
+                "%s %s → %d (%dms)",
+                request.method,
+                request.url.path,
+                status,
+                latency_ms,
+            )
+        else:
+            logger.info(
+                "%s %s → %d (%dms)",
+                request.method,
+                request.url.path,
+                status,
+                latency_ms,
+            )
+        return response
 
 
 class GatewayTrustMiddleware(BaseHTTPMiddleware):
