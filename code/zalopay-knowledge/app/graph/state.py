@@ -43,6 +43,8 @@ class Chunk(TypedDict, total=False):
     page: Optional[int]
     text: str
     score: float
+    compressed_text: Optional[str]
+    """Sentences extracted by the compress node; synthesize prefers this over text."""
 
 
 class Citation(TypedDict, total=False):

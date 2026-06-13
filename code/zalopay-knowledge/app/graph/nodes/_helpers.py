@@ -155,7 +155,8 @@ def render_chunks(chunks: list[Chunk], *, start: int = 1) -> str:
             header += f" — {section}"
         if lifecycle != "ACTIVE":
             header += f"  ({lifecycle})"
-        blocks.append(f"{header}\n{ch.get('text', '').strip()}")
+        text = ch.get("compressed_text") or ch.get("text", "")
+        blocks.append(f"{header}\n{text.strip()}")
     return "\n\n".join(blocks)
 
 
