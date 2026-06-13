@@ -1,16 +1,18 @@
-import { Activity } from "@/components/ui/icons";
+import { Activity, AlertTriangle, RotateCw } from "@/components/ui/icons";
 import { HistoryTable, MetricsGrid } from "@/components/dashboard/DashboardPanels";
 import { ScrollablePage } from "@/components/layout/ScrollablePage";
 import { Card } from "@/components/ui/Card";
-import { ErrorState } from "@/components/ui/StateViews";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { t } from "@/lib/i18n";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useUserStore } from "@/store/userStore";
+import { MOCK_DASHBOARD } from "@/lib/mockDashboard";
 
 export function DashboardPage() {
   const locale = useUserStore((s) => s.locale);
   const { data, error, loading, refresh } = useDashboard();
+
+  const displayData = data ?? (error ? MOCK_DASHBOARD : null);
 
   return (
     <ScrollablePage>
@@ -34,24 +36,40 @@ export function DashboardPage() {
         </div>
       </header>
 
-      {loading && !data ? (
+      {error && (
+        <div
+          role="alert"
+          className="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger-muted px-4 py-3 text-sm text-danger"
+        >
+          <AlertTriangle size="sm" className="flex-shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button
+            type="button"
+            onClick={refresh}
+            className="inline-flex items-center gap-1.5 rounded-md border border-danger/30 px-3 py-1 text-xs font-medium transition-colors hover:bg-danger/10"
+          >
+            <RotateCw size="xs" />
+            {t("retry", locale) ?? "Thử lại"}
+          </button>
+        </div>
+      )}
+
+      {loading && !displayData ? (
         <div className="surface-card p-12">
           <LoadingSpinner />
         </div>
-      ) : error ? (
-        <ErrorState message={error} onRetry={refresh} />
-      ) : data ? (
-        <MetricsGrid data={data} />
+      ) : displayData ? (
+        <MetricsGrid data={displayData} />
       ) : null}
 
-      {data && (
+      {displayData && (
         <section aria-labelledby="history-heading">
           <Card>
             <h3 id="history-heading" className="section-title mb-0">
               {t("queryHistory", locale)}
             </h3>
             <div className="mt-4">
-              <HistoryTable history={data.history} />
+              <HistoryTable history={displayData.history} />
             </div>
           </Card>
         </section>
