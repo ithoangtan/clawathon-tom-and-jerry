@@ -27,7 +27,10 @@ def admin_sync(
     orch = svc.orchestrator
 
     if body.source == "confluence":
-        started = svc.trigger_confluence(department=body.department)
+        try:
+            started = svc.trigger_confluence(department=body.department)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
     elif body.source == "gdrive":
         if body.department:
             raise HTTPException(

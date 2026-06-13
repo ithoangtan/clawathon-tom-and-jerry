@@ -53,6 +53,18 @@ class SyncService:
         *,
         department: str | None = None,
     ) -> bool:
+        if department:
+            space_map = self._cfg.confluence_space_map
+            if department not in space_map:
+                from app.common.departments import space_env_var as dept_env_var
+                try:
+                    env_var = dept_env_var(department)
+                except KeyError:
+                    env_var = f"CONFLUENCE_SPACE_{department.upper()}"
+                raise ValueError(
+                    f"Department {department!r} has no Confluence space configured. "
+                    f"Set {env_var}=<space-key> in your environment to enable sync for this department."
+                )
         if not self._orchestrator.start("confluence", department=department):
             return False
         threading.Thread(
@@ -86,10 +98,6 @@ class SyncService:
             total_chunks = 0
             space_map = self._cfg.confluence_space_map
             if department:
-                if department not in space_map:
-                    raise ValueError(
-                        f"Department {department!r} has no Confluence space configured"
-                    )
                 space_map = {department: space_map[department]}
 
             for dept, space_key in space_map.items():
