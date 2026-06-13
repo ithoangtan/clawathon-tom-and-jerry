@@ -1,13 +1,16 @@
 """Tests for compress node and related helpers."""
 from __future__ import annotations
 
+import time
 from unittest.mock import MagicMock
 
 from app.config import Settings
+from app.graph.build import GraphDeps, build_dept_subgraph
 from app.graph.nodes._helpers import render_chunks
 from app.graph.state import Chunk
 from app.ports.errors import LLMUnavailable
 from app.ports.types import LLMResult, ModelTier
+from app.ports.types import RetrievedChunk
 
 
 def _make_chunk(text: str, compressed_text: str | None = None, title: str = "Doc") -> Chunk:
@@ -184,3 +187,136 @@ def test_compress_node_does_not_store_if_compressed_longer_than_original():
     result = node(state)
     chunks = result["graded_chunks"]
     assert "compressed_text" not in chunks[0]
+
+
+# ── Smoke test: full dept subgraph end-to-end with compress enabled ───────────
+
+def _make_smart_llm() -> MagicMock:
+    """Return a MagicMock LLM that routes responses by tier and system prompt content."""
+
+    def _complete(
+        *,
+        tier: ModelTier,
+        messages: list[dict],
+        temperature: float = 0.0,
+        max_tokens: int | None = None,
+        response_format: str = "text",
+        timeout_s: float | None = None,
+    ) -> LLMResult:
+        system_content = ""
+        for msg in messages:
+            if msg.get("role") == "system":
+                system_content = msg.get("content", "").lower()
+                break
+
+        # Grade call: SMALL tier, system prompt mentions "relevance grader"
+        if tier == ModelTier.SMALL and "relevance grader" in system_content:
+            return LLMResult(
+                text='{"scores": [{"id": 0, "score": 0.9, "reason": "direct match"}]}',
+                raw={},
+                usage={},
+            )
+
+        # Compress call: SMALL tier, system prompt mentions "document compressor"
+        if tier == ModelTier.SMALL and "document compressor" in system_content:
+            return LLMResult(
+                text='{"compressed": "Key sentence."}',
+                raw={},
+                usage={},
+            )
+
+        # Verify call: SMALL tier, system prompt mentions "entailment verifier"
+        if tier == ModelTier.SMALL and "entailment verifier" in system_content:
+            return LLMResult(
+                text='{"verdict": "supported", "confidence": 0.9, "warnings": []}',
+                raw={},
+                usage={},
+            )
+
+        # Synthesize call: MAIN tier
+        if tier == ModelTier.MAIN:
+            return LLMResult(
+                text="The KYC process requires three steps [1].",
+                raw={},
+                usage={},
+            )
+
+        # Fallback: return empty JSON so nodes degrade gracefully
+        return LLMResult(text="{}", raw={}, usage={})
+
+    llm = MagicMock()
+    llm.complete.side_effect = _complete
+    return llm
+
+
+class _StubRetriever:
+    """Minimal retriever stub that returns one long chunk."""
+
+    def __init__(self, text: str) -> None:
+        self._text = text
+
+    def is_ready(self) -> bool:
+        return True
+
+    def search(self, **_kwargs) -> list[RetrievedChunk]:
+        return [
+            RetrievedChunk(
+                chunk_id="smoke-c1",
+                department="risk",
+                doc_type="policy",
+                title="KYC Policy",
+                url="https://example.com/kyc",
+                section="Overview",
+                last_modified="2024-01-01T00:00:00Z",
+                lifecycle_state="active",
+                source_type="confluence",
+                page=None,
+                text=self._text,
+                score=0.88,
+            )
+        ]
+
+
+def test_smoke_dept_subgraph_end_to_end_with_compress_enabled():
+    """Smoke test: full retrieve→grade→compress→synthesize→verify pipeline.
+
+    Verifies that:
+    - The subgraph completes without error with compress_enabled=True.
+    - dept_results is present in the output with status "answered" or "refused".
+    - The compress node had an opportunity to run (long chunk >150 chars provided).
+    """
+    long_text = (
+        "The KYC process requires three steps. "
+        "First, the merchant submits identity documents. "
+        "Second, the compliance team reviews within 48 hours. "
+        "Third, a risk score is calculated based on transaction history. "
+        "Merchants with a score below 30 are auto-approved. "
+        "All records are stored for 7 years per regulation."
+    )
+    assert len(long_text) > 150, "fixture text must exceed compress threshold"
+
+    settings = _settings(compress_enabled=True)
+    deps = GraphDeps(
+        llm=_make_smart_llm(),
+        retriever=_StubRetriever(long_text),
+        settings=settings,
+    )
+    subgraph = build_dept_subgraph(deps)
+
+    result = subgraph.invoke(
+        {
+            "department": "risk",
+            "question": "How many steps does KYC have?",
+            "retrieval_query": "KYC steps",
+            "role": "engineer",
+            "request_language": "en",
+            "home_department": "risk",
+            "deadline_ts": time.time() + 60.0,
+        }
+    )
+
+    dept_results = result.get("dept_results", [])
+    assert dept_results, "dept_results must be non-empty"
+    assert dept_results[0]["status"] in ("answered", "refused"), (
+        f"Unexpected status: {dept_results[0]['status']}"
+    )
