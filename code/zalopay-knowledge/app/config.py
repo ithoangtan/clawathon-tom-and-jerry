@@ -158,6 +158,10 @@ class Settings(BaseSettings):
         default="BAAI/bge-reranker-v2-m3",
         description="Cross-encoder model for second-stage reranking",
     )
+    compress_enabled: bool = Field(
+        default=True,
+        description="Extract relevant sentences per graded chunk before synthesis (reduces synthesis tokens ~50%)",
+    )
 
     # ── Graph timeouts ────────────────────────────────────────────────────────
 
@@ -233,17 +237,28 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[misc]
     @property
     def confluence_space_map(self) -> dict[str, str]:
-        """Map of department key → Confluence space key.
+        """Map of department key → Confluence space key, derived from the department registry.
 
-        Only includes entries where the space key is non-empty so callers can
-        check ``if dept_key in settings.confluence_space_map`` to guard sync.
+        Iterates all_departments() and resolves each department's ``space_env_var``
+        against the loaded settings fields.  Only departments with a non-empty
+        space key are included — callers use ``dept_key in settings.confluence_space_map``
+        to check whether a department is sync-ready.
+
+        Adding a new department to the registry automatically picks it up here
+        as long as the corresponding env var and settings field exist.
         """
-        raw: dict[str, str] = {
-            DepartmentKey.RISK.value: self.confluence_space_risk,
-            DepartmentKey.GROW_ENABLEMENT.value: self.confluence_space_grow,
-            DepartmentKey.BANK_PARTNERSHIPS.value: self.confluence_space_bank,
+        from app.common.departments import all_departments
+
+        _env_to_value: dict[str, str] = {
+            "CONFLUENCE_SPACE_RISK": self.confluence_space_risk,
+            "CONFLUENCE_SPACE_GROW": self.confluence_space_grow,
+            "CONFLUENCE_SPACE_BANK": self.confluence_space_bank,
         }
-        return {k: v for k, v in raw.items() if v}
+        return {
+            dept.key: space_key
+            for dept in all_departments()
+            if (space_key := _env_to_value.get(dept.space_env_var, ""))
+        }
 
     @computed_field  # type: ignore[misc]
     @property
