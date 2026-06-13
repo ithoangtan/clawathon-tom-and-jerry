@@ -167,7 +167,7 @@ export function ChatInput({
         className={classNames(
           "chat-input-shell flex flex-col",
           isHero ? "chat-input-shell--hero" : "",
-          disabled && "opacity-60",
+          disabled && "pointer-events-none opacity-50",
         )}
       >
         <div
@@ -206,11 +206,11 @@ export function ChatInput({
             onClick={handleSubmit}
             disabled={!canSend}
             className={classNames(
-              "mb-1 flex flex-shrink-0 items-center justify-center rounded-xl transition-colors",
+              "mb-1 flex flex-shrink-0 items-center justify-center rounded-xl transition-all duration-150",
               isHero ? "h-11 w-11" : "h-9 w-9",
               canSend
-                ? "bg-gradient-to-br from-brand to-brand-dark text-white shadow-md shadow-brand/25 hover:shadow-lg hover:shadow-brand/30"
-                : "bg-white/5 text-content-muted cursor-not-allowed",
+                ? "bg-gradient-to-br from-brand to-brand-dark text-white shadow-md shadow-brand/20 hover:shadow-lg hover:shadow-brand/30 hover:brightness-110"
+                : "bg-white/[0.04] text-content-muted/50 cursor-not-allowed",
             )}
             aria-label={loading ? t("sending", locale) : t("send", locale)}
           >
@@ -220,17 +220,17 @@ export function ChatInput({
 
         <div
           className={classNames(
-            "chat-input-shortcuts flex items-center gap-3 border-t border-border/35 px-3 py-1.5 transition-opacity duration-150",
+            "chat-input-shortcuts flex items-center gap-3 border-t border-border/20 py-1.5 transition-[opacity,border-color] duration-200",
             isHero ? "px-4" : "px-3",
-            focused ? "opacity-100" : "opacity-70",
+            focused ? "opacity-100 border-border/30" : "opacity-0 pointer-events-none",
           )}
           aria-hidden={!focused}
         >
-          <span className="inline-flex items-center gap-1 text-[10px] text-content-muted">
+          <span className="inline-flex items-center gap-1 text-[10px] text-content-muted/80">
             <kbd className="chat-kbd">↵</kbd>
             {t("inputHintSend", locale)}
           </span>
-          <span className="inline-flex items-center gap-1 text-[10px] text-content-muted">
+          <span className="inline-flex items-center gap-1 text-[10px] text-content-muted/80">
             <kbd className="chat-kbd">⇧↵</kbd>
             {t("inputHintNewline", locale)}
           </span>

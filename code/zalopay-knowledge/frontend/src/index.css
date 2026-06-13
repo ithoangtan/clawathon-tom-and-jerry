@@ -266,31 +266,39 @@
   }
 
   .chat-input-shell {
-    @apply rounded-2xl shadow-sm transition-shadow;
+    @apply rounded-2xl;
     background: var(--color-bg-input);
-    border: 1px solid color-mix(in srgb, var(--chat-border) 55%, transparent);
+    border: 1px solid color-mix(in srgb, var(--chat-border) 70%, transparent);
     box-shadow: var(--shadow-glass);
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease;
   }
 
   .chat-input-shell--hero {
     border-radius: 1.25rem;
-    border-color: color-mix(in srgb, var(--color-border-brand) 45%, transparent);
+    border-color: color-mix(in srgb, var(--color-border-brand) 38%, transparent);
     box-shadow:
       var(--shadow-glass),
-      0 0 0 1px color-mix(in srgb, var(--color-brand) 8%, transparent) inset,
-      0 20px 48px -24px color-mix(in srgb, var(--color-brand) 35%, transparent);
+      inset 0 0 0 1px color-mix(in srgb, var(--color-brand) 6%, transparent),
+      0 16px 40px -20px color-mix(in srgb, var(--color-brand) 22%, transparent);
   }
 
   .chat-input-shell:focus-within {
-    border-color: var(--color-border-brand);
-    box-shadow: var(--shadow-glass), var(--shadow-glow-brand);
+    border-color: color-mix(in srgb, var(--color-border-brand) 75%, transparent);
+    box-shadow:
+      var(--shadow-glass),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-brand) 10%, transparent),
+      0 0 16px -4px color-mix(in srgb, var(--color-brand) 22%, transparent);
   }
 
   .chat-input-shell--hero:focus-within {
+    border-color: color-mix(in srgb, var(--color-border-brand) 70%, transparent);
     box-shadow:
       var(--shadow-glass),
-      var(--shadow-glow-brand),
-      0 24px 56px -20px color-mix(in srgb, var(--color-brand) 40%, transparent);
+      inset 0 0 0 1px color-mix(in srgb, var(--color-brand) 12%, transparent),
+      0 0 20px -4px color-mix(in srgb, var(--color-brand) 26%, transparent),
+      0 20px 48px -16px color-mix(in srgb, var(--color-brand) 24%, transparent);
   }
 
   .chat-input-dock {
@@ -314,6 +322,7 @@
 
   .chat-input-shortcuts {
     min-height: 1.75rem;
+    overflow: hidden;
   }
 
   .chat-composer .dept-target-bar__tags {
