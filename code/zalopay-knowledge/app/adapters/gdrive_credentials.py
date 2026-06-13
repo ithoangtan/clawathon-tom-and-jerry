@@ -40,7 +40,7 @@ def resolve_gdrive_credentials(settings: Settings) -> dict[str, Any]:
         ValueError: when no credential source is configured.
     """
     if settings.is_agentbase and gdrive_identity_ready(settings):
-        token = _fetch_oauth_m2m_token(settings)
+        token = _fetch_oauth_3lo_token(settings)
         if token:
             return {"kind": "oauth_token", "token": token}
 
@@ -62,29 +62,43 @@ def resolve_gdrive_credentials(settings: Settings) -> dict[str, Any]:
     raise ValueError("Google Drive credentials are not configured")
 
 
-def _fetch_oauth_m2m_token(settings: Settings) -> str | None:
+def _fetch_oauth_3lo_token(settings: Settings) -> str | None:
+    """Retrieve a cached 3LO access token from AgentBase Identity.
+
+    Returns None (instead of raising) when the user hasn't authorized yet so
+    callers can fall back to other credential sources.  If authorization is
+    required, the URL is logged at WARNING level — an admin must visit it once.
+    """
     provider = (settings.gdrive_oauth_provider or "").strip()
     identity = (settings.greennode_agent_identity or "").strip()
     if not provider or not identity:
         return None
 
     try:
-        from greennode_agentbase.identity import GetM2mTokenRequest
+        from greennode_agentbase.identity import Get3loTokenRequest
 
         client = get_identity_client()
-        result = client.get_m2m_token(
+        result = client.get_3lo_token(
             provider_name=provider,
             agent_identity_name=identity,
-            request=GetM2mTokenRequest(scopes=settings.gdrive_oauth_scope_list),
+            request=Get3loTokenRequest(
+                agent_user_id=settings.gdrive_oauth_agent_user_id,
+                scopes=settings.gdrive_oauth_scope_list,
+            ),
         )
         token = (getattr(result, "access_token", None) or "").strip()
         if token:
-            logger.info("GDrive OAuth M2M token resolved via Identity provider %s", provider)
+            logger.info("GDrive OAuth 3LO token resolved via Identity provider %s", provider)
             return token
+        auth_url = getattr(result, "authorization_url", None)
+        if auth_url:
+            logger.warning(
+                "GDrive OAuth not yet authorized — admin must visit: %s", auth_url
+            )
     except ImportError:
         logger.warning("greennode-agentbase not installed — cannot fetch GDrive OAuth token")
     except Exception:
-        logger.exception("Failed to fetch GDrive OAuth M2M token from Identity")
+        logger.exception("Failed to fetch GDrive OAuth 3LO token from Identity")
     return None
 
 

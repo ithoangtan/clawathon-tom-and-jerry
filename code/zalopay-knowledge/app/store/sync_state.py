@@ -135,6 +135,18 @@ class SyncOrchestrator:
                     st.errors = (st.errors + [error])[-5:]
                 st.progress = None
                 admin_status = "failed"
+                # Ensure no department is left stuck in "running" state after a failure.
+                for i, dept in enumerate(st.department_results):
+                    if dept.status == "running":
+                        st.department_results[i] = DepartmentSyncResult(
+                            department=dept.department,
+                            space_key=dept.space_key,
+                            status="failed",
+                            page_count=dept.page_count,
+                            chunk_count=dept.chunk_count,
+                            synced_items=dept.synced_items,
+                            errors=dept.errors,
+                        )
             if st.job_id and st.started_at:
                 self._history.append(
                     SyncJobRecord(

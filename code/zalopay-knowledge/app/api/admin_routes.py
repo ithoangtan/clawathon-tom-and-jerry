@@ -14,6 +14,7 @@ from app.api.schemas import (
     AdminSyncStatusResponse,
 )
 from app.common.departments import get_department
+from app.config import Settings, get_settings
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -69,6 +70,53 @@ def admin_sync_status() -> AdminSyncStatusResponse:
     svc = get_sync_service()
     snapshot = svc.orchestrator.admin_status_snapshot()
     return AdminSyncStatusResponse(**snapshot)
+
+
+@router.get("/gdrive/authorize")
+def gdrive_authorize(settings: Settings = Depends(get_settings)) -> JSONResponse:
+    """Initiate or check Google Drive 3LO authorization.
+
+    Returns {"status": "authorized"} when Drive is already authorized.
+    Returns {"status": "pending", "authorization_url": "..."} when the admin
+    must open the URL in a browser and click Allow to grant access.
+    """
+    if not settings.is_agentbase:
+        raise HTTPException(status_code=400, detail="Only available in AgentBase runtime")
+
+    provider = (settings.gdrive_oauth_provider or "").strip()
+    identity = (settings.greennode_agent_identity or "").strip()
+    if not provider or not identity:
+        raise HTTPException(
+            status_code=400,
+            detail="GDRIVE_OAUTH_PROVIDER or GREENNODE_AGENT_IDENTITY not configured",
+        )
+
+    try:
+        from greennode_agentbase.identity import Get3loTokenRequest
+
+        from app.adapters.identity_client import get_identity_client
+
+        client = get_identity_client()
+        result = client.get_3lo_token(
+            provider_name=provider,
+            agent_identity_name=identity,
+            request=Get3loTokenRequest(
+                agent_user_id=settings.gdrive_oauth_agent_user_id,
+                scopes=settings.gdrive_oauth_scope_list,
+            ),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    access_token = (getattr(result, "access_token", None) or "").strip()
+    if access_token:
+        return JSONResponse({"status": "authorized"})
+
+    auth_url = getattr(result, "authorization_url", None)
+    if auth_url:
+        return JSONResponse({"status": "pending", "authorization_url": auth_url})
+
+    raise HTTPException(status_code=502, detail="AgentBase returned neither token nor auth URL")
 
 
 @router.get("/sync/history", response_model=AdminSyncHistoryResponse)

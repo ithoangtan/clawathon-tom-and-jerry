@@ -114,7 +114,14 @@ class Settings(BaseSettings):
     )
     gdrive_oauth_scopes: str = Field(
         default="https://www.googleapis.com/auth/drive.readonly",
-        description="Comma-separated OAuth scopes for GDrive M2M token",
+        description="Comma-separated OAuth scopes for GDrive 3LO token",
+    )
+    gdrive_oauth_agent_user_id: str = Field(
+        default="admin",
+        description=(
+            "Stable user ID passed to AgentBase 3LO flow — identifies which Google account "
+            "authorized access. Change only if multiple accounts are needed."
+        ),
     )
     gdrive_sa_provider: str = Field(
         default="",
