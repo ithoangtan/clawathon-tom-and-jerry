@@ -94,7 +94,7 @@ export function AdminSyncControls() {
               key={dept.key}
               variant="secondary"
               loading={loadingKey === dept.key}
-              disabled={Boolean(anyRunning && !deptRunning)}
+              disabled={Boolean(anyRunning)}
               onClick={() => trigger(dept.key)}
               className="justify-start"
             >
