@@ -69,7 +69,7 @@ def test_state_to_response_maps_access_denied_refusal_reason() -> None:
 
 
 def test_stream_chat_emits_sse_friendly_events() -> None:
-    """FR-6.2: stream_chat yields start, node, and done events."""
+    """FR-6.2: stream_chat yields start, node, pipeline, and done events."""
     ctx = UserContext(
         user_id="u1",
         session_id="s1",
@@ -86,10 +86,17 @@ def test_stream_chat_emits_sse_friendly_events() -> None:
         status="answered",
     )
 
-    def fake_stream(_state, _config, stream_mode="updates"):
-        assert stream_mode == "updates"
-        yield {"router": {"intent": "policy_lookup"}}
-        yield {"respond": {"answer": sample.answer, "status": "answered", "feedback_id": "fb-stream"}}
+    def fake_stream(_state, _config, stream_mode=None):
+        modes = stream_mode if isinstance(stream_mode, list) else [stream_mode]
+        assert modes == ["updates", "custom"]
+        yield (
+            "updates",
+            {"router": {"intent": "policy_lookup", "target_departments": ["risk"]}},
+        )
+        yield (
+            "updates",
+            {"respond": {"answer": sample.answer, "status": "answered", "feedback_id": "fb-stream"}},
+        )
 
     mock_graph = MagicMock()
     mock_graph.stream.side_effect = fake_stream
@@ -100,6 +107,14 @@ def test_stream_chat_emits_sse_friendly_events() -> None:
     assert events[0] == {"event": "start", "data": {"question": request.question}}
     assert events[1]["event"] == "node"
     assert events[1]["data"]["node"] == "router"
+    assert events[1]["data"]["step_key"] == "router"
+    assert "step_label" in events[1]["data"]
+    assert "elapsed_ms" in events[1]["data"]
+    pipeline = [e for e in events if e["event"] == "pipeline"]
+    assert len(pipeline) >= 2
+    assert pipeline[0]["data"]["phase"] == "start"
+    assert pipeline[0]["data"]["step_key"] == "router"
+    assert pipeline[-1]["data"]["phase"] == "end"
     assert events[-1]["event"] == "done"
     assert events[-1]["data"]["status"] == "answered"
     assert events[-1]["data"]["feedback_id"] == "fb-stream"

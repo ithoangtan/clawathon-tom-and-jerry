@@ -1,7 +1,7 @@
 [project]
 name = "zalopay-knowledge"
 version = "0.1.0"
-description = "ZaloPay Internal Knowledge Agent — citation-grounded corrective-RAG assistant"
+description = "Zalopay Internal Knowledge Agent — citation-grounded corrective-RAG assistant"
 requires-python = ">=3.11"
 # Runtime dependencies are declared in requirements.txt, not here, to keep
 # Docker layer caching simple and to allow AgentBase to inject its own deps.

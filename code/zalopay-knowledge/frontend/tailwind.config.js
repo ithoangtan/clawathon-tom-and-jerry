@@ -5,7 +5,7 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: "var(--color-brand)",
+          DEFAULT: "rgb(var(--color-brand-rgb) / <alpha-value>)",
           dark: "var(--color-brand-hover)",
           light: "var(--color-brand-muted)",
         },

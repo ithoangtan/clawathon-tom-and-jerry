@@ -39,6 +39,10 @@ class TestDepartmentRegistry:
             assert dept.space_env_var.startswith("CONFLUENCE_SPACE_")
             assert dept.accent_color.startswith("#")
             assert dept.channel_hint.startswith("teams-")
+            assert dept.head_manager_en
+            assert dept.head_manager_vi
+            assert dept.description_en
+            assert dept.description_vi
 
     def test_display_name_en_and_vi(self) -> None:
         risk = get_department("risk")

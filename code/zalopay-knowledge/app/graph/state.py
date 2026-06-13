@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""LangGraph graph state for the ZaloPay Knowledge Agent.
+"""LangGraph graph state for the Zalopay Knowledge Agent.
 
 This module defines the canonical ``GraphState`` TypedDict plus all supporting
 TypedDicts and reducer helpers.  Every graph node receives and returns a
@@ -57,6 +57,10 @@ class Citation(TypedDict, total=False):
     successor_url: Optional[str]
     source_type: Optional[str]
     page: Optional[int]
+    excerpt: Optional[str]
+    """Chunk text snippet (~400 chars) for the Citation Evidence Inspector."""
+    chunk_id: Optional[str]
+    """Stable chunk id when sourced from retrieval."""
 
 
 class ConflictSide(TypedDict, total=False):

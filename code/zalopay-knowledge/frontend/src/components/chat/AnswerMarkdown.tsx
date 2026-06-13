@@ -6,6 +6,7 @@ interface AnswerMarkdownProps {
   /** Markdown answer body with optional inline [n] citation markers. */
   answer: string;
   citations: Citation[];
+  onCitationClick?: (index: number) => void;
   streaming?: boolean;
 }
 
@@ -14,11 +15,17 @@ interface AnswerMarkdownProps {
  * Full GFM (tables, lists, blockquotes, task lists) plus syntax-highlighted
  * fenced code blocks with per-block copy via {@link CodeBlock}.
  */
-export function AnswerMarkdown({ answer, citations, streaming }: AnswerMarkdownProps) {
+export function AnswerMarkdown({
+  answer,
+  citations,
+  onCitationClick,
+  streaming,
+}: AnswerMarkdownProps) {
   return (
     <MarkdownRenderer
       content={answer}
       citations={citations}
+      onCitationClick={onCitationClick}
       streaming={streaming}
       className={classNames(
         "answer-markdown",

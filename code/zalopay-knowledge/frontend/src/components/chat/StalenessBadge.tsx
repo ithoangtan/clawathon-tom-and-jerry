@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/Badge";
+import { ArrowRight, ExternalLink } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import { useUserStore } from "@/store/userStore";
 import type { Citation } from "@/lib/types";
@@ -22,9 +23,11 @@ export function StalenessBadge({ citation }: StalenessBadgeProps) {
           href={citation.successor_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-medium text-brand hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
         >
-          {t("successorDoc", locale)} →
+          <ExternalLink size="xs" />
+          {t("successorDoc", locale)}
+          <ArrowRight size="xs" />
         </a>
       )}
     </div>

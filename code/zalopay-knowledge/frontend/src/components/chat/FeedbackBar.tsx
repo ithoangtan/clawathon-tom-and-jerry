@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/Button";
+import { ThumbsDown, ThumbsUp } from "@/components/ui/icons";
 import { api } from "@/lib/apiClient";
 import { runChipPop } from "@/lib/gsap";
 import { t } from "@/lib/i18n";
@@ -90,7 +91,7 @@ export function FeedbackBar({ feedbackId }: FeedbackBarProps) {
           aria-pressed={rating === "up"}
           aria-label={t("feedbackUp", locale)}
         >
-          👍
+          <ThumbsUp size="sm" />
         </Button>
         <Button
           variant={rating === "down" ? "primary" : "secondary"}
@@ -100,7 +101,7 @@ export function FeedbackBar({ feedbackId }: FeedbackBarProps) {
           aria-pressed={rating === "down"}
           aria-label={t("feedbackDown", locale)}
         >
-          👎
+          <ThumbsDown size="sm" />
         </Button>
       </div>
 

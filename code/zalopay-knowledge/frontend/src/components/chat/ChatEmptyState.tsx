@@ -1,3 +1,4 @@
+import { ArrowRight, Brain, Sparkles } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import {
   attachHoverLift,
@@ -6,6 +7,8 @@ import {
   gsap,
   REDUCED_MOTION_QUERY,
   runEmptyParallax,
+  runHero3DDepth,
+  runHeroFloat,
   runHeroOrb,
   runStaggerEnter,
   useGSAP,
@@ -29,6 +32,8 @@ export function ChatEmptyState({ examples, onExampleClick }: ChatEmptyStateProps
 
       const hero = container.querySelector("[data-empty-hero]");
       const orbRing = container.querySelector("[data-hero-orb]");
+      const depthLayers = container.querySelectorAll("[data-hero-depth]");
+      const heroCore = container.querySelector("[data-hero-core]");
       const parallaxLayers = container.querySelectorAll("[data-parallax]");
       const exampleItems = container.querySelectorAll("[data-example-question]");
       const cleanups: Array<() => void> = [];
@@ -53,6 +58,14 @@ export function ChatEmptyState({ examples, onExampleClick }: ChatEmptyStateProps
 
         if (orbRing) {
           cleanups.push(runHeroOrb(orbRing as HTMLElement));
+        }
+
+        if (heroCore) {
+          cleanups.push(runHeroFloat(heroCore as HTMLElement));
+        }
+
+        if (depthLayers.length > 0) {
+          cleanups.push(runHero3DDepth([...depthLayers]));
         }
 
         if (parallaxLayers.length > 0) {
@@ -93,9 +106,14 @@ export function ChatEmptyState({ examples, onExampleClick }: ChatEmptyStateProps
         aria-hidden
       />
 
-      <div data-empty-hero className="chat-hero-orb mb-6 h-[4.5rem] w-[4.5rem]">
+      <div data-empty-hero className="chat-hero-orb perspective-scene mb-6 h-[4.5rem] w-[4.5rem]">
         <div data-hero-orb className="absolute inset-[-6px] rounded-2xl" aria-hidden />
-        <div className="chat-hero-core h-14 w-14 text-xl">ZP</div>
+        <div data-hero-depth className="hero-3d-ring absolute inset-[-10px] rounded-2xl opacity-40" aria-hidden />
+        <div data-hero-depth className="hero-3d-ring absolute inset-[-4px] rounded-2xl opacity-60" aria-hidden />
+        <div data-hero-core className="chat-hero-core tilt-card h-14 w-14">
+          <Brain size="lg" strokeWidth={2.25} />
+          <Sparkles size="xs" className="absolute -right-1 -top-1 text-white/90" />
+        </div>
       </div>
 
       <h2 className="text-gradient-brand text-2xl font-semibold tracking-tight">
@@ -105,7 +123,7 @@ export function ChatEmptyState({ examples, onExampleClick }: ChatEmptyStateProps
         {t("emptyChat", locale)}
       </p>
 
-      <div className="mt-10 w-full max-w-lg">
+      <div className="mt-10 w-full max-w-lg" data-tour="example-questions">
         <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-content-muted">
           {t("exampleQuestions", locale)}
         </p>
@@ -117,9 +135,7 @@ export function ChatEmptyState({ examples, onExampleClick }: ChatEmptyStateProps
                 className="chat-prompt-chip text-content-primary focus-visible:ring-2 focus-visible:ring-brand"
                 onClick={() => onExampleClick(q)}
               >
-                <span className="mr-2 text-brand" aria-hidden>
-                  →
-                </span>
+                <ArrowRight size="sm" className="mr-2 inline text-brand" aria-hidden />
                 {q}
               </button>
             </li>

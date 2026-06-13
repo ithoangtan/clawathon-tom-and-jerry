@@ -12,6 +12,7 @@ interface AssistantMessageProps {
   timestamp: string;
   streaming?: boolean;
   onClarifySelect?: (dept: Department) => void;
+  onCitationClick?: (index: number) => void;
 }
 
 export function AssistantMessage({
@@ -19,6 +20,7 @@ export function AssistantMessage({
   timestamp,
   streaming,
   onClarifySelect,
+  onCitationClick,
 }: AssistantMessageProps) {
   const locale = useUserStore((s) => s.locale);
   const timeLabel = formatMessageTime(timestamp, locale);
@@ -52,6 +54,7 @@ export function AssistantMessage({
           <AnswerCard
             response={response}
             onClarifySelect={onClarifySelect}
+            onCitationClick={onCitationClick}
             variant="message"
             streaming={streaming}
           />

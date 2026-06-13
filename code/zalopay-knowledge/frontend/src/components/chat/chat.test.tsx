@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AnswerCard } from "./AnswerCard";
 import { ConfidenceBadge, DepartmentChip } from "./Badges";
 import { CitationList } from "./CitationList";
@@ -135,6 +135,20 @@ describe("CitationList", () => {
   it("returns null when citations array is empty", () => {
     const { container } = renderWithUser(<CitationList citations={[]} />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("opens inspector via onCitationClick on card button", async () => {
+    const user = userEvent.setup();
+    const onCitationClick = vi.fn();
+    renderWithUser(
+      <CitationList
+        citations={citations.slice(0, 2)}
+        collapsible={false}
+        onCitationClick={onCitationClick}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /View source 1: Settlement Runbook/ }));
+    expect(onCitationClick).toHaveBeenCalledWith(1);
   });
 });
 

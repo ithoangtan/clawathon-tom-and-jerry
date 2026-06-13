@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { DEPARTMENTS, departmentLabel, getDepartment, roleLabel, ROLES } from "./departments";
+import {
+  DEPARTMENTS,
+  departmentHeadManager,
+  departmentLabel,
+  descriptionSnippet,
+  filterDepartments,
+  getDepartment,
+  roleLabel,
+  ROLES,
+  type DepartmentMeta,
+} from "./departments";
+import type { Department } from "./types";
 
 describe("departments", () => {
   it("exports all three departments", () => {
@@ -9,6 +20,14 @@ describe("departments", () => {
       "grow_enablement",
       "bank_partnerships",
     ]);
+  });
+
+  it("includes head manager and description metadata", () => {
+    const risk = getDepartment("risk");
+    expect(risk.head_manager_en).toBeTruthy();
+    expect(risk.head_manager_vi).toBeTruthy();
+    expect(risk.description_en).toBeTruthy();
+    expect(risk.description_vi).toBeTruthy();
   });
 
   it("returns Vietnamese label", () => {
@@ -41,5 +60,51 @@ describe("departments", () => {
   it("defines expected roles", () => {
     expect(ROLES).toContain("engineer");
     expect(ROLES).toContain("business");
+  });
+
+  it("truncates long descriptions", () => {
+    const long = "a".repeat(120);
+    expect(descriptionSnippet(long, 40)).toHaveLength(40);
+    expect(descriptionSnippet(long, 40).endsWith("…")).toBe(true);
+  });
+
+  it("filters by department name", () => {
+    const results = filterDepartments(DEPARTMENTS, "bank", "en");
+    expect(results.map((d) => d.key)).toEqual(["bank_partnerships"]);
+  });
+
+  it("filters by head manager name", () => {
+    const results = filterDepartments(DEPARTMENTS, "Nguyễn Thị Lan", "vi");
+    expect(results.map((d) => d.key)).toEqual(["risk"]);
+  });
+
+  it("filters by description text", () => {
+    const results = filterDepartments(DEPARTMENTS, "settlement", "en");
+    expect(results.map((d) => d.key)).toEqual(["bank_partnerships"]);
+  });
+
+  it("returns all departments for empty query", () => {
+    expect(filterDepartments(DEPARTMENTS, "   ", "en")).toHaveLength(DEPARTMENTS.length);
+  });
+
+  it("scales to 20+ departments without changing filter semantics", () => {
+    const scaleCatalog: DepartmentMeta[] = Array.from({ length: 25 }, (_, index) => {
+      const key = `dept_${index}` as Department;
+      return {
+        key,
+        name_en: `Department ${index}`,
+        name_vi: `Phòng ban ${index}`,
+        accent_color: "#000000",
+        channel_hint: `teams-dept-${index}`,
+        head_manager_en: `Manager ${index}`,
+        head_manager_vi: `Quản lý ${index}`,
+        description_en: `Coverage area ${index} for internal docs.`,
+        description_vi: `Phạm vi ${index} cho tài liệu nội bộ.`,
+      };
+    });
+
+    expect(filterDepartments(scaleCatalog, "manager 19", "en")).toHaveLength(1);
+    expect(filterDepartments(scaleCatalog, "phạm vi 22", "vi")).toHaveLength(1);
+    expect(departmentHeadManager(scaleCatalog[0], "en")).toBe("Manager 0");
   });
 });

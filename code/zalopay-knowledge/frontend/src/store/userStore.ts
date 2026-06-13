@@ -8,6 +8,7 @@ interface UserStore extends UserContext {
   setRole: (role: Role) => void;
   setHomeDept: (homeDept: Department) => void;
   setLocale: (locale: Lang) => void;
+  setSessionId: (sessionId: string) => void;
   newSession: () => void;
   update: (partial: Partial<UserContext>) => void;
 }
@@ -28,6 +29,7 @@ export const useUserStore = create<UserStore>()(
       setRole: (role) => set({ role }),
       setHomeDept: (homeDept) => set({ homeDept }),
       setLocale: (locale) => set({ locale }),
+      setSessionId: (sessionId) => set({ sessionId }),
       newSession: () => set({ sessionId: generateSessionId() }),
       update: (partial) => set(partial),
     }),

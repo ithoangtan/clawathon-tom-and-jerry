@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Check } from "@/components/ui/icons";
+import { DepartmentSearchList } from "@/components/departments/DepartmentSearchList";
 import { DEPARTMENTS, ROLES, roleLabel } from "@/lib/departments";
-import { departmentLabel } from "@/lib/departments";
 import { t } from "@/lib/i18n";
 import { useUserStore } from "@/store/userStore";
 import type { Department, Lang, Role } from "@/lib/types";
@@ -85,22 +86,19 @@ export function UserIdentityForm() {
           </select>
         </div>
 
-        <div>
-          <label htmlFor="home-dept" className="block text-sm font-medium text-slate-700 mb-1">
+        <div className="sm:col-span-2">
+          <span className="block text-sm font-medium text-slate-700 mb-1">
             {t("homeDept", locale)}
-          </label>
-          <select
-            id="home-dept"
-            className={fieldClass}
-            value={draftDept}
-            onChange={(e) => setDraftDept(e.target.value as Department)}
-          >
-            {DEPARTMENTS.map((d) => (
-              <option key={d.key} value={d.key}>
-                {departmentLabel(d.key, draftLocale)}
-              </option>
-            ))}
-          </select>
+          </span>
+          <DepartmentSearchList
+            selected={[draftDept]}
+            onChange={(depts) => {
+              if (depts[0]) setDraftDept(depts[0]);
+            }}
+            multiple={false}
+            departments={DEPARTMENTS}
+            maxListHeightClass="max-h-44"
+          />
         </div>
 
         <div>
@@ -113,8 +111,8 @@ export function UserIdentityForm() {
             value={draftLocale}
             onChange={(e) => setDraftLocale(e.target.value as Lang)}
           >
-            <option value="en">English</option>
-            <option value="vi">Tiếng Việt</option>
+            <option value="en">{t("langEn", draftLocale)}</option>
+            <option value="vi">{t("langVi", draftLocale)}</option>
           </select>
         </div>
       </div>
@@ -124,8 +122,9 @@ export function UserIdentityForm() {
           {t("save", locale)}
         </Button>
         {saved && (
-          <span className="text-sm text-emerald-600" role="status" aria-live="polite">
-            ✓ {t("saved", locale)}
+          <span className="inline-flex items-center gap-1 text-sm text-emerald-600" role="status" aria-live="polite">
+            <Check size="sm" />
+            {t("saved", locale)}
           </span>
         )}
       </div>

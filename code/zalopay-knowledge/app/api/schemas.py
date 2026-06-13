@@ -44,6 +44,10 @@ class CitationModel(_Base):
     successor_url: Optional[str] = None
     source_type: Optional[str] = None
     page: Optional[int] = None
+    excerpt: Optional[str] = None
+    """Chunk text snippet (~400 chars) for the Citation Evidence Inspector."""
+    chunk_id: Optional[str] = None
+    """Stable chunk id when sourced from retrieval."""
 
 
 class ConflictSide(_Base):

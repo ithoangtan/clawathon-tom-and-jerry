@@ -14,9 +14,9 @@
 
 ## Learned Workspace Facts
 
-- Primary app: `code/zalopay-knowledge/` — ZaloPay Internal Knowledge Agent (RAG Q&A from internal docs only, no web search).
+- Primary app: `code/zalopay-knowledge/` — Zalopay Internal Knowledge Agent (RAG Q&A from internal docs only, no web search).
 - Canonical product spec: `2-requirements/` (derived from `requirements-fable-5`; preferred over `requirement-opus`).
-- `requirements/` documents GreenNode AgentBase platform capabilities, not the ZaloPay product.
+- `requirements/` documents GreenNode AgentBase platform capabilities, not the Zalopay product.
 - MVP departments: Risk, Grow Enablement, Bank Partnerships; sources are Confluence spaces plus GDrive PDFs (SharePoint in production).
 - Backend stack: Python 3.11, FastAPI, LangGraph, FAISS (MVP), VNG MaaS/Qwen; deploy via `code/greennode-agentbase-skills/`.
 - Dashboard metrics API is `GET /api/dashboard` (not `/dashboard`) to avoid SPA route collision.

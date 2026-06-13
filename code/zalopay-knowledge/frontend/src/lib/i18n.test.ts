@@ -3,13 +3,13 @@ import { t } from "./i18n";
 
 describe("i18n", () => {
   it("returns English strings for en locale", () => {
-    expect(t("appTitle", "en")).toBe("ZaloPay Knowledge");
+    expect(t("appTitle", "en")).toBe("Zalopay Knowledge");
     expect(t("send", "en")).toBe("Send");
     expect(t("citations", "en")).toBe("Sources");
   });
 
   it("returns Vietnamese strings for vi locale", () => {
-    expect(t("appTitle", "vi")).toBe("Tri thức ZaloPay");
+    expect(t("appTitle", "vi")).toBe("Tri thức Zalopay");
     expect(t("send", "vi")).toBe("Gửi");
     expect(t("citations", "vi")).toBe("Nguồn tham khảo");
   });
@@ -31,5 +31,12 @@ describe("i18n", () => {
     expect(t("statusAccessDenied", "vi")).toBe("Không có quyền truy cập");
     expect(t("emptyChatTitle", "vi")).toBe("Tôi có thể giúp gì?");
     expect(t("indexNotReady", "en")).toMatch(/not synced/i);
+  });
+
+  it("covers dashboard and layout chrome strings", () => {
+    expect(t("knowledgeAgent", "vi")).toBe("Trợ lý Tri thức");
+    expect(t("dashboardSubtitle", "en")).toMatch(/usage metrics/i);
+    expect(t("historyQuestion", "vi")).toBe("Câu hỏi");
+    expect(t("lastSync", "en", { date: "Jan 1" })).toBe("Last sync: Jan 1");
   });
 });

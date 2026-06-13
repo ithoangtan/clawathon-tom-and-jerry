@@ -4,7 +4,7 @@ import { useChat } from "./useChat";
 import { ApiError } from "@/lib/apiClient";
 import { getUserContext } from "@/store/userStore";
 import type { ChatResponse } from "@/lib/types";
-import { resetUserStore } from "@/test/test-utils";
+import { resetUserStore, resetSessionStore } from "@/test/test-utils";
 
 const chatStreamMock = vi.fn();
 const chatMock = vi.fn();
@@ -50,6 +50,7 @@ describe("useChat", () => {
     chatStreamMock.mockReset();
     chatMock.mockReset();
     resetUserStore();
+    resetSessionStore();
     installSyncRaf();
   });
 
@@ -81,6 +82,34 @@ describe("useChat", () => {
     });
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
+  });
+
+  it("sends single pinned department when auto-route is off", async () => {
+    chatStreamMock.mockReturnValue(
+      streamOf([
+        { event: "done", data: answeredResponse as unknown as Record<string, unknown> },
+      ]),
+    );
+
+    const { result } = renderHook(() => useChat());
+
+    act(() => {
+      result.current.setTargetAutoRoute(false);
+      result.current.setTargetDepartments(["risk"]);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage("Single dept question?");
+    });
+
+    expect(chatStreamMock).toHaveBeenCalledWith(
+      {
+        question: "Single dept question?",
+        target_departments: ["risk"],
+      },
+      getUserContext(),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("includes pinned target_departments in the stream request body", async () => {
@@ -153,7 +182,51 @@ describe("useChat", () => {
     );
   });
 
-  it("sets streamingStatus from node events", async () => {
+  it("updates pipelineProgress from pipeline events", async () => {
+    let resolveDone: () => void;
+    const donePromise = new Promise<void>((resolve) => {
+      resolveDone = resolve;
+    });
+
+    chatStreamMock.mockReturnValue(
+      (async function* () {
+        yield {
+          event: "pipeline",
+          data: {
+            step_key: "synthesize",
+            phase: "start",
+            node: "synthesize",
+            departments: ["risk"],
+          },
+        };
+        await donePromise;
+        yield { event: "done", data: answeredResponse as unknown as Record<string, unknown> };
+      })(),
+    );
+
+    const { result } = renderHook(() => useChat());
+
+    let sendPromise!: Promise<void>;
+    act(() => {
+      sendPromise = result.current.sendMessage("Pipeline stream?");
+    });
+
+    await waitFor(() => {
+      expect(result.current.pipelineProgress?.usesPipelineEvents).toBe(true);
+      expect(result.current.pipelineProgress?.steps.find((s) => s.id === "verify")?.status).toBe(
+        "active",
+      );
+    });
+
+    await act(async () => {
+      resolveDone!();
+      await sendPromise;
+    });
+
+    expect(result.current.pipelineProgress?.phase).toBe("collapsed");
+  });
+
+  it("updates pipelineProgress from node events", async () => {
     let resolveDone: () => void;
     const donePromise = new Promise<void>((resolve) => {
       resolveDone = resolve;
@@ -176,6 +249,48 @@ describe("useChat", () => {
 
     await waitFor(() => {
       expect(result.current.streamingStatus).toBe("synthesize");
+      expect(result.current.pipelineProgress?.steps.find((s) => s.id === "verify")?.status).toBe(
+        "active",
+      );
+    });
+
+    await act(async () => {
+      resolveDone!();
+      await sendPromise;
+    });
+
+    expect(result.current.pipelineProgress?.phase).toBe("collapsed");
+  });
+
+  it("prefers step_label over node for streamingStatus", async () => {
+    let resolveDone: () => void;
+    const donePromise = new Promise<void>((resolve) => {
+      resolveDone = resolve;
+    });
+
+    chatStreamMock.mockReturnValue(
+      (async function* () {
+        yield {
+          event: "node",
+          data: {
+            node: "router",
+            step_label: "Routing to departments",
+          },
+        };
+        await donePromise;
+        yield { event: "done", data: answeredResponse as unknown as Record<string, unknown> };
+      })(),
+    );
+
+    const { result } = renderHook(() => useChat());
+
+    let sendPromise!: Promise<void>;
+    act(() => {
+      sendPromise = result.current.sendMessage("Step label?");
+    });
+
+    await waitFor(() => {
+      expect(result.current.streamingStatus).toBe("Routing to departments");
     });
 
     await act(async () => {

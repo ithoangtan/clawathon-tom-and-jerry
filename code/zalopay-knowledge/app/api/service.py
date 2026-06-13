@@ -11,6 +11,7 @@ from typing import Any, Iterator
 from langchain_core.messages import HumanMessage
 
 from app.graph import get_compiled_graph
+from app.graph.pipeline import PipelineTracker, map_node_to_step_key
 from app.api.context import UserContext
 from app.api.schemas import (
     ChatRequest,
@@ -21,6 +22,7 @@ from app.api.schemas import (
     ConflictSide,
 )
 from app.config import Settings, get_settings
+from app.api.stream_events import build_node_event_data
 from app.store.audit import AuditStore
 from app.store.feedback import FeedbackStore
 
@@ -152,25 +154,99 @@ def run_chat(ctx: UserContext, request: ChatRequest) -> ChatResponse:
     return state_to_response(result)
 
 
+def _iter_stream_chunks(chunk: object) -> list[tuple[str, dict[str, Any]]]:
+    """Normalize LangGraph stream items into ``(mode, payload)`` pairs."""
+    if isinstance(chunk, tuple) and len(chunk) == 2 and isinstance(chunk[0], str):
+        mode, payload = chunk
+        if mode == "updates" and isinstance(payload, dict):
+            return [(mode, payload)]
+        if mode == "custom" and isinstance(payload, dict):
+            return [(mode, payload)]
+        return []
+
+    if isinstance(chunk, dict):
+        return [("updates", chunk)]
+    return []
+
+
+def _pipeline_events_for_node(
+    tracker: PipelineTracker,
+    node_name: str,
+    update: dict[str, Any],
+    *,
+    router_started: bool,
+) -> tuple[list[dict[str, Any]], bool]:
+    """Emit structured ``pipeline`` events for the router step."""
+    events: list[dict[str, Any]] = []
+    step_key = map_node_to_step_key(node_name)
+    if step_key != "router":
+        return events, router_started
+
+    if not router_started:
+        events.append(
+            {
+                "event": "pipeline",
+                "data": tracker.start_event(step_key, node=node_name),
+            }
+        )
+        router_started = True
+
+    departments = list(update.get("target_departments") or [])
+    events.append(
+        {
+            "event": "pipeline",
+            "data": tracker.end_event(
+                step_key,
+                node=node_name,
+                departments=departments,
+            ),
+        }
+    )
+    return events, router_started
+
+
 def stream_chat(ctx: UserContext, request: ChatRequest) -> Iterator[dict[str, Any]]:
     """Stream LangGraph node updates as SSE-friendly event dicts."""
     cfg = get_settings()
     graph = get_compiled_graph()
     started = time.perf_counter()
+    tracker = PipelineTracker(started)
 
     yield {"event": "start", "data": {"question": request.question}}
 
     final_state: dict[str, Any] = {}
+    router_started = False
     try:
         for chunk in graph.stream(
             _initial_state(ctx, request, cfg),
             _graph_config(ctx),
-            stream_mode="updates",
+            stream_mode=["updates", "custom"],
         ):
-            for node_name, update in chunk.items():
-                yield {"event": "node", "data": {"node": node_name}}
-                if isinstance(update, dict):
-                    final_state.update(update)
+            for mode, payload in _iter_stream_chunks(chunk):
+                if mode == "custom":
+                    yield {"event": "pipeline", "data": payload}
+                    continue
+
+                for node_name, update in payload.items():
+                    if isinstance(update, dict):
+                        final_state.update(update)
+                    elapsed_ms = int((time.perf_counter() - started) * 1000)
+                    node_data = build_node_event_data(
+                        node_name,
+                        update if isinstance(update, dict) else None,
+                        elapsed_ms=elapsed_ms,
+                        accumulated=final_state,
+                    )
+                    yield {"event": "node", "data": node_data}
+
+                    if isinstance(update, dict):
+                        pipeline_events, router_started = _pipeline_events_for_node(
+                            tracker,
+                            node_name,
+                            update,
+                            router_started=router_started,
+                        )
+                        yield from pipeline_events
     except Exception as exc:
         logger.exception("Graph stream failed")
         yield {"event": "error", "data": {"detail": str(exc)}}

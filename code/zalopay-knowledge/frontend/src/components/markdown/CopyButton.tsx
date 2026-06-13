@@ -1,4 +1,5 @@
 import { classNames } from "@/lib/format";
+import { Check, Copy } from "@/components/ui/icons";
 import { runCopySuccess } from "@/lib/gsap";
 import { t } from "@/lib/i18n";
 import { useUserStore } from "@/store/userStore";
@@ -56,8 +57,6 @@ export function CopyButton({
     };
   }, []);
 
-  const iconSize = size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4";
-
   return (
     <button
       ref={buttonRef}
@@ -75,32 +74,15 @@ export function CopyButton({
     >
       {copied ? (
         <>
-          <CheckIcon className={iconSize} />
+          <Check size={size === "sm" ? "sm" : "md"} />
           <span className="sr-only sm:not-sr-only">{copiedText}</span>
         </>
       ) : (
         <>
-          <CopyIcon className={iconSize} />
+          <Copy size={size === "sm" ? "sm" : "md"} />
           <span className="sr-only sm:not-sr-only">{copyLabel}</span>
         </>
       )}
     </button>
-  );
-}
-
-function CopyIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <rect x="9" y="9" width="13" height="13" rx="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
   );
 }

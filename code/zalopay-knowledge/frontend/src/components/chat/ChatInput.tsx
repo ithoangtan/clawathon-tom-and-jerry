@@ -1,4 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent } from "react";
+import { Loader2, Send } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import { classNames } from "@/lib/format";
 import {
@@ -17,20 +18,6 @@ interface ChatInputProps {
   onSubmit: () => void;
   loading?: boolean;
   disabled?: boolean;
-}
-
-function SendIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="h-4 w-4"
-      aria-hidden
-    >
-      <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
-    </svg>
-  );
 }
 
 export function ChatInput({ value, onChange, onSubmit, loading, disabled }: ChatInputProps) {
@@ -159,6 +146,7 @@ export function ChatInput({ value, onChange, onSubmit, loading, disabled }: Chat
     <div className="w-full">
       <div
         ref={shellRef}
+        data-tour="chat-input"
         className={classNames(
           "chat-input-shell flex items-end gap-2 p-2",
           disabled && "opacity-60",
@@ -194,14 +182,7 @@ export function ChatInput({ value, onChange, onSubmit, loading, disabled }: Chat
           )}
           aria-label={loading ? t("sending", locale) : t("send", locale)}
         >
-          {loading ? (
-            <span
-              className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-              aria-hidden
-            />
-          ) : (
-            <SendIcon />
-          )}
+          {loading ? <Loader2 size="md" /> : <Send size="md" />}
         </button>
       </div>
       <p id="chat-input-hint" className="mt-2 text-center text-[11px] text-content-muted">

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -11,8 +11,12 @@ vi.mock("@/hooks/useChat", () => ({
     setInput: vi.fn(),
     targetDepartments: [],
     setTargetDepartments: vi.fn(),
+    targetAutoRoute: true,
+    setTargetAutoRoute: vi.fn(),
     loading: false,
     streamingStatus: null,
+    pipelineProgress: null,
+    dismissPipelineSummary: vi.fn(),
     error: null,
     sendMessage: vi.fn(),
     retryLast: vi.fn(),
@@ -63,11 +67,24 @@ describe("App navigation", () => {
     renderWithUser(<App />);
 
     expect(screen.getByRole("heading", { name: "How can I help?" })).toBeInTheDocument();
+    const header = screen.getByRole("banner");
+    expect(within(header).getByRole("button", { name: "Switch to Vietnamese" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Dashboard" }));
     expect(screen.getByRole("heading", { name: "Usage & Health" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Chat" }));
     expect(screen.getByRole("heading", { name: "How can I help?" })).toBeInTheDocument();
+  });
+
+  it("switches UI language from the header control", async () => {
+    const user = userEvent.setup();
+    renderWithUser(<App />);
+
+    const header = screen.getByRole("banner");
+    await user.click(within(header).getByRole("button", { name: "Switch to Vietnamese" }));
+
+    expect(screen.getByRole("link", { name: "Hỏi đáp" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Tôi có thể giúp gì?" })).toBeInTheDocument();
   });
 });

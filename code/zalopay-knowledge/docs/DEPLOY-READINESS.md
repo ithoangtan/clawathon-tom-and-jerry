@@ -1,4 +1,4 @@
-# Deploy Readiness — ZaloPay Knowledge Agent (AgentBase)
+# Deploy Readiness — Zalopay Knowledge Agent (AgentBase)
 
 Checklist for MVP deploy on GreenNode AgentBase. Skills live in `.claude/skills/` (symlink or copy from `greennode-agentbase-skills`).
 

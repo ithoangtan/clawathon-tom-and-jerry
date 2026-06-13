@@ -1,6 +1,6 @@
-# ZaloPay Internal Knowledge Agent
+# Zalopay Internal Knowledge Agent
 
-A **citation-grounded, corrective-RAG assistant** for ZaloPay's internal teams.  Every answer carries at least one verifiable citation from your Confluence/Drive corpus; the agent refuses when the retrieved documents don't support an answer.  It never touches the internet.
+A **citation-grounded, corrective-RAG assistant** for Zalopay's internal teams.  Every answer carries at least one verifiable citation from your Confluence/Drive corpus; the agent refuses when the retrieved documents don't support an answer.  It never touches the internet.
 
 ---
 

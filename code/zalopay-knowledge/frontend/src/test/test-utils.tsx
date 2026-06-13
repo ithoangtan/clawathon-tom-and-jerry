@@ -1,5 +1,6 @@
 import { render, type RenderOptions } from "@testing-library/react";
 import type { ReactElement } from "react";
+import { useSessionStore } from "@/store/sessionStore";
 import { useUserStore } from "@/store/userStore";
 import type { UserContext } from "@/lib/types";
 
@@ -11,9 +12,19 @@ const defaultUserContext: UserContext = {
   locale: "en",
 };
 
+export function resetSessionStore() {
+  useSessionStore.setState({ threads: {}, sessionAction: null });
+  useSessionStore.persist?.clearStorage?.();
+}
+
 export function resetUserStore(overrides: Partial<UserContext> = {}) {
   useUserStore.setState({ ...defaultUserContext, ...overrides });
   useUserStore.persist?.clearStorage?.();
+}
+
+export function resetStores(overrides: Partial<UserContext> = {}) {
+  resetUserStore(overrides);
+  resetSessionStore();
 }
 
 export function renderWithUser(ui: ReactElement, user: Partial<UserContext> = {}, options?: RenderOptions) {

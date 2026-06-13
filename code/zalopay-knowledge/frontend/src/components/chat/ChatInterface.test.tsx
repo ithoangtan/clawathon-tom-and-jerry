@@ -10,6 +10,7 @@ const sendMessageMock = vi.fn();
 const retryLastMock = vi.fn();
 const setInputMock = vi.fn();
 const setTargetDepartmentsMock = vi.fn();
+const setTargetAutoRouteMock = vi.fn();
 
 const clarifyResponse: ChatResponse = {
   answer: "Which department are you asking about?",
@@ -30,8 +31,12 @@ let mockChatState = {
   setInput: setInputMock,
   targetDepartments: [] as ChatResponse["source_departments"],
   setTargetDepartments: setTargetDepartmentsMock,
+  targetAutoRoute: true,
+  setTargetAutoRoute: setTargetAutoRouteMock,
   loading: false,
   streamingStatus: null as string | null,
+  pipelineProgress: null,
+  dismissPipelineSummary: vi.fn(),
   error: null as string | null,
   sendMessage: sendMessageMock,
   retryLast: retryLastMock,
@@ -58,14 +63,19 @@ describe("ChatInterface", () => {
     retryLastMock.mockReset();
     setInputMock.mockReset();
     setTargetDepartmentsMock.mockReset();
+    setTargetAutoRouteMock.mockReset();
     mockChatState = {
       messages: [],
       input: "",
       setInput: setInputMock,
       targetDepartments: [],
       setTargetDepartments: setTargetDepartmentsMock,
+      targetAutoRoute: true,
+      setTargetAutoRoute: setTargetAutoRouteMock,
       loading: false,
       streamingStatus: null,
+      pipelineProgress: null,
+      dismissPipelineSummary: vi.fn(),
       error: null,
       sendMessage: sendMessageMock,
       retryLast: retryLastMock,
@@ -108,9 +118,22 @@ describe("ChatInterface", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows typing indicator while loading with streaming status", () => {
+  it("shows pipeline stepper while loading", () => {
     mockChatState.loading = true;
-    mockChatState.streamingStatus = "synthesize";
+    mockChatState.pipelineProgress = {
+      startedAt: Date.now(),
+      departmentCount: 1,
+      phase: "running",
+      departments: ["risk"],
+      deptBranches: { risk: { department: "risk", status: "active" } },
+      steps: [
+        { id: "routing", status: "done" },
+        { id: "retrieval", status: "active", startedAt: Date.now() },
+        { id: "grade", status: "pending" },
+        { id: "verify", status: "pending" },
+        { id: "synthesis", status: "pending" },
+      ],
+    };
     mockChatState.messages = [
       {
         id: "user-1",
@@ -121,8 +144,9 @@ describe("ChatInterface", () => {
     ];
 
     renderWithUser(<ChatInterface />);
-    expect(screen.getByText("synthesize")).toBeInTheDocument();
-    expect(screen.getByText(/Thinking/i)).toBeInTheDocument();
+    expect(screen.getByText("Per-department retrieval")).toBeInTheDocument();
+    const branches = screen.getByRole("list", { name: "Department retrieval branches" });
+    expect(within(branches).getByText("Risk")).toBeInTheDocument();
   });
 
   it("maps timeout errors and offers retry", async () => {
@@ -168,6 +192,7 @@ describe("ChatInterface", () => {
     const clarifyRegion = screen.getByRole("region", { name: "Clarification needed" });
     await user.click(within(clarifyRegion).getByRole("button", { name: "Risk" }));
 
+    expect(setTargetAutoRouteMock).toHaveBeenCalledWith(false);
     expect(setTargetDepartmentsMock).toHaveBeenCalledWith(["risk"]);
     expect(sendMessageMock).toHaveBeenCalledWith("What is the policy?", ["risk"]);
   });

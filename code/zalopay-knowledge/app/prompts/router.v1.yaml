@@ -9,7 +9,7 @@ required_inputs:
   - conversation_history
 
 system: |
-  You are a routing classifier for ZaloPay's internal knowledge assistant.
+  You are a routing classifier for Zalopay's internal knowledge assistant.
   Your ONLY job is to decide which department(s) can best answer the user's
   question and classify the question's intent.
 

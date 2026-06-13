@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Canonical department registry for the ZaloPay Knowledge Agent.
+"""Canonical department registry for the Zalopay Knowledge Agent.
 
 All other modules that need department metadata import from here — never
 hard-code department keys or display names elsewhere.
@@ -45,6 +45,18 @@ class Department:
     channel_hint: str
     """Teams / Slack channel name users can contact for manual help."""
 
+    head_manager_en: str
+    """English name of the department head / manager."""
+
+    head_manager_vi: str
+    """Vietnamese name of the department head / manager."""
+
+    description_en: str
+    """Short English blurb for UI search and routing hints."""
+
+    description_vi: str
+    """Short Vietnamese blurb for UI search and routing hints."""
+
     def display_name(self, lang: str = "en") -> str:
         """Return the display name for the given language code."""
         if lang == "vi":
@@ -62,6 +74,10 @@ _REGISTRY: dict[str, Department] = {
         space_env_var="CONFLUENCE_SPACE_RISK",
         accent_color="#E63946",  # assertive red — risk theme
         channel_hint="teams-risk-knowledge",
+        head_manager_en="Lan Nguyen",
+        head_manager_vi="Nguyễn Thị Lan",
+        description_en="Risk controls, fraud monitoring, compliance policies, and incident escalation.",
+        description_vi="Kiểm soát rủi ro, giám sát gian lận, chính sách tuân thủ và leo thang sự cố.",
     ),
     DepartmentKey.GROW_ENABLEMENT.value: Department(
         key=DepartmentKey.GROW_ENABLEMENT.value,
@@ -70,6 +86,10 @@ _REGISTRY: dict[str, Department] = {
         space_env_var="CONFLUENCE_SPACE_GROW",
         accent_color="#2A9D8F",  # teal-green — growth theme
         channel_hint="teams-grow-enablement-knowledge",
+        head_manager_en="Minh Tran",
+        head_manager_vi="Trần Văn Minh",
+        description_en="Merchant growth programs, onboarding playbooks, and enablement runbooks.",
+        description_vi="Chương trình phát triển merchant, playbook onboarding và runbook enablement.",
     ),
     DepartmentKey.BANK_PARTNERSHIPS.value: Department(
         key=DepartmentKey.BANK_PARTNERSHIPS.value,
@@ -78,6 +98,10 @@ _REGISTRY: dict[str, Department] = {
         space_env_var="CONFLUENCE_SPACE_BANK",
         accent_color="#457B9D",  # corporate blue — banking theme
         channel_hint="teams-bank-partnerships-knowledge",
+        head_manager_en="Hoang Le",
+        head_manager_vi="Lê Hoàng",
+        description_en="Bank integrations, settlement reconciliation, and partner SLA documentation.",
+        description_vi="Tích hợp ngân hàng, đối soát thanh toán và tài liệu SLA đối tác.",
     ),
 }
 

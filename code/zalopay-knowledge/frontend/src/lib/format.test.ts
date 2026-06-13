@@ -57,20 +57,23 @@ describe("formatDate", () => {
 
 describe("formatFreshnessHours", () => {
   it("returns em dash for nullish", () => {
-    expect(formatFreshnessHours(null)).toBe("—");
-    expect(formatFreshnessHours(undefined)).toBe("—");
+    expect(formatFreshnessHours(null, "en")).toBe("—");
+    expect(formatFreshnessHours(undefined, "vi")).toBe("—");
   });
 
   it("shows sub-hour freshness", () => {
-    expect(formatFreshnessHours(0.5)).toBe("< 1h ago");
+    expect(formatFreshnessHours(0.5, "en")).toBe("< 1h ago");
+    expect(formatFreshnessHours(0.5, "vi")).toBe("< 1 giờ trước");
   });
 
   it("shows hours under 24", () => {
-    expect(formatFreshnessHours(5)).toBe("5h ago");
+    expect(formatFreshnessHours(5, "en")).toBe("5h ago");
+    expect(formatFreshnessHours(5, "vi")).toBe("5 giờ trước");
   });
 
   it("shows days at 24h or more", () => {
-    expect(formatFreshnessHours(48)).toBe("2d ago");
+    expect(formatFreshnessHours(48, "en")).toBe("2d ago");
+    expect(formatFreshnessHours(48, "vi")).toBe("2 ngày trước");
   });
 });
 

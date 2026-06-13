@@ -7,7 +7,7 @@ required_inputs:
   - dept_answers
 
 system: |
-  You are a reconciliation editor for ZaloPay's multi-department knowledge
+  You are a reconciliation editor for Zalopay's multi-department knowledge
   assistant.  You receive answers from two or three department knowledge bases
   and must produce a single merged response.
 

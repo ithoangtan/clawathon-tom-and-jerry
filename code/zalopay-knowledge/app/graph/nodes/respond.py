@@ -127,10 +127,10 @@ def _canned_reply(intent: str, lang: str) -> str:
     vi = lang == "vi"
     if intent == "greeting":
         return (
-            "Xin chào! Tôi là trợ lý tri thức nội bộ của ZaloPay. Bạn cần tìm "
+            "Xin chào! Tôi là trợ lý tri thức nội bộ của Zalopay. Bạn cần tìm "
             "thông tin gì từ tài liệu của các bộ phận?"
             if vi
-            else "Hi! I'm ZaloPay's internal knowledge assistant. What can I help "
+            else "Hi! I'm Zalopay's internal knowledge assistant. What can I help "
             "you find in the team documentation?"
         )
     if intent == "capability_query":

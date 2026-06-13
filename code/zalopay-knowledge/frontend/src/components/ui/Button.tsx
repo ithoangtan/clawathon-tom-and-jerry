@@ -1,4 +1,5 @@
 import { classNames } from "@/lib/format";
+import { Loader2 } from "@/components/ui/icons";
 import { forwardRef, type ButtonHTMLAttributes } from "react";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -33,12 +34,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       {...props}
     >
-      {loading && (
-        <span
-          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-          aria-hidden
-        />
-      )}
+      {loading && <Loader2 size="sm" />}
       {children}
     </button>
   );

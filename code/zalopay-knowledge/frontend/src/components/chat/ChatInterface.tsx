@@ -1,16 +1,23 @@
 import { AssistantMessage } from "@/components/chat/AssistantMessage";
+import {
+  CitationEvidenceInspector,
+  type CitationInspectorState,
+} from "@/components/chat/CitationEvidenceInspector";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { DepartmentTargetBar } from "@/components/chat/DepartmentTargetBar";
-import { TypingIndicator } from "@/components/chat/TypingIndicator";
+import { PipelineProgress } from "@/components/chat/PipelineProgress";
 import { UserMessage } from "@/components/chat/UserMessage";
 import { ErrorState } from "@/components/ui/StateViews";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { t } from "@/lib/i18n";
+import { classNames } from "@/lib/format";
 import { useChat } from "@/hooks/useChat";
 import { useHealth } from "@/hooks/useHealth";
 import { useSmoothScroll } from "@/hooks/useSmoothScroll";
 import { useUserStore } from "@/store/userStore";
-import type { Department } from "@/lib/types";
+import type { Citation, Department } from "@/lib/types";
+import { useCallback, useEffect, useState } from "react";
 
 const EXAMPLE_QUESTIONS = {
   en: [
@@ -34,20 +41,77 @@ export function ChatInterface() {
     setInput,
     targetDepartments,
     setTargetDepartments,
+    targetAutoRoute,
+    setTargetAutoRoute,
     loading,
     streamingStatus,
+    pipelineProgress,
+    dismissPipelineSummary,
     error,
     sendMessage,
     retryLast,
   } = useChat();
 
-  const scrollRef = useSmoothScroll([messages, loading, streamingStatus]);
+  const scrollRef = useSmoothScroll([messages, loading, streamingStatus, pipelineProgress]);
+
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const [inspector, setInspector] = useState<CitationInspectorState | null>(null);
+
+  const closeInspector = useCallback(() => setInspector(null), []);
+
+  const openCitation = useCallback((citations: Citation[], index: number) => {
+    setInspector({ citations, selectedIndex: index });
+  }, []);
+
+  useEffect(() => {
+    if (!inspector) return;
+    const activeInspector = inspector;
+
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeInspector();
+        return;
+      }
+
+      if (/^[1-9]$/.test(e.key)) {
+        const idx = parseInt(e.key, 10);
+        if (idx <= activeInspector.citations.length) {
+          e.preventDefault();
+          setInspector((prev) => (prev ? { ...prev, selectedIndex: idx } : null));
+        }
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [inspector, closeInspector]);
+
+  useEffect(() => {
+    if (!inspector || isDesktop) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [inspector, isDesktop]);
 
   const indexReady = health?.index_ready ?? false;
   const examples = locale === "vi" ? EXAMPLE_QUESTIONS.vi : EXAMPLE_QUESTIONS.en;
   const isEmpty = messages.length === 0 && !loading;
 
   function handleClarify(dept: Department) {
+    setTargetAutoRoute(false);
     setTargetDepartments([dept]);
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     if (lastUser) {
@@ -67,12 +131,20 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="chat-shell flex h-full min-h-0 flex-col">
-      <div className="relative z-10 flex-shrink-0 border-b border-slate-200/60 chat-glass px-4 py-2.5">
+    <div className="chat-shell flex h-full min-h-0">
+      <div
+        className={classNames(
+          "flex min-h-0 flex-col",
+          inspector && isDesktop ? "w-[60%] flex-shrink-0" : "w-full flex-1",
+        )}
+      >
+      <div className="dept-target-bar relative z-30 flex-shrink-0 overflow-visible border-b border-slate-200/60 chat-glass px-4 py-2.5">
         <div className="mx-auto max-w-3xl">
           <DepartmentTargetBar
             selected={targetDepartments}
+            autoRoute={targetAutoRoute}
             onChange={setTargetDepartments}
+            onAutoRouteChange={setTargetAutoRoute}
           />
           {!indexReady && (
             <p className="mt-2 text-xs text-amber-700" role="status">
@@ -111,11 +183,17 @@ export function ChatInterface() {
                     timestamp={msg.timestamp}
                     streaming={msg.streaming}
                     onClarifySelect={handleClarify}
+                    onCitationClick={(index) => openCitation(msg.response!.citations, index)}
                   />
                 ) : null,
               )}
 
-              {loading && <TypingIndicator statusText={streamingStatus} />}
+              {(loading || pipelineProgress?.phase === "collapsed") && pipelineProgress && (
+                <PipelineProgress
+                  progress={pipelineProgress}
+                  onCollapsedDismiss={dismissPipelineSummary}
+                />
+              )}
 
               {error && (
                 <ErrorState message={mapError(error)} onRetry={retryLast} />
@@ -138,6 +216,19 @@ export function ChatInterface() {
           />
         </div>
       </div>
+      </div>
+
+      {inspector && (
+        <CitationEvidenceInspector
+          state={inspector}
+          open
+          variant={isDesktop ? "panel" : "sheet"}
+          onClose={closeInspector}
+          onSelectIndex={(index) =>
+            setInspector((prev) => (prev ? { ...prev, selectedIndex: index } : null))
+          }
+        />
+      )}
     </div>
   );
 }

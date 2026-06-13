@@ -30,6 +30,10 @@ export interface Citation {
   source_type?: string | null;
   /** PDF page number (1-indexed); null for Confluence chunks. */
   page?: number | null;
+  /** Retrieved chunk text excerpt (~400 chars); optional until BE ships. */
+  excerpt?: string | null;
+  /** Stable chunk identifier from the vector store. */
+  chunk_id?: string | null;
 }
 
 // ── Conflict ─────────────────────────────────────────────────────────────────
@@ -69,7 +73,28 @@ export interface ChatRequest {
 }
 
 /** SSE event names from POST /chat/stream */
-export type ChatStreamEventName = "start" | "node" | "error" | "done";
+export type ChatStreamEventName = "start" | "node" | "pipeline" | "error" | "done";
+
+/** `node` event payload from POST /chat/stream (pipeline timeline). */
+export interface StreamNodeEvent {
+  /** Raw LangGraph node name (always present). */
+  node: string;
+  step_key?: string;
+  step_label?: string;
+  departments?: Department[];
+  elapsed_ms?: number;
+}
+
+/** `pipeline` event payload — structured step timeline with start/end phases. */
+export interface StreamPipelineEvent {
+  step_key: "router" | "retrieve" | "grade" | "synthesize" | "verify";
+  phase: "start" | "end";
+  node: string;
+  departments: Department[];
+  elapsed_ms: number;
+  step_elapsed_ms: number | null;
+  ts: string;
+}
 
 /** One SSE payload from POST /chat/stream (`data: {event, data}` lines). */
 export interface ChatStreamEvent {

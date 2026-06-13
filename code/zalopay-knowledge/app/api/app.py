@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     cfg = get_settings()
     app = FastAPI(
-        title="ZaloPay Knowledge Agent",
+        title="Zalopay Knowledge Agent",
         version=cfg.app_version,
         description="Citation-grounded internal knowledge assistant",
         lifespan=lifespan,

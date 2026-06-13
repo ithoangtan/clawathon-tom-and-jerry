@@ -1,4 +1,5 @@
 import type { Lang } from "./types";
+import { t } from "./i18n";
 
 export function formatPercent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
@@ -36,12 +37,12 @@ export function formatDate(iso: string | null | undefined, locale: Lang): string
   }
 }
 
-export function formatFreshnessHours(hours: number | null | undefined): string {
+export function formatFreshnessHours(hours: number | null | undefined, locale: Lang): string {
   if (hours == null) return "—";
-  if (hours < 1) return "< 1h ago";
-  if (hours < 24) return `${Math.round(hours)}h ago`;
+  if (hours < 1) return t("freshnessLessThan1h", locale);
+  if (hours < 24) return t("freshnessHoursAgo", locale, { hours: Math.round(hours) });
   const days = Math.round(hours / 24);
-  return `${days}d ago`;
+  return t("freshnessDaysAgo", locale, { days });
 }
 
 export function freshnessLevel(

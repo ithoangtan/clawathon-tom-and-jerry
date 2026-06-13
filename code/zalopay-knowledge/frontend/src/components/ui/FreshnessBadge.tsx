@@ -22,10 +22,10 @@ export function FreshnessBadge({ lastSuccessAt, freshnessHours }: FreshnessBadge
   const tone = level === "green" ? "success" : level === "amber" ? "warning" : "danger";
 
   return (
-    <Badge tone={tone} title={formatFreshnessHours(freshnessHours)}>
+    <Badge tone={tone} title={formatFreshnessHours(freshnessHours, locale)}>
       {label}
       {freshnessHours != null && level !== "red" && (
-        <span className="ml-1 opacity-75">({formatFreshnessHours(freshnessHours)})</span>
+        <span className="ml-1 opacity-75">({formatFreshnessHours(freshnessHours, locale)})</span>
       )}
     </Badge>
   );

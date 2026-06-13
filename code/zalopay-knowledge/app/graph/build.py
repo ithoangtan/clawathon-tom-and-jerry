@@ -25,6 +25,7 @@ import time
 from dataclasses import dataclass
 from typing import Callable, Optional
 
+from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 
 try:  # langgraph 0.2 exposes Send from .types; older layouts use .constants
@@ -33,6 +34,7 @@ except ImportError:  # pragma: no cover - import-path shim
     from langgraph.constants import Send  # type: ignore
 
 from app.config import Settings, get_settings
+from app.graph.pipeline import PipelineEmitter
 from app.graph.nodes import (
     make_grade_node,
     make_ingest_context_node,
@@ -114,8 +116,15 @@ def _make_dept_branch(subgraph) -> Callable[[DeptState], dict]:
 
     def dept_branch(state: DeptState) -> dict:
         department = state.get("department", "?")
+        emitter = PipelineEmitter(get_stream_writer(), department=department)
         try:
-            result = subgraph.invoke(state)
+            emitter.branch_start()
+            result: dict = {}
+            for chunk in subgraph.stream(state, stream_mode="updates"):
+                for node_name, update in chunk.items():
+                    emitter.on_node_complete(node_name)
+                    if isinstance(update, dict):
+                        result.update(update)
             return {
                 "dept_results": result.get("dept_results", []),
                 "evidence": result.get("evidence", {}),

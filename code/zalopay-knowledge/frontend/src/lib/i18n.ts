@@ -3,7 +3,7 @@ import type { Lang } from "./types";
 type Strings = Record<string, { en: string; vi: string }>;
 
 const strings: Strings = {
-  appTitle: { en: "ZaloPay Knowledge", vi: "Tri thức ZaloPay" },
+  appTitle: { en: "Zalopay Knowledge", vi: "Tri thức Zalopay" },
   appSubtitle: {
     en: "Citation-grounded answers from internal docs",
     vi: "Câu trả lời có trích dẫn từ tài liệu nội bộ",
@@ -12,18 +12,74 @@ const strings: Strings = {
   navDashboard: { en: "Dashboard", vi: "Bảng điều khiển" },
   navSettings: { en: "Settings", vi: "Cài đặt" },
   newSession: { en: "New session", vi: "Phiên mới" },
+  sessionHistory: { en: "Session history", vi: "Lịch sử phiên hỏi đáp" },
+  sessionHistoryHint: {
+    en: "Recent conversations saved on this device.",
+    vi: "Các cuộc hội thoại gần đây được lưu trên thiết bị này.",
+  },
+  searchSessions: { en: "Search sessions", vi: "Tìm phiên hỏi đáp" },
+  noSessions: { en: "No saved sessions yet.", vi: "Chưa có phiên nào được lưu." },
+  deleteSession: { en: "Delete session", vi: "Xóa phiên" },
+  deleteSessionConfirm: {
+    en: "Delete this session? This cannot be undone.",
+    vi: "Xóa phiên này? Hành động không thể hoàn tác.",
+  },
+  openSessionHistory: { en: "Open session history", vi: "Mở lịch sử phiên" },
+  closeSessionHistory: { en: "Close session history", vi: "Đóng lịch sử phiên" },
+  statusConflict: { en: "Conflict", vi: "Mâu thuẫn" },
+  statusPending: { en: "In progress", vi: "Đang xử lý" },
+  cancel: { en: "Cancel", vi: "Hủy" },
+  confirm: { en: "Confirm", vi: "Xác nhận" },
   indexNotReady: {
     en: "Knowledge base not synced yet — go to Settings to sync.",
     vi: "Cơ sở tri thức chưa được đồng bộ — vào Cài đặt để đồng bộ.",
   },
   askPlaceholder: {
-    en: "Ask about ZaloPay policies, runbooks, or procedures…",
-    vi: "Hỏi về chính sách, quy trình hoặc runbook của ZaloPay…",
+    en: "Ask about Zalopay policies, runbooks, or procedures…",
+    vi: "Hỏi về chính sách, quy trình hoặc runbook của Zalopay…",
   },
   send: { en: "Send", vi: "Gửi" },
   sending: { en: "Thinking…", vi: "Đang xử lý…" },
   targetDepartments: { en: "Target departments", vi: "Phòng ban mục tiêu" },
   targetAll: { en: "Auto-route (Agent Center)", vi: "Tự động định tuyến" },
+  turnOffAutoRoute: {
+    en: "Turn off auto-route",
+    vi: "Tắt tự động định tuyến",
+  },
+  enableAutoRoute: {
+    en: "Enable auto-route (Agent Center)",
+    vi: "Bật tự động định tuyến",
+  },
+  departmentSearchPlaceholder: {
+    en: "Search departments by name, head, or description…",
+    vi: "Tìm phòng ban theo tên, trưởng bộ phận hoặc mô tả…",
+  },
+  departmentSearchEmpty: {
+    en: "No departments match your search.",
+    vi: "Không có phòng ban nào khớp với tìm kiếm của bạn.",
+  },
+  removeDepartment: {
+    en: "Remove {name}",
+    vi: "Xóa {name}",
+  },
+  addDepartment: { en: "Add department", vi: "Thêm phòng ban" },
+  addDepartmentModalTitle: {
+    en: "Add target departments",
+    vi: "Thêm phòng ban mục tiêu",
+  },
+  addDepartmentModalHint: {
+    en: "Search and pin departments. Click the check again to deselect. The picker stays open for multi-select.",
+    vi: "Tìm và ghim phòng ban. Nhấn dấu tick lần nữa để bỏ chọn. Cửa sổ vẫn mở để chọn nhiều mục.",
+  },
+  closeAddDepartments: { en: "Close department picker", vi: "Đóng bộ chọn phòng ban" },
+  selectDepartment: { en: "Select {name}", vi: "Chọn {name}" },
+  deselectDepartment: { en: "Deselect {name}", vi: "Bỏ chọn {name}" },
+  selectDepartmentAction: { en: "Select", vi: "Chọn" },
+  deselectDepartmentAction: { en: "Deselect", vi: "Bỏ chọn" },
+  departmentAlreadySelected: { en: "Already selected", vi: "Đã chọn" },
+  departmentHeadLabel: { en: "Head manager", vi: "Trưởng bộ phận" },
+  departmentDescriptionLabel: { en: "Description", vi: "Mô tả" },
+  done: { en: "Done", vi: "Xong" },
   citations: { en: "Sources", vi: "Nguồn tham khảo" },
   confidence: { en: "Confidence", vi: "Độ tin cậy" },
   feedbackThanks: { en: "Thanks for your feedback!", vi: "Cảm ơn phản hồi của bạn!" },
@@ -76,7 +132,7 @@ const strings: Strings = {
     vi: "Đặt câu hỏi để bắt đầu. Mỗi câu trả lời đều có trích dẫn từ Confluence hoặc Drive.",
   },
   you: { en: "You", vi: "Bạn" },
-  assistantName: { en: "ZaloPay Knowledge", vi: "Tri thức ZaloPay" },
+  assistantName: { en: "Zalopay Knowledge", vi: "Tri thức Zalopay" },
   inputHint: {
     en: "Enter to send · Shift+Enter for new line",
     vi: "Enter để gửi · Shift+Enter xuống dòng",
@@ -127,7 +183,183 @@ const strings: Strings = {
   copied: { en: "Copied!", vi: "Đã sao chép!" },
   copyCode: { en: "Copy code", vi: "Sao chép mã" },
   copyMessage: { en: "Copy response", vi: "Sao chép câu trả lời" },
+  knowledgeAgent: { en: "Knowledge Agent", vi: "Trợ lý Tri thức" },
+  settingsSubtitle: {
+    en: "Configure your identity, sync preferences, and runtime environment for grounded answers.",
+    vi: "Cấu hình danh tính, tùy chọn đồng bộ và môi trường runtime để nhận câu trả lời có căn cứ.",
+  },
+  dashboardSubtitle: {
+    en: "Real-time usage metrics, sync health, and query history for your knowledge agent.",
+    vi: "Số liệu sử dụng theo thời gian thực, tình trạng đồng bộ và lịch sử truy vấn của trợ lý tri thức.",
+  },
+  configEmpty: {
+    en: "No config snapshot available.",
+    vi: "Chưa có ảnh chụp cấu hình.",
+  },
+  configVersion: { en: "Version {version}", vi: "Phiên bản {version}" },
+  lastSync: { en: "Last sync: {date}", vi: "Đồng bộ lần cuối: {date}" },
+  langEn: { en: "English", vi: "English" },
+  langVi: { en: "Tiếng Việt", vi: "Tiếng Việt" },
+  navAriaLabel: { en: "Main navigation", vi: "Điều hướng chính" },
+  historyTime: { en: "Time", vi: "Thời gian" },
+  historyQuestion: { en: "Question", vi: "Câu hỏi" },
+  historyDepartments: { en: "Departments", vi: "Phòng ban" },
+  historyStatus: { en: "Status", vi: "Trạng thái" },
+  historyLatency: { en: "Latency", vi: "Độ trễ" },
+  sourceConfluence: { en: "Confluence", vi: "Confluence" },
+  sourceGdrive: { en: "Google Drive", vi: "Google Drive" },
+  syncStateRunning: { en: "running", vi: "đang chạy" },
+  syncStateIdle: { en: "idle", vi: "chờ" },
+  syncStateError: { en: "error", vi: "lỗi" },
+  freshnessLessThan1h: { en: "< 1h ago", vi: "< 1 giờ trước" },
+  freshnessHoursAgo: { en: "{hours}h ago", vi: "{hours} giờ trước" },
+  freshnessDaysAgo: { en: "{days}d ago", vi: "{days} ngày trước" },
+  switchToEnglish: { en: "Switch to English", vi: "Chuyển sang tiếng Anh" },
+  switchToVietnamese: { en: "Switch to Vietnamese", vi: "Chuyển sang tiếng Việt" },
+  evidenceInspectorTitle: { en: "Source evidence", vi: "Minh chứng nguồn" },
+  evidenceInspectorAriaLabel: {
+    en: "Citation evidence for source {index}",
+    vi: "Minh chứng trích dẫn nguồn {index}",
+  },
+  evidenceExcerpt: { en: "Excerpt", vi: "Đoạn trích" },
+  evidenceExcerptMissing: {
+    en: "Excerpt not available for this source yet.",
+    vi: "Chưa có đoạn trích cho nguồn này.",
+  },
+  evidenceLifecycleActive: { en: "Active", vi: "Đang dùng" },
+  evidenceLifecycleDeprecated: { en: "Deprecated", vi: "Đã lỗi thời" },
+  evidenceDocTypeUnknown: { en: "Document", vi: "Tài liệu" },
+  evidenceChunkId: { en: "Chunk ID", vi: "Mã đoạn" },
+  openInConfluence: { en: "Open in Confluence", vi: "Mở trong Confluence" },
+  openInDrive: { en: "Open in Drive", vi: "Mở trong Drive" },
+  openInSource: { en: "Open source document", vi: "Mở tài liệu nguồn" },
+  closeInspector: { en: "Close evidence panel", vi: "Đóng bảng minh chứng" },
+  citationKeyboardHint: {
+    en: "Press 1–9 to switch sources · Esc to close",
+    vi: "Nhấn 1–9 để chuyển nguồn · Esc để đóng",
+  },
+  evidenceSelectSource: { en: "View source {index}", vi: "Xem nguồn {index}" },
+  pipelineStepRouting: {
+    en: "Agent Center routing",
+    vi: "Định tuyến Agent Center",
+  },
+  pipelineStepRetrieval: {
+    en: "Per-department retrieval",
+    vi: "Truy xuất theo phòng ban",
+  },
+  pipelineStepGrade: {
+    en: "Grade / relevance check",
+    vi: "Chấm điểm / kiểm tra liên quan",
+  },
+  pipelineStepVerify: {
+    en: "Claim verification",
+    vi: "Xác minh khẳng định",
+  },
+  pipelineStepSynthesis: {
+    en: "Answer synthesis",
+    vi: "Tổng hợp câu trả lời",
+  },
+  pipelineDeptBranches: {
+    en: "Department retrieval branches",
+    vi: "Nhánh truy xuất theo phòng ban",
+  },
+  pipelineComplete: { en: "Processing complete", vi: "Đã xử lý xong" },
+  pipelineProcessedSummary: {
+    en: "Processed in {seconds}s · {count} departments",
+    vi: "Xử lý trong {seconds}s · {count} phòng ban",
+  },
+  "tutorial.welcome.title": {
+    en: "Welcome to Zalopay Knowledge",
+    vi: "Chào mừng đến Tri thức Zalopay",
+  },
+  "tutorial.welcome.description": {
+    en: "This agent answers questions from internal Confluence and Drive docs only — every answer includes traceable sources. This quick tour shows the main workflows.",
+    vi: "Trợ lý chỉ trả lời từ tài liệu Confluence và Drive nội bộ — mỗi câu trả lời đều có nguồn truy vết. Tour ngắn này giới thiệu các luồng chính.",
+  },
+  "tutorial.departments.title": {
+    en: "Choose where to search",
+    vi: "Chọn phạm vi tìm kiếm",
+  },
+  "tutorial.departments.description": {
+    en: "Keep Auto-route to let the agent pick Risk, Grow Enablement, or Bank Partnerships — or pin one or more departments to narrow retrieval.",
+    vi: "Giữ Tự động định tuyến để trợ lý chọn Risk, Grow Enablement hoặc Bank Partnerships — hoặc ghim một hoặc nhiều phòng ban để thu hẹp kết quả.",
+  },
+  "tutorial.examples.title": {
+    en: "Try a starter question",
+    vi: "Thử một câu hỏi mẫu",
+  },
+  "tutorial.examples.description": {
+    en: "Click any example to send it instantly. Good questions mention a process, policy, or runbook (e.g. settlement reconciliation or KYC thresholds).",
+    vi: "Nhấn vào câu mẫu để gửi ngay. Câu hỏi tốt nên nêu quy trình, chính sách hoặc runbook (ví dụ đối soát thanh toán hoặc ngưỡng KYC).",
+  },
+  "tutorial.chatInput.title": {
+    en: "Ask in natural language",
+    vi: "Hỏi bằng ngôn ngữ tự nhiên",
+  },
+  "tutorial.chatInput.description": {
+    en: "Type your question here and press Enter or Send. Shift+Enter adds a new line. Answers stream in with citations you can open in Confluence or Drive.",
+    vi: "Nhập câu hỏi và nhấn Enter hoặc Gửi. Shift+Enter để xuống dòng. Câu trả lời hiển thị kèm trích dẫn mở được trên Confluence hoặc Drive.",
+  },
+  "tutorial.citations.title": {
+    en: "Verify with Sources",
+    vi: "Xác minh qua Nguồn tham khảo",
+  },
+  "tutorial.citations.description": {
+    en: "After each answer, a Sources section lists numbered citations with links, sections, and freshness badges. Always check sources before acting on policy or operational guidance.",
+    vi: "Sau mỗi câu trả lời, mục Nguồn tham khảo liệt kê trích dẫn có số thứ tự, liên kết, mục và nhãn độ mới. Luôn kiểm tra nguồn trước khi áp dụng chính sách hoặc hướng dẫn vận hành.",
+  },
+  "tutorial.navDashboard.title": {
+    en: "Monitor usage & health",
+    vi: "Theo dõi sử dụng & sức khỏe",
+  },
+  "tutorial.navDashboard.description": {
+    en: "Open Dashboard to see query volume, refusal rate, latency, sync status, and recent query history for your team.",
+    vi: "Mở Bảng điều khiển để xem lượng truy vấn, tỷ lệ từ chối, độ trễ, trạng thái đồng bộ và lịch sử truy vấn gần đây.",
+  },
+  "tutorial.dashboardOverview.title": {
+    en: "Usage & sync at a glance",
+    vi: "Sử dụng & đồng bộ trong một màn hình",
+  },
+  "tutorial.dashboardOverview.description": {
+    en: "Track how the agent is used and whether knowledge sources are up to date. Admins can trigger manual sync from Settings when the index is pending.",
+    vi: "Theo dõi cách trợ lý được dùng và tài liệu có cập nhật không. Quản trị viên có thể đồng bộ thủ công từ Cài đặt khi chỉ mục chưa sẵn sàng.",
+  },
+  "tutorial.finish.title": {
+    en: "You're ready to go",
+    vi: "Bạn đã sẵn sàng",
+  },
+  "tutorial.finish.description": {
+    en: "Reopen this tour anytime from Help. Set your role and home department in Settings so answers match your context.",
+    vi: "Mở lại tour bất cứ lúc nào từ Trợ giúp. Đặt vai trò và phòng ban chính trong Cài đặt để câu trả lời phù hợp ngữ cảnh của bạn.",
+  },
+  tutorialHelp: { en: "Help", vi: "Trợ giúp" },
+  tutorialHelpAria: { en: "Help and tutorial", vi: "Trợ giúp và hướng dẫn" },
+  tutorialHelpTitle: { en: "Help & tutorial", vi: "Trợ giúp & hướng dẫn" },
+  tutorialDismiss: {
+    en: "Don't show again on startup",
+    vi: "Không hiện lại khi khởi động",
+  },
+  tutorialNext: { en: "Next", vi: "Tiếp" },
+  tutorialBack: { en: "Back", vi: "Quay lại" },
+  tutorialDone: { en: "Done", vi: "Xong" },
+  tutorialProgress: { en: "{current} / {total}", vi: "{current} / {total}" },
 };
+
+export function syncStateLabel(state: string, locale: Lang): string {
+  const key =
+    state === "running"
+      ? "syncStateRunning"
+      : state === "error"
+        ? "syncStateError"
+        : "syncStateIdle";
+  return t(key, locale);
+}
+
+export function sourceLabel(source: string, locale: Lang): string {
+  if (source === "confluence") return t("sourceConfluence", locale);
+  if (source === "gdrive") return t("sourceGdrive", locale);
+  return source;
+}
 
 export function t(
   key: keyof typeof strings,

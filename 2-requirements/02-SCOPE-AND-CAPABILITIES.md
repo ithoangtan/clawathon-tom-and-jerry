@@ -6,7 +6,7 @@
 |---|---|---|
 | Departments | 3 (Risk, Grow Enablement, Bank Partnerships) — **≈1,000 pages total across 3 departments** | 20 |
 | Sources | Confluence (3 personal spaces) + PDF files on Google Drive (simulating SharePoint) | Confluence (all spaces) + GitLab + SharePoint (PDF store) |
-| Index | FAISS, **pre-built by the sync job and baked into the image / loaded at boot** (≤1,000 pages ⇒ build offline, not per-request) | Hybrid (dense + BM25) per-department index in ZaloPay VPC (Weaviate or pgvector) |
+| Index | FAISS, **pre-built by the sync job and baked into the image / loaded at boot** (≤1,000 pages ⇒ build offline, not per-request) | Hybrid (dense + BM25) per-department index in Zalopay VPC (Weaviate or pgvector) |
 | Sync | Manual trigger; pipeline **architected** for scheduled incremental runs (Phase 2 activation only) | Daily incremental batch + tombstones + weekly reconcile |
 | Networking | Personal Confluence space; networking per ai-stack/agent-base platform defaults (no custom VPC) | Private runtime + private MCP Gateway (VPC peering) |
 | Channels | **Web UI portal** (Chat + Dashboard) + `POST /chat` (test alias) | Teams (mention/DM) + Web UI portal (Chat + Dashboard) + MCP server |
@@ -76,4 +76,4 @@
 
 ## Out of scope (all phases of this spec)
 
-Write actions on any source system; customer-facing deployment; model fine-tuning; non-ZaloPay tenants; real-time (sub-minute) sync; voice channels; automated escalation ticket creation (phase-3 candidate).
+Write actions on any source system; customer-facing deployment; model fine-tuning; non-Zalopay tenants; real-time (sub-minute) sync; voice channels; automated escalation ticket creation (phase-3 candidate).

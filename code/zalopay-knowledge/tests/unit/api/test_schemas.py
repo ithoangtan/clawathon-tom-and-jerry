@@ -98,9 +98,18 @@ class TestCitationModel:
             successor_url="https://example.com/new",
             source_type="pdf",
             page=3,
+            excerpt="Policy excerpt text.",
+            chunk_id="risk-abc123",
         )
         assert cite.page == 3
         assert cite.deprecated is True
+        assert cite.excerpt == "Policy excerpt text."
+        assert cite.chunk_id == "risk-abc123"
+
+    def test_excerpt_and_chunk_id_optional(self) -> None:
+        cite = CitationModel(title="Doc", url="https://example.com")
+        assert cite.excerpt is None
+        assert cite.chunk_id is None
 
 
 class TestConflictAndClarifying:

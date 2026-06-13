@@ -42,7 +42,7 @@ Rejected alternative — 21 runtimes (1 router + 20 departments): AgentBase scal
          Prod source access:                Sync job (separate schedule):
          MCP Gateway (Private) + Policy     Confluence/GitLab/Drive →
          Groups → Confluence/GitLab/Drive   chunk → embed → upsert+tombstone
-         inside ZaloPay VPC (VPC peering)   → index partitions
+         inside Zalopay VPC (VPC peering)   → index partitions
 ```
 
 ## 3. Graph state (carried across nodes, checkpointed)
@@ -66,7 +66,7 @@ Checkpointer: `AgentBaseMemoryEvents` from **`greennode-agent-bridge[langgraph]`
 
 ## 5. Data layer
 
-- **Corpus index** (not the Memory service): partitioned per department. MVP: FAISS index pre-built by the sync job from the 3 department spaces (Risk, Grow Enablement, Bank Partnerships; ≈1,000 pages total) and baked into the image / loaded at boot — never built per-request. Prod: Weaviate or Postgres+pgvector deployed in ZaloPay's VPC, reached privately; hybrid search (dense + BM25); chunk metadata per FR-5.3.
+- **Corpus index** (not the Memory service): partitioned per department. MVP: FAISS index pre-built by the sync job from the 3 department spaces (Risk, Grow Enablement, Bank Partnerships; ≈1,000 pages total) and baked into the image / loaded at boot — never built per-request. Prod: Weaviate or Postgres+pgvector deployed in Zalopay's VPC, reached privately; hybrid search (dense + BM25); chunk metadata per FR-5.3.
 - **Memory service** (`https://agentbase.api.vngcloud.vn/memory/...`): one Memory store; `eventExpiryDuration` 30 days; LTMS: `USER_PREFERENCE` (auto) + `CUSTOM` (response-style extraction prompt). Namespace `/strategies/{memoryStrategyId}/actors/{actorId}`; `actorId` = employee user ID.
 - **Audit/feedback**: append-only log via runtime logs (MVP); prod adds a small Postgres in VPC for feedback rows + audit queries (the only bespoke datastore besides the index).
 

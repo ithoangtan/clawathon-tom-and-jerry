@@ -14,7 +14,7 @@ describe("UserIdentityForm", () => {
     fireEvent.change(userIdInput, { target: { value: "user-saved-99" } });
 
     fireEvent.change(screen.getByLabelText(/Role/i), { target: { value: "pm" } });
-    fireEvent.change(screen.getByLabelText(/Home department/i), { target: { value: "grow_enablement" } });
+    await user.click(screen.getByRole("option", { name: /Grow Enablement/i }));
     fireEvent.change(screen.getByLabelText(/Language/i), { target: { value: "vi" } });
 
     await user.click(screen.getByRole("button", { name: "Save" }));

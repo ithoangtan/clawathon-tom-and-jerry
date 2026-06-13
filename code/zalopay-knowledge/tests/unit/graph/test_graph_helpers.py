@@ -18,6 +18,25 @@ def test_chunk_to_citation_maps_fr2_fields(sample_chunk: Chunk):
     assert cite["lifecycle_state"] == "active"
     assert cite["deprecated"] is False
     assert cite["successor_url"] is None
+    assert cite["chunk_id"] == sample_chunk["chunk_id"]
+    assert cite["excerpt"] == sample_chunk["text"]
+
+
+def test_chunk_to_citation_truncates_long_excerpt():
+    long_text = "word " * 200
+    chunk = Chunk(
+        chunk_id="long-1",
+        department="risk",
+        title="Policy",
+        url="https://example.com/policy",
+        text=long_text,
+        score=0.5,
+    )
+    cite = chunk_to_citation(chunk)
+
+    assert cite["excerpt"] is not None
+    assert len(cite["excerpt"]) <= 400 + 1  # ellipsis char
+    assert cite["excerpt"].endswith("…")
 
 
 def test_chunk_to_citation_flags_deprecated_lifecycle():

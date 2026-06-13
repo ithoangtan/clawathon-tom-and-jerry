@@ -53,7 +53,7 @@ def test_respond_short_circuit_greeting(test_settings: Settings):
     node = make_respond_node(settings=test_settings)
     out = node({"intent": "greeting", "request_language": "en"})
     assert out["status"] == "answered"
-    assert "ZaloPay" in out["answer"]
+    assert "Zalopay" in out["answer"]
     assert out["citations"] == []
     assert out["source_departments"] == []
     assert out["confidence"] == 1.0

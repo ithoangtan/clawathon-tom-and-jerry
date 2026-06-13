@@ -1,19 +1,53 @@
 import type { ReactNode } from "react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { LocaleEffect } from "@/components/layout/LocaleEffect";
+import { TutorialHelpButton } from "@/components/layout/TutorialHelpButton";
+import {
+  Brain,
+  LayoutDashboard,
+  MessageSquare,
+  Plus,
+  Settings,
+  Sparkles,
+} from "@/components/ui/icons";
+import { runBrandPulse, runHeroFloat, runNavStagger, useGSAP } from "@/lib/gsap";
 import { t } from "@/lib/i18n";
 import { classNames } from "@/lib/format";
 import { useHealth } from "@/hooks/useHealth";
 import { useUserStore } from "@/store/userStore";
+import { useSessionStore } from "@/store/sessionStore";
 import { NavLink } from "react-router-dom";
 
+const NAV_ICONS = {
+  "/": MessageSquare,
+  "/dashboard": LayoutDashboard,
+  "/settings": Settings,
+} as const;
+
 function BrandMark() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el) return;
+      const cleanups = [runBrandPulse(el), runHeroFloat(el)];
+      return () => cleanups.forEach((fn) => fn());
+    },
+    { scope: ref },
+  );
+
   return (
     <div
-      className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-accent font-bold text-sm text-white shadow-glow"
+      ref={ref}
+      className="perspective-scene relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-accent text-white shadow-glow"
       aria-hidden
     >
-      <span className="relative z-10">ZP</span>
+      <Brain size="md" className="relative z-10" strokeWidth={2.25} />
+      <Sparkles size="xs" className="absolute -right-0.5 -top-0.5 z-20 text-accent opacity-90" />
       <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand/20 to-accent/20 blur-sm" />
     </div>
   );
@@ -21,7 +55,7 @@ function BrandMark() {
 
 export function Header() {
   const locale = useUserStore((s) => s.locale);
-  const newSession = useUserStore((s) => s.newSession);
+  const requestNewSession = useSessionStore((s) => s.requestNewSession);
   const { health } = useHealth();
 
   const indexReady = health?.index_ready ?? false;
@@ -40,12 +74,13 @@ export function Header() {
               <span className="mx-1.5 text-content-muted" aria-hidden>
                 ·
               </span>
-              <span className="text-gradient-brand font-medium">Knowledge Agent</span>
+              <span className="text-gradient-brand font-medium">{t("knowledgeAgent", locale)}</span>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <LanguageSwitcher className="hidden sm:inline-flex" />
           <Badge tone={indexReady ? "success" : "warning"}>
             <span
               className={classNames(
@@ -56,7 +91,9 @@ export function Header() {
             />
             {indexReady ? t("healthHealthy", locale) : t("healthIndexPending", locale)}
           </Badge>
-          <Button variant="ghost" onClick={newSession} className="hidden sm:inline-flex">
+          <TutorialHelpButton />
+          <Button variant="ghost" onClick={requestNewSession} className="hidden sm:inline-flex">
+            <Plus size="sm" />
             {t("newSession", locale)}
           </Button>
         </div>
@@ -67,31 +104,50 @@ export function Header() {
 
 export function Nav() {
   const locale = useUserStore((s) => s.locale);
+  const navRef = useRef<HTMLDivElement>(null);
 
-  const links = [
+  const links: { to: keyof typeof NAV_ICONS; label: string; end?: boolean }[] = [
     { to: "/", label: t("navChat", locale), end: true },
     { to: "/dashboard", label: t("navDashboard", locale) },
     { to: "/settings", label: t("navSettings", locale) },
   ];
 
+  useGSAP(
+    () => {
+      const pills = navRef.current?.querySelectorAll("[data-nav-pill]");
+      if (!pills?.length) return;
+      return runNavStagger(pills);
+    },
+    { scope: navRef },
+  );
+
   return (
     <nav
       className="relative z-20 border-b border-border glass-panel"
-      aria-label="Main navigation"
+      aria-label={t("navAriaLabel", locale)}
     >
-      <div className="mx-auto flex max-w-6xl gap-1 px-4 py-2 sm:px-6">
-        {links.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            end={link.end}
-            className={({ isActive }) =>
-              classNames("nav-pill", isActive && "nav-pill-active")
-            }
-          >
-            {link.label}
-          </NavLink>
-        ))}
+      <div ref={navRef} className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 sm:px-6">
+        <div className="flex flex-1 gap-1">
+          {links.map((link) => {
+            const NavIcon = NAV_ICONS[link.to];
+            return (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                data-nav-pill
+                data-tour={link.to === "/dashboard" ? "nav-dashboard" : undefined}
+                className={({ isActive }) =>
+                  classNames("nav-pill", isActive && "nav-pill-active")
+                }
+              >
+                <NavIcon size="sm" className="opacity-80" />
+                {link.label}
+              </NavLink>
+            );
+          })}
+        </div>
+        <LanguageSwitcher className="sm:hidden" />
       </div>
     </nav>
   );
@@ -102,6 +158,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden">
+      <LocaleEffect />
       <div className="pointer-events-none fixed inset-0 mesh-bg" aria-hidden />
       <div className="pointer-events-none fixed inset-0 grid-overlay opacity-40" aria-hidden />
 

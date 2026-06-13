@@ -14,6 +14,7 @@ import type { ChatResponse, Department } from "@/lib/types";
 interface AnswerCardProps {
   response: ChatResponse;
   onClarifySelect?: (dept: Department) => void;
+  onCitationClick?: (index: number) => void;
   variant?: "card" | "message";
   streaming?: boolean;
 }
@@ -21,6 +22,7 @@ interface AnswerCardProps {
 export function AnswerCard({
   response,
   onClarifySelect,
+  onCitationClick,
   variant = "card",
   streaming,
 }: AnswerCardProps) {
@@ -92,10 +94,13 @@ export function AnswerCard({
             <AnswerMarkdown
               answer={answer}
               citations={citations}
+              onCitationClick={onCitationClick}
               streaming={streaming}
             />
           </div>
-          {!streaming && <CitationList citations={citations} />}
+          {!streaming && (
+            <CitationList citations={citations} onCitationClick={onCitationClick} />
+          )}
           {!streaming && conflicts && conflicts.length > 0 && (
             <ConflictPanel conflicts={conflicts} />
           )}

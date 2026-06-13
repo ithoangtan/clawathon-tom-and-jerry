@@ -1,3 +1,4 @@
+import { Activity } from "@/components/ui/icons";
 import { HistoryTable, MetricsGrid } from "@/components/dashboard/DashboardPanels";
 import { SyncStatusPanel } from "@/components/dashboard/SyncStatusPanel";
 import { Card } from "@/components/ui/Card";
@@ -12,18 +13,22 @@ export function DashboardPage() {
   const { data, error, loading, refresh } = useDashboard();
 
   return (
-    <div className="page-shell space-y-8 sm:space-y-10">
+    <div className="page-shell space-y-8 sm:space-y-10" data-tour="dashboard-overview">
       <header className="page-header">
         <div className="flex items-start gap-4">
+          <div
+            className="hidden h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-brand-muted text-brand sm:flex"
+            aria-hidden
+          >
+            <Activity size="lg" />
+          </div>
           <div
             className="hidden h-12 w-1 flex-shrink-0 rounded-full bg-gradient-to-b from-brand to-accent sm:block"
             aria-hidden
           />
           <div>
             <h2 className="page-title">{t("dashboardTitle", locale)}</h2>
-            <p className="page-subtitle">
-              Real-time usage metrics, sync health, and query history for your knowledge agent.
-            </p>
+            <p className="page-subtitle">{t("dashboardSubtitle", locale)}</p>
           </div>
         </div>
       </header>

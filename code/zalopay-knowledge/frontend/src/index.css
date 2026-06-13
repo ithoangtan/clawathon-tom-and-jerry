@@ -12,8 +12,9 @@
     --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
     --font-display: var(--font-sans);
 
-    /* Brand — ZaloPay fintech blue + AI teal */
+    /* Brand — Zalopay fintech blue + AI teal */
     --color-brand: #0068ff;
+    --color-brand-rgb: 0 104 255;
     --color-brand-hover: #1a7aff;
     --color-brand-muted: rgba(0, 104, 255, 0.14);
     --color-brand-glow: rgba(0, 104, 255, 0.35);
@@ -323,6 +324,35 @@
     @apply relative z-10 flex items-center justify-center rounded-2xl font-bold text-white;
     background: linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-hover) 50%, var(--color-accent) 100%);
     box-shadow: var(--shadow-glow-brand), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+    transform-style: preserve-3d;
+  }
+
+  .perspective-scene {
+    perspective: 900px;
+    transform-style: preserve-3d;
+  }
+
+  .tilt-card {
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  .hero-3d-ring {
+    border: 1px solid var(--color-border-brand);
+    background: conic-gradient(
+      from 0deg,
+      transparent,
+      var(--color-brand-muted),
+      transparent,
+      var(--color-accent-muted),
+      transparent
+    );
+    transform-style: preserve-3d;
+  }
+
+  .metric-card-3d {
+    transform-style: preserve-3d;
+    will-change: transform;
   }
 
   .chat-prompt-chip {
@@ -403,6 +433,131 @@
   @keyframes shimmer-slide {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(250%); }
+  }
+
+
+  /* ─── Pipeline progress stepper ─── */
+  .pipeline-shell {
+    @apply rounded-2xl rounded-tl-md border px-4 py-3;
+    background: var(--chat-surface);
+    border-color: var(--chat-border);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .pipeline-stepper {
+    @apply m-0 list-none space-y-0 p-0;
+  }
+
+  .pipeline-step {
+    @apply relative;
+  }
+
+  .pipeline-step-row {
+    @apply flex items-start gap-2.5 py-1.5;
+  }
+
+  .pipeline-step-connector {
+    @apply ml-[11px] block w-px;
+    height: 0.65rem;
+    background: var(--color-border-strong);
+  }
+
+  .pipeline-step--done .pipeline-step-connector {
+    background: var(--color-brand);
+    opacity: 0.45;
+  }
+
+  .pipeline-step-icon {
+    @apply mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border;
+  }
+
+  .pipeline-step-icon--pending {
+    @apply border-slate-300 bg-slate-100;
+  }
+
+  .pipeline-step-icon--active {
+    @apply border-border-brand bg-brand-light;
+  }
+
+  .pipeline-step-icon--done {
+    @apply border-brand bg-brand;
+  }
+
+  .pipeline-step-label {
+    @apply text-sm leading-snug;
+  }
+
+  .pipeline-step-timer {
+    @apply text-[11px] text-content-muted;
+  }
+
+  .pipeline-dept-branches {
+    @apply mt-2 flex flex-wrap gap-1.5;
+  }
+
+  .pipeline-dept-chip--active {
+    @apply ring-2 ring-offset-1 rounded-full;
+    --tw-ring-color: var(--color-border-brand);
+  }
+
+  .pipeline-dept-chip--done {
+    opacity: 0.85;
+  }
+
+  .pipeline-collapsed-summary {
+    @apply text-sm text-content-secondary;
+  }
+
+  /* ─── Citation evidence inspector ─── */
+  .citation-inspector-panel,
+  .citation-inspector-sheet {
+    @apply shadow-lg;
+    background: var(--color-bg-glass-strong);
+  }
+
+  .citation-inspector-overlay {
+    animation: fade-in 0.2s ease-out;
+  }
+
+  .citation-inspector-backdrop {
+    animation: fade-in 0.2s ease-out;
+    transition: opacity var(--duration-normal) var(--ease-out-expo);
+  }
+
+  .citation-inspector-sheet {
+    transform: translateY(0);
+    transition: transform var(--duration-normal) var(--ease-out-expo);
+  }
+
+  .citation-inspector-pill {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold transition-colors;
+    border-color: var(--color-border);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-glass);
+  }
+
+  .citation-inspector-pill:hover {
+    border-color: var(--color-border-brand);
+    color: var(--color-brand);
+  }
+
+  .citation-inspector-pill-active {
+    border-color: var(--color-brand);
+    background: var(--color-brand-muted);
+    color: var(--color-brand);
+    box-shadow: var(--shadow-glow-brand);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .citation-inspector-backdrop,
+    .citation-inspector-sheet {
+      transition: none;
+      animation: none;
+    }
+
+    .citation-inspector-overlay {
+      animation: none;
+    }
   }
 
   /* ─── Streaming text ─── */
@@ -494,6 +649,12 @@
     border: 1px solid var(--color-border-brand);
   }
 
+  button.citation-link {
+    cursor: pointer;
+    font: inherit;
+    line-height: inherit;
+  }
+
   .citation-link:hover {
     background: linear-gradient(135deg, var(--color-brand), var(--color-brand-hover));
     color: var(--color-text-inverse);
@@ -531,6 +692,18 @@
     box-shadow: var(--shadow-glow-brand);
   }
 
+  .dept-target-bar {
+    position: relative;
+    z-index: 30;
+    overflow: visible;
+  }
+
+  .dept-target-bar__tags {
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+  }
+
   .dept-chip-interactive {
     @apply transition-transform duration-150;
   }
@@ -538,6 +711,144 @@
   .dept-chip-interactive:hover {
     transform: translateY(-1px);
     filter: brightness(1.05);
+  }
+
+  .dept-target-tag {
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+  }
+
+  .dept-target-tag:hover,
+  .dept-target-tag:focus-within {
+    z-index: 40;
+  }
+
+  .dept-target-tag:focus-within .dept-target-tag-chip {
+    box-shadow: var(--focus-ring);
+  }
+
+  .dept-target-tag-remove {
+    opacity: 0;
+    transform: scale(0.75);
+    pointer-events: none;
+  }
+
+  .dept-target-tag:hover .dept-target-tag-remove,
+  .dept-target-tag:focus-within .dept-target-tag-remove {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
+
+  .dept-tag-tooltip {
+    animation: dept-tooltip-in var(--duration-fast) var(--ease-out-expo);
+  }
+
+  .dept-tag-tooltip--portal {
+    position: fixed;
+    z-index: 100;
+    animation: dept-tooltip-portal-in var(--duration-fast) var(--ease-out-expo);
+  }
+
+  .dept-tag-tooltip--portal.dept-tag-tooltip--top {
+    transform: translate(-50%, -100%);
+  }
+
+  .dept-tag-tooltip--portal.dept-tag-tooltip--bottom {
+    transform: translate(-50%, 0);
+  }
+
+  .dept-tag-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -6px;
+    margin-top: -1px;
+    border: 6px solid transparent;
+    border-top-color: var(--color-border-strong);
+  }
+
+  .dept-tag-tooltip--bottom::after {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: -1px;
+    border-top-color: transparent;
+    border-bottom-color: var(--color-border-strong);
+  }
+
+  .dept-picker-modal {
+    animation: dept-modal-in var(--duration-normal) var(--ease-out-expo);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-strong);
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.55),
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  }
+
+  .dept-picker-overlay {
+    /* Above driver.js overlay (10000) and popover (1e9) */
+    z-index: 1000000001;
+  }
+
+  .dept-picker-backdrop {
+    background: rgba(2, 6, 14, 0.72);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .dept-picker-row {
+    transition: background-color var(--duration-fast) ease;
+  }
+
+  .dept-picker-row:hover {
+    background: rgba(var(--color-brand-rgb), 0.06);
+  }
+
+  .dept-picker-row-main:hover,
+  .dept-picker-row-main:focus-visible {
+    background: rgba(var(--color-brand-rgb), 0.08);
+  }
+
+  .dept-picker-row-expanded {
+    background: var(--color-bg-surface);
+  }
+
+  .dept-picker-quick-add:not(:disabled) {
+    background: var(--color-bg-input);
+  }
+
+  @keyframes dept-tooltip-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 4px);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  }
+
+  @keyframes dept-tooltip-portal-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes dept-modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 
   /* ─── Syntax highlighting ─── */
@@ -589,14 +900,102 @@
     .typing-shimmer::after,
     .streaming-text.is-streaming::after,
     .streaming-shimmer,
-    .typing-dot {
+    .typing-dot,
+    .pipeline-dept-chip--active {
+      animation: none !important;
+      box-shadow: none;
+    }
+
+    .dept-tag-tooltip,
+    .dept-tag-tooltip--portal,
+    .dept-picker-modal {
       animation: none !important;
     }
 
     .citation-link:hover,
-    .dept-chip-interactive:hover {
+    .dept-chip-interactive:hover,
+    .dept-target-tag-remove {
       transform: none;
       filter: none;
     }
+
+    .perspective-scene,
+    .tilt-card,
+    .metric-card-3d,
+    .hero-3d-ring {
+      transform: none !important;
+      will-change: auto;
+    }
   }
+}
+
+/* ─── Onboarding tutorial (driver.js) ─── */
+.driver-popover.zp-tutorial-popover {
+  background: var(--color-bg-glass-strong);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-brand);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-glass), var(--shadow-glow-brand);
+  max-width: min(22rem, calc(100vw - 2rem));
+}
+
+.driver-popover.zp-tutorial-popover .driver-popover-title {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.driver-popover.zp-tutorial-popover .driver-popover-description {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.driver-popover.zp-tutorial-popover .driver-popover-progress-text {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.driver-popover.zp-tutorial-popover button {
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-shadow: none;
+}
+
+.driver-popover.zp-tutorial-popover .driver-popover-next-btn,
+.driver-popover.zp-tutorial-popover .driver-popover-done-btn {
+  background: linear-gradient(135deg, var(--color-brand), var(--color-accent));
+  color: #fff;
+  border: none;
+}
+
+.driver-popover.zp-tutorial-popover .driver-popover-prev-btn,
+.driver-popover.zp-tutorial-popover .driver-popover-close-btn {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.zp-tutorial-dismiss {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.zp-tutorial-dismiss input {
+  accent-color: var(--color-brand);
+}
+
+/* Hide tutorial chrome while department picker is open (backup if z-index alone is insufficient) */
+body.dept-picker-open .driver-overlay,
+body.dept-picker-open .driver-popover {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }

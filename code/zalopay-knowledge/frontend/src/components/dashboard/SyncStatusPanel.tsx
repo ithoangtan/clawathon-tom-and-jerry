@@ -4,7 +4,7 @@ import { FreshnessBadge } from "@/components/ui/FreshnessBadge";
 import { ErrorState } from "@/components/ui/StateViews";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { formatDate, formatFreshnessHours } from "@/lib/format";
-import { t } from "@/lib/i18n";
+import { sourceLabel, syncStateLabel, t } from "@/lib/i18n";
 import { useSyncStatus } from "@/hooks/useSyncStatus";
 import { useUserStore } from "@/store/userStore";
 import type { SourceStatus } from "@/lib/types";
@@ -48,19 +48,14 @@ function SourceCard({ source }: { source: SourceStatus }) {
         ? "danger"
         : "default";
 
-  const label =
-    source.source === "confluence"
-      ? "Confluence"
-      : source.source === "gdrive"
-        ? "Google Drive"
-        : source.source;
+  const label = sourceLabel(source.source, locale);
 
   return (
     <Card role="listitem">
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold text-slate-800">{label}</h3>
         <div className="flex gap-2">
-          <Badge tone={stateTone}>{source.state}</Badge>
+          <Badge tone={stateTone}>{syncStateLabel(source.state, locale)}</Badge>
           <FreshnessBadge
             lastSuccessAt={source.last_success_at}
             freshnessHours={source.freshness_hours}
@@ -81,9 +76,9 @@ function SourceCard({ source }: { source: SourceStatus }) {
 
       {source.last_success_at && (
         <p className="mt-2 text-xs text-slate-500">
-          Last sync: {formatDate(source.last_success_at, locale)}
+          {t("lastSync", locale, { date: formatDate(source.last_success_at, locale) })}
           {source.freshness_hours != null && (
-            <span> · {formatFreshnessHours(source.freshness_hours)}</span>
+            <span> · {formatFreshnessHours(source.freshness_hours, locale)}</span>
           )}
         </p>
       )}

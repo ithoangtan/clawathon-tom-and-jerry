@@ -162,6 +162,8 @@ class TestChatContractSuccess:
             "successor_url",
             "source_type",
             "page",
+            "excerpt",
+            "chunk_id",
         ):
             assert field in cite
 

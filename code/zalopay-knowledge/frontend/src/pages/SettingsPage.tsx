@@ -13,9 +13,7 @@ export function SettingsPage() {
     <div className="page-shell mx-auto max-w-3xl space-y-8">
       <header className="page-header">
         <h2 className="page-title">{t("settingsTitle", locale)}</h2>
-        <p className="page-subtitle">
-          Configure your identity, sync preferences, and runtime environment for grounded answers.
-        </p>
+        <p className="page-subtitle">{t("settingsSubtitle", locale)}</p>
       </header>
 
       <div className="space-y-6">

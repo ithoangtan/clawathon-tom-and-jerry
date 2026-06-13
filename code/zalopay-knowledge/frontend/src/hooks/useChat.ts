@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { api, ApiError, chatStream } from "@/lib/apiClient";
-import { getUserContext } from "@/store/userStore";
+import {
+  applyPipelineEvent,
+  applyPipelineNodeEvent,
+  completePipeline,
+  createInitialPipeline,
+  hidePipeline,
+  type PipelineProgressState,
+} from "@/lib/pipelineSteps";
+import { getUserContext, useUserStore } from "@/store/userStore";
+import { resolveTargetAutoRoute } from "@/lib/sessionThread";
+import { useSessionStore } from "@/store/sessionStore";
 import type { ChatResponse, Department } from "@/lib/types";
 
 export interface ChatMessage {
@@ -66,21 +76,123 @@ async function revealAnswerProgressively(
   });
 }
 
+function resetChatState(
+  setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
+  setTargetDepartments: Dispatch<SetStateAction<Department[]>>,
+  setTargetAutoRoute: Dispatch<SetStateAction<boolean>>,
+  setError: Dispatch<SetStateAction<string | null>>,
+  setLastQuestion: Dispatch<SetStateAction<string | null>>,
+  setInput: Dispatch<SetStateAction<string>>,
+  setPipelineProgress: Dispatch<SetStateAction<PipelineProgressState | null>>,
+) {
+  setMessages([]);
+  setTargetDepartments([]);
+  setTargetAutoRoute(true);
+  setError(null);
+  setLastQuestion(null);
+  setInput("");
+  setPipelineProgress(null);
+}
+
 export function useChat() {
+  const sessionId = useUserStore((s) => s.sessionId);
+  const sessionAction = useSessionStore((s) => s.sessionAction);
+  const saveThread = useSessionStore((s) => s.saveThread);
+  const getThread = useSessionStore((s) => s.getThread);
+  const clearSessionAction = useSessionStore((s) => s.clearSessionAction);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [targetDepartments, setTargetDepartments] = useState<Department[]>([]);
+  const [targetDepartments, setTargetDepartmentsState] = useState<Department[]>([]);
+  const [targetAutoRoute, setTargetAutoRouteState] = useState(true);
   const [loading, setLoading] = useState(false);
   const [streamingStatus, setStreamingStatus] = useState<string | null>(null);
+  const [pipelineProgress, setPipelineProgress] = useState<PipelineProgressState | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [lastQuestion, setLastQuestion] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const hydratedSessionRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (hydratedSessionRef.current === sessionId) return;
+
+    const thread = getThread(sessionId);
+    if (thread) {
+      setMessages(thread.messages);
+      setTargetDepartmentsState(thread.targetDepartments);
+      setTargetAutoRouteState(resolveTargetAutoRoute(thread));
+    } else if (hydratedSessionRef.current !== null) {
+      resetChatState(
+        setMessages,
+        setTargetDepartmentsState,
+        setTargetAutoRouteState,
+        setError,
+        setLastQuestion,
+        setInput,
+        setPipelineProgress,
+      );
+    }
+
+    hydratedSessionRef.current = sessionId;
+  }, [sessionId, getThread]);
+
+  useEffect(() => {
+    if (!sessionAction) return;
+
+    abortRef.current?.abort();
+    const { setSessionId, newSession } = useUserStore.getState();
+
+    if (sessionAction.type === "new") {
+      saveThread(sessionId, messages, targetDepartments, targetAutoRoute);
+      newSession();
+      resetChatState(
+        setMessages,
+        setTargetDepartmentsState,
+        setTargetAutoRouteState,
+        setError,
+        setLastQuestion,
+        setInput,
+        setPipelineProgress,
+      );
+      hydratedSessionRef.current = useUserStore.getState().sessionId;
+    } else {
+      saveThread(sessionId, messages, targetDepartments, targetAutoRoute);
+      const thread = getThread(sessionAction.sessionId);
+      setSessionId(sessionAction.sessionId);
+      setMessages(thread?.messages ?? []);
+      setTargetDepartmentsState(thread?.targetDepartments ?? []);
+      setTargetAutoRouteState(thread ? resolveTargetAutoRoute(thread) : true);
+      setError(null);
+      setLastQuestion(null);
+      setInput("");
+      setPipelineProgress(null);
+      hydratedSessionRef.current = sessionAction.sessionId;
+    }
+
+    clearSessionAction();
+  }, [
+    sessionAction,
+    sessionId,
+    messages,
+    targetDepartments,
+    targetAutoRoute,
+    saveThread,
+    getThread,
+    clearSessionAction,
+  ]);
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+    saveThread(sessionId, messages, targetDepartments, targetAutoRoute);
+  }, [messages, targetDepartments, targetAutoRoute, sessionId, saveThread]);
 
   const appendAssistant = useCallback(
     async (response: ChatResponse, assistantId: string, progressive: boolean) => {
@@ -109,6 +221,7 @@ export function useChat() {
       if (!trimmed || loading) return;
 
       const depts = overrideDepts ?? targetDepartments;
+      const useAutoRoute = overrideDepts === undefined ? targetAutoRoute : false;
       const now = new Date().toISOString();
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -125,12 +238,13 @@ export function useChat() {
       setInput("");
       setLoading(true);
       setStreamingStatus(null);
+      setPipelineProgress(createInitialPipeline());
       setError(null);
       setLastQuestion(trimmed);
 
       const body = {
         question: trimmed,
-        target_departments: depts.length > 0 ? depts : null,
+        target_departments: !useAutoRoute && depts.length > 0 ? depts : null,
       };
       const ctx = getUserContext();
       const assistantId = `assistant-${Date.now()}`;
@@ -138,13 +252,30 @@ export function useChat() {
       try {
         let finalResponse: ChatResponse | null = null;
         let streamError: string | null = null;
+        let sawPipelineEvents = false;
 
         for await (const event of chatStream(body, ctx, {
           signal: controller.signal,
         })) {
-          if (event.event === "node") {
+          if (event.event === "pipeline") {
+            sawPipelineEvents = true;
+            setPipelineProgress((prev) =>
+              applyPipelineEvent(prev ?? createInitialPipeline(), event.data),
+            );
+          } else if (event.event === "node") {
+            if (!sawPipelineEvents) {
+              setPipelineProgress((prev) =>
+                applyPipelineNodeEvent(prev ?? createInitialPipeline(), event.data),
+              );
+            }
+            const stepLabel =
+              typeof event.data.step_label === "string"
+                ? event.data.step_label
+                : undefined;
             const node = event.data.node;
-            if (typeof node === "string") {
+            if (stepLabel) {
+              setStreamingStatus(stepLabel);
+            } else if (typeof node === "string") {
               setStreamingStatus(node);
             }
           } else if (event.event === "error") {
@@ -159,11 +290,19 @@ export function useChat() {
         }
 
         if (streamError) {
+          setPipelineProgress(null);
           setError(streamError);
           return;
         }
 
         if (finalResponse) {
+          setPipelineProgress((prev) =>
+            completePipeline(prev ?? createInitialPipeline(), {
+              departments: finalResponse.source_departments,
+              departmentCount: finalResponse.source_departments.length,
+              totalElapsedMs: prev?.totalElapsedMs,
+            }),
+          );
           setLoading(false);
           setStreamingStatus(null);
           await appendAssistant(finalResponse, assistantId, true);
@@ -179,18 +318,21 @@ export function useChat() {
             streamErr instanceof ApiError
               ? streamErr.detail ?? streamErr.message
               : "Request failed";
+          setPipelineProgress(null);
           setError(message);
           return;
         }
 
         try {
           const response = await api.chat(body, ctx);
+          setPipelineProgress(null);
           setLoading(false);
           setStreamingStatus(null);
           await appendAssistant(response, assistantId, false);
         } catch (e) {
           const message =
             e instanceof ApiError ? e.detail ?? e.message : "Request failed";
+          setPipelineProgress(null);
           setError(message);
         }
       } finally {
@@ -198,7 +340,7 @@ export function useChat() {
         setStreamingStatus(null);
       }
     },
-    [loading, targetDepartments, appendAssistant],
+    [loading, targetDepartments, targetAutoRoute, appendAssistant],
   );
 
   const retryLast = useCallback(() => {
@@ -215,14 +357,36 @@ export function useChat() {
     }
   }, [lastQuestion, sendMessage]);
 
+  const dismissPipelineSummary = useCallback(() => {
+    setPipelineProgress((prev) => (prev ? hidePipeline(prev) : null));
+  }, []);
+
+  const setTargetDepartments = useCallback((departments: Department[]) => {
+    setTargetDepartmentsState(departments);
+    if (departments.length > 0) {
+      setTargetAutoRouteState(false);
+    }
+  }, []);
+
+  const setTargetAutoRoute = useCallback((autoRoute: boolean) => {
+    setTargetAutoRouteState(autoRoute);
+    if (autoRoute) {
+      setTargetDepartmentsState([]);
+    }
+  }, []);
+
   return {
     messages,
     input,
     setInput,
     targetDepartments,
     setTargetDepartments,
+    targetAutoRoute,
+    setTargetAutoRoute,
     loading,
     streamingStatus,
+    pipelineProgress,
+    dismissPipelineSummary,
     error,
     sendMessage,
     retryLast,

@@ -2,7 +2,7 @@ import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
 import { renderWithUser } from "@/test/test-utils";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Citation } from "@/lib/types";
 
 const baseCitation: Citation = {
@@ -70,5 +70,20 @@ describe("MarkdownRenderer", () => {
     renderWithUser(<MarkdownRenderer content={md} citations={[baseCitation]} />);
     const link = screen.getByRole("link", { name: /Citation 1/ });
     expect(link).toHaveAttribute("href", baseCitation.url);
+  });
+
+  it("turns [n] markers into buttons when onCitationClick is set", async () => {
+    const user = userEvent.setup();
+    const onCitationClick = vi.fn();
+    const md = "See policy details [1] for more.";
+    renderWithUser(
+      <MarkdownRenderer
+        content={md}
+        citations={[baseCitation]}
+        onCitationClick={onCitationClick}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /Citation 1/ }));
+    expect(onCitationClick).toHaveBeenCalledWith(1);
   });
 });

@@ -12,8 +12,8 @@ required_inputs:
   - conversation_history
 
 system: |
-  You are ZaloPay's internal knowledge assistant.  Your answers are used by
-  ZaloPay employees to make decisions — accuracy is critical.
+  You are Zalopay's internal knowledge assistant.  Your answers are used by
+  Zalopay employees to make decisions — accuracy is critical.
 
   ## Core constraints (NEVER violate these)
 

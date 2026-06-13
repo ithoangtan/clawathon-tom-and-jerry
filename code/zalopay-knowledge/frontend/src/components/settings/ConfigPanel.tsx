@@ -15,7 +15,7 @@ export function ConfigPanel({ health }: ConfigPanelProps) {
     return (
       <Card>
         <h3 className="font-semibold text-slate-800 mb-2">{t("configPanel", locale)}</h3>
-        <p className="text-sm text-slate-500">No config snapshot available.</p>
+        <p className="text-sm text-slate-500">{t("configEmpty", locale)}</p>
       </Card>
     );
   }
@@ -34,7 +34,9 @@ export function ConfigPanel({ health }: ConfigPanelProps) {
         ))}
       </dl>
       {health?.version && (
-        <p className="mt-4 text-xs text-slate-500">Version {health.version}</p>
+        <p className="mt-4 text-xs text-slate-500">
+          {t("configVersion", locale, { version: health.version })}
+        </p>
       )}
     </Card>
   );

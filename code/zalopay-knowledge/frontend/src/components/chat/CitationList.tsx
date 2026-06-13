@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { StalenessBadge } from "@/components/chat/StalenessBadge";
 import { formatDate } from "@/lib/format";
+import { classNames } from "@/lib/format";
 import { attachHoverLift, useGSAP } from "@/lib/gsap";
 import { t } from "@/lib/i18n";
 import { useUserStore } from "@/store/userStore";
@@ -69,6 +70,7 @@ function CitationCard({
 }) {
   const locale = useUserStore((s) => s.locale);
   const cardRef = useRef<HTMLDivElement>(null);
+  const interactive = Boolean(onClick);
 
   useGSAP(
     () => {
@@ -79,26 +81,49 @@ function CitationCard({
     { scope: cardRef },
   );
 
+  function handleOpen() {
+    onClick?.(index);
+  }
+
+  const titleClass =
+    "font-medium text-brand hover:text-brand-dark line-clamp-2 transition-colors text-left";
+
   return (
     <div ref={cardRef}>
-      <Card padding="sm" className="citation-card-future">
-      <div className="flex gap-3">
-        <span
-          className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-dark text-xs font-bold text-white shadow-sm"
-          aria-hidden
-        >
-          {index}
-        </span>
-        <div className="min-w-0 flex-1">
-          <a
-            href={citation.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-brand hover:text-brand-dark line-clamp-2 transition-colors"
-            onClick={() => onClick?.(index)}
+      <Card
+        padding="sm"
+        className={classNames(
+          "citation-card-future",
+          interactive && "cursor-pointer",
+        )}
+      >
+        <div className="flex gap-3">
+          <span
+            className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-dark text-xs font-bold text-white shadow-sm"
+            aria-hidden
           >
-            {citation.title}
-          </a>
+            {index}
+          </span>
+          <div className="min-w-0 flex-1">
+            {interactive ? (
+              <button
+                type="button"
+                className={titleClass}
+                onClick={handleOpen}
+                aria-label={`${t("evidenceSelectSource", locale, { index })}: ${citation.title}`}
+              >
+                {citation.title}
+              </button>
+            ) : (
+              <a
+                href={citation.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={titleClass}
+              >
+                {citation.title}
+              </a>
+            )}
           <p className="mt-1 truncate text-xs text-slate-400" title={citation.url}>
             {formatCitationUrl(citation.url)}
           </p>

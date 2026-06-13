@@ -12,6 +12,8 @@ export interface MarkdownRendererProps {
   content: string;
   /** When provided, [n] markers in text become citation links. */
   citations?: Citation[];
+  /** Opens the evidence inspector instead of navigating when set. */
+  onCitationClick?: (index: number) => void;
   className?: string;
   streaming?: boolean;
 }
@@ -23,14 +25,19 @@ export interface MarkdownRendererProps {
 export function MarkdownRenderer({
   content,
   citations = [],
+  onCitationClick,
   className,
   streaming,
 }: MarkdownRendererProps) {
   const withCitations = citations.length > 0;
+  const citationOptions = useMemo(
+    () => ({ citations, onCitationClick }),
+    [citations, onCitationClick],
+  );
 
   const components = useMemo<Components>(() => {
     const wrap = (children: ReactNode) =>
-      withCitations ? processCitationChildren(children, citations) : children;
+      withCitations ? processCitationChildren(children, citationOptions) : children;
 
     return {
       h1: ({ children }) => (
@@ -123,7 +130,7 @@ export function MarkdownRenderer({
         return <code>{wrap(children)}</code>;
       },
     };
-  }, [citations, withCitations]);
+  }, [citationOptions, withCitations]);
 
   if (!content.trim()) return null;
 

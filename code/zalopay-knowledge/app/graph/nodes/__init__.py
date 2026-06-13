@@ -1,4 +1,4 @@
-"""Graph node factories for the ZaloPay Knowledge Agent.
+"""Graph node factories for the Zalopay Knowledge Agent.
 
 Each node is built by a ``make_*_node(...)`` factory that closes over its port
 dependencies (LLM, retriever, …) and returns a plain LangGraph node callable.

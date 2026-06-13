@@ -113,6 +113,27 @@ def _first_json_span(text: str) -> str | None:
     return None
 
 
+# ── Citation excerpts (FR-2 evidence inspector) ───────────────────────────────
+
+EXCERPT_MAX_LEN = 400
+
+
+def excerpt_from_text(text: str | None, *, max_len: int = EXCERPT_MAX_LEN) -> str | None:
+    """Return a trimmed chunk excerpt for citation evidence display."""
+    if not text:
+        return None
+    cleaned = text.strip()
+    if not cleaned:
+        return None
+    if len(cleaned) <= max_len:
+        return cleaned
+    truncated = cleaned[:max_len]
+    last_space = truncated.rfind(" ")
+    if last_space > int(max_len * 0.6):
+        truncated = truncated[:last_space]
+    return truncated.rstrip() + "…"
+
+
 # ── Chunk rendering ─────────────────────────────────────────────────────────────
 
 def render_chunks(chunks: list[Chunk], *, start: int = 1) -> str:
@@ -141,7 +162,7 @@ def render_chunks(chunks: list[Chunk], *, start: int = 1) -> str:
 def chunk_to_citation(chunk: Chunk) -> Citation:
     """Project a retrieved :class:`Chunk` into a response :class:`Citation`."""
     lifecycle = chunk.get("lifecycle_state") or "active"
-    return Citation(
+    cite = Citation(
         title=chunk.get("title", "(untitled)"),
         url=chunk.get("url", ""),
         section=chunk.get("section"),
@@ -152,6 +173,13 @@ def chunk_to_citation(chunk: Chunk) -> Citation:
         source_type=chunk.get("source_type"),
         page=chunk.get("page"),
     )
+    excerpt = excerpt_from_text(chunk.get("text"))
+    if excerpt:
+        cite["excerpt"] = excerpt
+    chunk_id = chunk.get("chunk_id")
+    if chunk_id:
+        cite["chunk_id"] = chunk_id
+    return cite
 
 
 # ── Claim extraction (for the verify node) ──────────────────────────────────────

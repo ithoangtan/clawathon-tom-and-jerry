@@ -220,3 +220,118 @@ export function runHeroOrb(el: HTMLElement): () => void {
     return () => tween.kill();
   });
 }
+
+/** Gentle float for hero core / brand mark. */
+export function runHeroFloat(el: HTMLElement): () => void {
+  return withReducedMotion((reduceMotion) => {
+    if (reduceMotion) return;
+    const tween = gsap.to(el, {
+      y: -6,
+      duration: 2.8,
+      ease: CHAT_EASE.glow,
+      repeat: -1,
+      yoyo: true,
+    });
+    return () => tween.kill();
+  });
+}
+
+/** Staggered nav pill entrance on shell load. */
+export function runNavStagger(elements: NodeListOf<Element> | Element[]): () => void {
+  return withReducedMotion((reduceMotion) => {
+    if (reduceMotion) {
+      gsap.set(elements, { opacity: 1, y: 0 });
+      return;
+    }
+    gsap.from(elements, {
+      opacity: 0,
+      y: 10,
+      duration: CHAT_DURATION.micro,
+      ease: CHAT_EASE.enter,
+      stagger: 0.06,
+    });
+  });
+}
+
+/** Subtle brand mark glow pulse in header. */
+export function runBrandPulse(el: HTMLElement): () => void {
+  return withReducedMotion((reduceMotion) => {
+    if (reduceMotion) return;
+    const tween = gsap.to(el, {
+      boxShadow: "0 0 28px rgba(0, 104, 255, 0.45), 0 0 0 1px rgba(0, 201, 183, 0.2)",
+      duration: 2.2,
+      ease: CHAT_EASE.glow,
+      repeat: -1,
+      yoyo: true,
+    });
+    return () => tween.kill();
+  });
+}
+
+/** Mouse-follow 3D tilt for metric cards and glass panels. */
+export function attachPerspectiveTilt(
+  el: HTMLElement,
+  options?: { maxTilt?: number },
+): () => void {
+  const maxTilt = options?.maxTilt ?? 7;
+
+  return withReducedMotion((reduceMotion) => {
+    if (reduceMotion) return;
+
+    gsap.set(el, { transformPerspective: 900, transformStyle: "preserve-3d" });
+
+    const onMove = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      gsap.to(el, {
+        rotationY: x * maxTilt * 2,
+        rotationX: -y * maxTilt * 2,
+        duration: 0.35,
+        ease: CHAT_EASE.micro,
+        overwrite: "auto",
+      });
+    };
+
+    const onLeave = () => {
+      gsap.to(el, {
+        rotationY: 0,
+        rotationX: 0,
+        duration: 0.55,
+        ease: CHAT_EASE.enter,
+        overwrite: "auto",
+      });
+    };
+
+    el.addEventListener("mousemove", onMove);
+    el.addEventListener("mouseleave", onLeave);
+
+    return () => {
+      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mouseleave", onLeave);
+      gsap.set(el, { rotationY: 0, rotationX: 0 });
+    };
+  });
+}
+
+/** Layered 3D depth float for hero orb rings. */
+export function runHero3DDepth(layers: Element[]): () => void {
+  return withReducedMotion((reduceMotion) => {
+    if (reduceMotion || layers.length === 0) return;
+
+    const tweens = layers.map((layer, i) =>
+      gsap.to(layer, {
+        z: (i + 1) * 8,
+        y: i % 2 === 0 ? -4 : 4,
+        duration: 3 + i * 0.8,
+        ease: CHAT_EASE.glow,
+        repeat: -1,
+        yoyo: true,
+      }),
+    );
+
+    return () => {
+      tweens.forEach((tween) => tween.kill());
+    };
+  });
+}

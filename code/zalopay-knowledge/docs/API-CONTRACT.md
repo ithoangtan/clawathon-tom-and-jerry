@@ -1,4 +1,4 @@
-# API Contract — ZaloPay Knowledge Agent
+# API Contract — Zalopay Knowledge Agent
 
 **Version:** 0.1.0  
 **Single source of truth for the FE↔BE handshake.**  
@@ -117,7 +117,9 @@ grounded answer with citations.
       "deprecated": false,
       "successor_url": null,
       "source_type": "confluence",
-      "page": null
+      "page": null,
+      "excerpt": "Escalation Level 1 requires manager approval within 24 hours when…",
+      "chunk_id": "risk-abc12345-deadbeef"
     },
     {
       "title": "Incident Response Runbook.pdf",
@@ -174,6 +176,8 @@ grounded answer with citations.
 | `successor_url` | `string \| null` | Link to replacement doc (deprecated only) |
 | `source_type` | `string \| null` | `"confluence"` \| `"pdf"` |
 | `page` | `int \| null` | PDF page number (1-indexed) |
+| `excerpt` | `string \| null` | Optional chunk text snippet (~400 chars) for evidence inspection |
+| `chunk_id` | `string \| null` | Optional stable chunk id from retrieval |
 
 **`Conflict` shape:**
 
@@ -211,6 +215,56 @@ grounded answer with citations.
 | `400` | `{"detail": "Missing required header: ..."}` | Missing User-Id or Session-Id header |
 | `408` | `{"detail": "Request timeout"}` | Exceeded `GRAPH_BUDGET_S` |
 | `503` | `{"detail": "Knowledge base not ready — please sync first"}` | No FAISS index built yet |
+
+---
+
+### `POST /chat/stream`
+
+**Streaming chat endpoint (SSE).** Same request body and headers as `POST /chat`.
+Emits Server-Sent Events as JSON lines (`data: {...}\n\n`).
+
+**Event envelope:**
+
+```json
+{ "event": "start" | "node" | "done" | "error", "data": { ... } }
+```
+
+| Event | `data` shape | Description |
+|---|---|---|
+| `start` | `{ "question": string }` | Stream opened; echoes the question |
+| `node` | `StreamNodeEvent` | LangGraph node completed (pipeline timeline) |
+| `done` | `ChatResponse` | Terminal answer (same shape as `POST /chat`) |
+| `error` | `{ "detail": string }` | Fatal stream error |
+
+**`StreamNodeEvent` shape (backward compatible):**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `node` | `string` | **Yes** | Raw LangGraph node name (e.g. `router`, `dept_subgraph`) |
+| `step_key` | `string` | No | Stable step id for UI timeline (e.g. `retrieve`, `reconcile`) |
+| `step_label` | `string` | No | Human-readable step label |
+| `departments` | `Department[]` | No | Departments being queried when known |
+| `elapsed_ms` | `int` | No | Milliseconds since stream start |
+
+Example `node` event:
+
+```json
+{
+  "event": "node",
+  "data": {
+    "node": "dept_subgraph",
+    "step_key": "retrieve",
+    "step_label": "Searching internal documents",
+    "departments": ["risk", "grow_enablement"],
+    "elapsed_ms": 842
+  }
+}
+```
+
+Existing clients may continue to read only `data.node`; new fields are optional.
+
+**Error responses:** same as `POST /chat` for HTTP-level failures (400, 503).
+Stream-level failures use the `error` SSE event.
 
 ---
 

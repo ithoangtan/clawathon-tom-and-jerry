@@ -1,4 +1,4 @@
-# ZaloPay Knowledge Agent — multi-stage image (AgentBase-compatible)
+# Zalopay Knowledge Agent — multi-stage image (AgentBase-compatible)
 #
 # Stage 1: build the React SPA into frontend/dist
 # Stage 2: Python 3.11 runtime with FAISS + local embeddings + FastAPI on :8080

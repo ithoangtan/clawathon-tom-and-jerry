@@ -22,7 +22,7 @@ Skills used (all ten): `agentbase-wizard` (lifecycle driver), `agentbase` (refer
 | LLM client | OpenAI-compatible client → MaaS | One client, two model tiers |
 | Embeddings | Multilingual model (e.g. `multilingual-e5-small` class) — local in MVP; served in VPC at prod scale | Corpus is VI+EN |
 | Index (MVP) | FAISS in-process | Pre-built from the 3 dept spaces (Risk, Grow Enablement, Bank Partnerships; ≈1,000 pages total), baked into image / loaded at boot |
-| Index (Prod) | Weaviate **or** Postgres+pgvector in ZaloPay VPC | Hybrid dense+BM25; per-dept partitions/collections |
+| Index (Prod) | Weaviate **or** Postgres+pgvector in Zalopay VPC | Hybrid dense+BM25; per-dept partitions/collections |
 | HTTP | SDK app (FastAPI-compatible additional routes): Web UI portal (Chat + Dashboard), `/chat`, `/feedback`; `/webhooks/teams` in Phase 2 | Bind `0.0.0.0:8080` |
 | Tests | pytest + contract tests from `/agentbase-wizard test` | |
 
@@ -41,7 +41,7 @@ Endpoint: `https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1` (`LLM_BASE_URL`),
 | System | Phase | Access path | Auth (stored in Agent Identity) |
 |---|---|---|---|
 | Confluence (source of truth) | 1 (3 personal spaces) / 2 (all) | MVP: REST v2 direct over the personal Confluence instance. Prod: via MCP Gateway route into VPC | Service-account bearer token (apikey credential) |
-| Microsoft Teams | 2 (webhook + full bot) | Webhook route on the runtime; Bot Framework registration on ZaloPay tenant | Bot app ID + secret (apikey credential); webhook signature verification |
+| Microsoft Teams | 2 (webhook + full bot) | Webhook route on the runtime; Bot Framework registration on Zalopay tenant | Bot app ID + secret (apikey credential); webhook signature verification |
 | GitLab | 2 | MCP Gateway route; index README/docs/comments via sync job | Project access token |
 | SharePoint | 2 | MCP Gateway route; OAuth2 (2LO admin-granted); document text extraction in sync job | OAuth2 credential on identity |
 | PDF stores | 1 (Google Drive, SharePoint simulation) / 2 (SharePoint, full) | Sync-job extraction (pypdf/OCR) → same chunk pipeline; citation = file name + page | Per-store credential on identity |
