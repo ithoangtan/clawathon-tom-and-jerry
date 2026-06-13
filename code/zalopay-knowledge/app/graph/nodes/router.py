@@ -20,7 +20,6 @@ User-pinned departments bypass the LLM and the confidence gate entirely.
 import logging
 from typing import Callable
 
-from app.common.access import ACCESS_DENIED_ERROR, access_denied_message
 from app.common.departments import department_catalog_text, iter_keys
 from app.config import Settings, get_settings
 from app.graph.nodes._helpers import budget_exceeded, parse_json_response
@@ -109,15 +108,6 @@ def make_router_node(
         ]
         targets = [d for d in raw_targets if d in allowed]
 
-        # Router classified to department(s) the user cannot access — refuse, no leakage.
-        if raw_targets and not targets and intent not in SHORT_CIRCUIT_INTENTS:
-            logger.info(
-                "Access denied: routed targets %s not in allowed %s",
-                raw_targets,
-                sorted(allowed),
-            )
-            return _access_denied_route(lang, allowed)
-
         # ── Path 2: short-circuit intents (no retrieval needed) ───────────────
         if intent in SHORT_CIRCUIT_INTENTS:
             return {
@@ -184,24 +174,8 @@ def _build_messages(
     ]
 
 
-def _access_denied_route(lang: str, allowed: set[str] | None = None) -> dict:
-    """Terminal refusal when routing targets departments outside the allowlist."""
-    dept_keys = list(allowed) if allowed else None
-    return {
-        "intent": "access_denied",
-        "target_departments": [],
-        "routing_confidence": 0.0,
-        "clarify_question": None,
-        "status": "refused",
-        "answer": access_denied_message(lang, dept_keys),
-        "errors": [ACCESS_DENIED_ERROR],
-    }
-
-
 def _fallback_route(allowed: set[str], *, reason: str, lang: str = "en") -> dict:
     """Fan out to every allowed department when the router cannot classify."""
-    if not allowed:
-        return _access_denied_route(lang, allowed)
     return {
         "intent": "unclear",
         "target_departments": list(allowed),

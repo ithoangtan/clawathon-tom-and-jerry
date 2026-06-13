@@ -147,7 +147,7 @@ class GraphState(TypedDict, total=False):
     """Detected request language: ``"en"`` or ``"vi"``."""
 
     allowed_departments: list[str]
-    """Departments this user/role is permitted to query (derived from ROLE_DEPT_ACCESS)."""
+    """Departments to fan out to — always all departments (knowledge is open)."""
 
     # ── Input ────────────────────────────────────────────────────────────────
     question: str

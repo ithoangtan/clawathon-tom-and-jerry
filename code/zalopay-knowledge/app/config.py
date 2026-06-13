@@ -7,7 +7,6 @@ strong types.  Import ``get_settings()`` everywhere — never read ``os.environ`
 directly in application code.
 """
 
-import json
 import logging
 from functools import lru_cache
 from typing import Any
@@ -15,7 +14,7 @@ from typing import Any
 from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.common.departments import ROLES, DepartmentKey
+from app.common.departments import DepartmentKey
 
 
 class Settings(BaseSettings):
@@ -220,17 +219,6 @@ class Settings(BaseSettings):
         ),
     )
 
-    # ── Access control (FR-7.2) ───────────────────────────────────────────────
-
-    role_dept_access_json: str = Field(
-        default="",
-        validation_alias="ROLE_DEPT_ACCESS",
-        description=(
-            "JSON map of role → list of department keys the role may query. "
-            "When empty, a restrictive MVP demo default is used (business cannot access risk)."
-        ),
-    )
-
     # ── Computed properties ───────────────────────────────────────────────────
 
     @computed_field  # type: ignore[misc]
@@ -251,24 +239,11 @@ class Settings(BaseSettings):
         check ``if dept_key in settings.confluence_space_map`` to guard sync.
         """
         raw: dict[str, str] = {
-            DepartmentKey.RISK: self.confluence_space_risk,
-            DepartmentKey.GROW_ENABLEMENT: self.confluence_space_grow,
-            DepartmentKey.BANK_PARTNERSHIPS: self.confluence_space_bank,
+            DepartmentKey.RISK.value: self.confluence_space_risk,
+            DepartmentKey.GROW_ENABLEMENT.value: self.confluence_space_grow,
+            DepartmentKey.BANK_PARTNERSHIPS.value: self.confluence_space_bank,
         }
         return {k: v for k, v in raw.items() if v}
-
-    @computed_field  # type: ignore[misc]
-    @property
-    def role_dept_access(self) -> dict[str, list[str]]:
-        """Which departments each role may query (FR-7.2).
-
-        Uses ``ROLE_DEPT_ACCESS`` when set; otherwise the MVP demo default
-        restricts ``business`` from ``risk`` so access denial can be demonstrated.
-        """
-        raw = (self.role_dept_access_json or "").strip()
-        if raw:
-            return _parse_role_dept_access(raw)
-        return _default_role_dept_access()
 
     @computed_field  # type: ignore[misc]
     @property
@@ -313,13 +288,6 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
-    def _validate_role_dept_access_json(self) -> "Settings":
-        """Fail fast when ROLE_DEPT_ACCESS is present but invalid."""
-        if (self.role_dept_access_json or "").strip():
-            _parse_role_dept_access(self.role_dept_access_json)
-        return self
-
-    @model_validator(mode="after")
     def _warn_missing_models(self) -> "Settings":
         """Emit a warning if LLM model ids are not configured.
 
@@ -341,56 +309,16 @@ class Settings(BaseSettings):
                 "GATEWAY_TRUST_SECRET is not set — production should use HMAC "
                 "gateway trust instead of Gateway-Verified marker alone"
             )
+        for env_var, value in (
+            ("CONFLUENCE_SPACE_RISK", self.confluence_space_risk),
+            ("CONFLUENCE_SPACE_GROW", self.confluence_space_grow),
+            ("CONFLUENCE_SPACE_BANK", self.confluence_space_bank),
+        ):
+            if not value:
+                logger.warning("%s is not set — Confluence sync for that department will be skipped", env_var)
         return self
 
 
-_ALL_DEPARTMENTS: list[str] = [
-    DepartmentKey.RISK,
-    DepartmentKey.GROW_ENABLEMENT,
-    DepartmentKey.BANK_PARTNERSHIPS,
-]
-
-
-def _default_role_dept_access() -> dict[str, list[str]]:
-    """MVP demo RBAC: ``business`` may not query Risk; other roles get full access."""
-    non_risk = [
-        DepartmentKey.GROW_ENABLEMENT,
-        DepartmentKey.BANK_PARTNERSHIPS,
-    ]
-    access: dict[str, list[str]] = {role: list(_ALL_DEPARTMENTS) for role in ROLES}
-    access["business"] = list(non_risk)
-    return access
-
-
-def _parse_role_dept_access(raw: str) -> dict[str, list[str]]:
-    """Parse and validate ``ROLE_DEPT_ACCESS`` JSON."""
-    logger = logging.getLogger(__name__)
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"ROLE_DEPT_ACCESS is not valid JSON: {exc}") from exc
-
-    if not isinstance(parsed, dict):
-        raise ValueError("ROLE_DEPT_ACCESS must be a JSON object mapping role → [departments]")
-
-    valid_keys = {d.value for d in DepartmentKey}
-    normalized: dict[str, list[str]] = {}
-    for role, depts in parsed.items():
-        if not isinstance(role, str):
-            raise ValueError("ROLE_DEPT_ACCESS role keys must be strings")
-        if not isinstance(depts, list):
-            raise ValueError(f"ROLE_DEPT_ACCESS[{role!r}] must be a list of department keys")
-        cleaned: list[str] = []
-        for dept in depts:
-            if not isinstance(dept, str) or dept not in valid_keys:
-                raise ValueError(
-                    f"ROLE_DEPT_ACCESS[{role!r}] contains invalid department {dept!r}; "
-                    f"valid keys: {sorted(valid_keys)}"
-                )
-            if dept not in cleaned:
-                cleaned.append(dept)
-        normalized[role] = cleaned
-    return normalized
 
 
 @lru_cache(maxsize=1)

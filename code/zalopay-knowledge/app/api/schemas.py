@@ -24,7 +24,7 @@ from pydantic import BaseModel as _Base
 Department = Literal["risk", "grow_enablement", "bank_partnerships"]
 Role = Literal["engineer", "pm", "ops", "risk", "business"]
 AnswerStatus = Literal["answered", "refused", "partial"]
-RefusalReason = Literal["access_denied", "out_of_scope"]
+RefusalReason = Literal["out_of_scope"]
 Lang = Literal["en", "vi"]
 
 

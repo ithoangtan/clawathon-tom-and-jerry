@@ -78,8 +78,6 @@ def _to_citation_model(c: dict | CitationModel) -> CitationModel:
 def _refusal_reason(state: dict[str, Any]) -> str | None:
     """Map terminal graph state to a structured refusal reason for the UI."""
     errors = list(state.get("errors") or [])
-    if "access_denied" in errors:
-        return "access_denied"
     intent = state.get("intent", "")
     if intent in OUT_OF_SCOPE_INTENTS:
         return "out_of_scope"
