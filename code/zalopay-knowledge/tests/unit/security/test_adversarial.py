@@ -178,7 +178,15 @@ class TestEmptyIndexRefusal:
     def client(self) -> TestClient:
         return TestClient(create_app())
 
-    def test_api_returns_503_when_index_not_ready(self, client: TestClient) -> None:
+    def test_api_returns_503_when_index_not_ready(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        mock_retriever = MagicMock()
+        mock_retriever.is_ready.return_value = False
+        mock_deps = MagicMock()
+        mock_deps.retriever = mock_retriever
+        monkeypatch.setattr("app.api.routes.get_deps", lambda: mock_deps)
+
         resp = client.post(
             "/chat",
             json={"question": "What is the escalation process?"},

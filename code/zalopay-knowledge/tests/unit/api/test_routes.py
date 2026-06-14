@@ -46,7 +46,15 @@ class TestChatRoute:
         resp = client.post("/chat", json={"question": ""}, headers=AUTH_HEADERS)
         assert resp.status_code == 422
 
-    def test_chat_503_when_index_not_ready(self, client: TestClient) -> None:
+    def test_chat_503_when_index_not_ready(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        mock_retriever = MagicMock()
+        mock_retriever.is_ready.return_value = False
+        mock_deps = MagicMock()
+        mock_deps.retriever = mock_retriever
+        monkeypatch.setattr("app.api.routes.get_deps", lambda: mock_deps)
+
         resp = client.post(
             "/chat",
             json={"question": "What is the escalation process?"},
@@ -148,7 +156,15 @@ class TestChatStreamRoute:
         assert '"event": "done"' in body
         assert sample_chat_response.feedback_id in body
 
-    def test_chat_stream_503_when_index_not_ready(self, client: TestClient) -> None:
+    def test_chat_stream_503_when_index_not_ready(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        mock_retriever = MagicMock()
+        mock_retriever.is_ready.return_value = False
+        mock_deps = MagicMock()
+        mock_deps.retriever = mock_retriever
+        monkeypatch.setattr("app.api.routes.get_deps", lambda: mock_deps)
+
         resp = client.post(
             "/chat/stream",
             json={"question": "hello"},

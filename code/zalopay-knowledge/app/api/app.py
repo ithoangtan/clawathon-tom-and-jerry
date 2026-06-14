@@ -27,8 +27,35 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 
+async def _warmup_embedder() -> None:
+    """Pre-load the embedding model in a background thread.
+
+    bge-m3 takes ~250s on cold CPU; running this at startup ensures the first
+    real chat query doesn't hit the GRAPH_BUDGET_S=240s deadline before the
+    model is loaded.  We don't block server startup — the server accepts health
+    probes while warmup runs.  The first /chat that arrives during warmup will
+    block on the model's _load_lock until warmup completes, which is correct.
+    """
+    import asyncio
+
+    from app.adapters.deps import get_deps
+
+    deps = get_deps()
+    embedder = getattr(deps.retriever, "_embedder", None)
+    if embedder is None:
+        return
+    loop = asyncio.get_event_loop()
+    try:
+        await loop.run_in_executor(None, lambda: embedder.encode_query("warmup"))
+        logger.info("Embedding model warmed up")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Embedding warmup failed — model loads on first query: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio
+
     setup_logging()
     cfg = get_settings()
     logger.info("Starting zalopay-knowledge v%s (env=%s)", cfg.app_version, cfg.app_env)
@@ -38,6 +65,10 @@ async def lifespan(app: FastAPI):
     get_deps()
     get_audit_store().ensure_schema()
     get_feedback_store().ensure_schema()
+
+    # Warm up embedding model in background — avoids cold-start timeout on first query
+    asyncio.create_task(_warmup_embedder())
+
     yield
     logger.info("Shutting down")
 

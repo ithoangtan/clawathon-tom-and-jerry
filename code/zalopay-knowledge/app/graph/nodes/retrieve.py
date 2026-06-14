@@ -27,25 +27,70 @@ logger = logging.getLogger(__name__)
 _TECHNICAL_RE = re.compile(
     r"\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b"
     r"|/api/"
-    r"|\b(MySQL|PostgreSQL|MariaDB|SQLite|MongoDB|Redis)\b",
+    r"|\b(MySQL|PostgreSQL|MariaDB|SQLite|MongoDB|Redis)\b"
+    # natural-language technical intent signals (EN + VI)
+    r"|\btech[ -]?stack\b"
+    r"|\btechnology[ -]?stack\b"
+    r"|\b(database|db schema|data model)\b"
+    r"|\b(API|endpoint|endpoints)\b"
+    r"|\b(architecture|kiến[ -]?trúc|công[ -]?nghệ|kỹ[ -]?thuật)\b"
+    r"|\b(framework|library|thư[ -]?viện)\b",
     re.IGNORECASE,
 )
 _VERSION_RE = re.compile(r"/v\d+")
 _BRACE_RE = re.compile(r"[{}]")
 _SLASH_SPLIT_RE = re.compile(r"[/\-_]")
 
+# Extra terms appended when the query signals tech-stack / DB / API discovery
+# but doesn't name specific values — improves BM25 recall against doc sections
+# that use concrete names (MySQL, Spring, /api/v1/...).
+_TECHSTACK_BOOST = "MySQL PostgreSQL Spring Java database API endpoint architecture"
+_API_BOOST = "POST GET endpoint /api/ spin campaign"
+_TECHSTACK_INTENT_RE = re.compile(
+    r"\b(tech[ -]?stack|technology|kiến[ -]?trúc|công[ -]?nghệ|architecture|framework)\b",
+    re.IGNORECASE,
+)
+_DB_INTENT_RE = re.compile(
+    r"\b(database|db|MySQL|PostgreSQL|MariaDB|SQLite|MongoDB|Redis|data[ -]?model|schema)\b",
+    re.IGNORECASE,
+)
+_API_INTENT_RE = re.compile(
+    r"\b(API|endpoint|endpoints|spin|tích[ -]?hợp|integration)\b",
+    re.IGNORECASE,
+)
+
 
 def _expand_technical_query(query: str) -> str | None:
-    """Return a natural-language alternative for technical API/DB queries, or None."""
+    """Return an enriched alternative query for technical API/DB/stack questions.
+
+    For URL-like queries (containing slashes, HTTP verbs, etc.) extracts natural
+    tokens as before.  For natural-language tech discovery questions (e.g. "tech
+    stack gì", "database là gì", "API endpoint nào") appends domain-specific boost
+    terms so BM25 can surface chunks that name concrete values like MySQL or /api/.
+    """
     if not _TECHNICAL_RE.search(query):
         return None
-    tokens: list[str] = []
-    for part in _SLASH_SPLIT_RE.split(_VERSION_RE.sub("", query)):
-        part = _BRACE_RE.sub("", part).strip()
-        if part and not re.fullmatch(r"v?\d+", part):
-            tokens.append(part)
-    natural = " ".join(dict.fromkeys(tokens))
-    return natural if natural and natural.lower() != query.lower() else None
+
+    # URL/code-like query: extract natural tokens from path segments
+    if "/api/" in query.lower() or re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\b", query, re.I):
+        tokens: list[str] = []
+        for part in _SLASH_SPLIT_RE.split(_VERSION_RE.sub("", query)):
+            part = _BRACE_RE.sub("", part).strip()
+            if part and not re.fullmatch(r"v?\d+", part):
+                tokens.append(part)
+        natural = " ".join(dict.fromkeys(tokens))
+        return natural if natural and natural.lower() != query.lower() else None
+
+    # Natural-language discovery query: boost with domain terms
+    boosts: list[str] = []
+    if _TECHSTACK_INTENT_RE.search(query) or _DB_INTENT_RE.search(query):
+        boosts.append(_TECHSTACK_BOOST)
+    if _API_INTENT_RE.search(query):
+        boosts.append(_API_BOOST)
+    if not boosts:
+        return None
+    expanded = f"{query} {' '.join(boosts)}"
+    return expanded
 
 
 def make_retrieve_node(

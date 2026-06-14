@@ -32,6 +32,15 @@ const apiProxy = {
   },
 };
 
+// Routes that are BOTH a React client-route (SPA page) AND an API endpoint.
+// GET requests must reach the SPA (index.html); only POST/etc go to the backend.
+const spaApiProxy = {
+  ...apiProxy,
+  bypass: (req: IncomingMessage) => {
+    if (req.method === "GET") return req.url ?? "/";
+  },
+};
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -43,7 +52,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/health": apiProxy,
-      "/chat": apiProxy,
+      "/chat": spaApiProxy,
       "/invocations": apiProxy,
       "/feedback": apiProxy,
       "/sync": apiProxy,
