@@ -381,8 +381,8 @@ const strings: Strings = {
     vi: "Chọn phạm vi tìm kiếm",
   },
   "tutorial.departments.description": {
-    en: "Keep Auto-route to let the agent pick Risk, Grow Enablement, or Bank Partnerships — or pin one or more departments to narrow retrieval.",
-    vi: "Giữ Tự động định tuyến để trợ lý chọn Risk, Grow Enablement hoặc Bank Partnerships — hoặc ghim một hoặc nhiều phòng ban để thu hẹp kết quả.",
+    en: "Keep Auto-route to let the agent pick Risk, Growth Enablement, or Bank Partnerships — or pin one or more departments to narrow retrieval.",
+    vi: "Giữ Tự động định tuyến để trợ lý chọn Risk, Growth Enablement hoặc Bank Partnerships — hoặc ghim một hoặc nhiều phòng ban để thu hẹp kết quả.",
   },
   "tutorial.examples.title": {
     en: "Try a starter question",
@@ -446,6 +446,30 @@ const strings: Strings = {
   confidenceHigh: { en: "High", vi: "Cao" },
   confidenceMedium: { en: "Medium", vi: "Trung bình" },
   confidenceLow: { en: "Low", vi: "Thấp" },
+  tooltipStatusAnswered: {
+    en: "The question was fully answered from indexed documents.",
+    vi: "Câu hỏi đã được trả lời đầy đủ từ tài liệu đã lập chỉ mục.",
+  },
+  tooltipStatusPartial: {
+    en: "Some departments had no relevant documentation — answer may be incomplete.",
+    vi: "Một số phòng ban không có tài liệu liên quan — câu trả lời có thể chưa đầy đủ.",
+  },
+  tooltipStatusClarify: {
+    en: "Multiple departments could apply. Select one to get a targeted answer.",
+    vi: "Câu hỏi liên quan đến nhiều phòng ban. Chọn một phòng ban để nhận câu trả lời chính xác hơn.",
+  },
+  tooltipStatusRefused: {
+    en: "No relevant content found in the indexed documentation.",
+    vi: "Không tìm thấy nội dung liên quan trong tài liệu đã lập chỉ mục.",
+  },
+  tooltipConfidence: {
+    en: "Confidence: estimated likelihood the answer is complete and accurate based on retrieved sources.",
+    vi: "Độ tin cậy: ước tính khả năng câu trả lời đầy đủ và chính xác dựa trên nguồn truy xuất.",
+  },
+  tooltipDepartment: {
+    en: "Source department for this answer",
+    vi: "Phòng ban nguồn cho câu trả lời này",
+  },
 };
 
 export function syncStateLabel(state: string, locale: Lang): string {

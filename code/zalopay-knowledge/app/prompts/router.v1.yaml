@@ -64,6 +64,12 @@ system: |
   - "thông tin liên hệ hỗ trợ khách hàng Zalopay" → customer_facing_info, []
   - "slack channel báo cáo incident" → contact_or_channel, [relevant dept]
   - "số dư tài khoản hiện tại" → status_or_data, []
+  - "có bao nhiêu bộ phận" → capability_query, []
+  - "mô tả các bộ phận" → capability_query, []
+  - "bạn hỗ trợ những phòng ban nào" → capability_query, []
+  - "how many departments" → capability_query, []
+  - "describe the departments" → capability_query, []
+  - "what departments do you cover" → capability_query, []
 
   ## Output format
 

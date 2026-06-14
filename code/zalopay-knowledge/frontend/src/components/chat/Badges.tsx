@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/Badge";
-import { departmentLabel, getDepartment } from "@/lib/departments";
+import { departmentLabel, departmentDescription, getDepartment } from "@/lib/departments";
 import { formatConfidence } from "@/lib/format";
 import { attachHoverLift, useGSAP } from "@/lib/gsap";
 import { t } from "@/lib/i18n";
@@ -43,14 +43,22 @@ export function ConfidenceBadge({
             ? t("statusOutOfScope", locale)
             : t("statusRefused", locale);
 
+  const statusTooltip = clarifying
+    ? t("tooltipStatusClarify", locale)
+    : status === "answered"
+      ? t("tooltipStatusAnswered", locale)
+      : status === "partial"
+        ? t("tooltipStatusPartial", locale)
+        : t("tooltipStatusRefused", locale);
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Badge tone={statusTone}>{statusLabel}</Badge>
+      <Badge tone={statusTone} title={statusTooltip} style={{ cursor: "help" }}>{statusLabel}</Badge>
       {(() => {
         const tierTone = confidence >= 0.80 ? "success" : confidence >= 0.55 ? "warning" : "danger";
         const tierKey = confidence >= 0.80 ? "confidenceHigh" : confidence >= 0.55 ? "confidenceMedium" : "confidenceLow";
         return (
-          <Badge tone={tierTone}>
+          <Badge tone={tierTone} title={t("tooltipConfidence", locale)} style={{ cursor: "help" }}>
             {t(tierKey as Parameters<typeof t>[0], locale)} · {formatConfidence(confidence)}
           </Badge>
         );
@@ -79,6 +87,8 @@ export function DepartmentChip({ deptKey, interactive }: DepartmentChipProps) {
     { scope: chipRef, dependencies: [interactive] },
   );
 
+  const description = departmentDescription(dept, locale);
+
   return (
     <span
       ref={chipRef}
@@ -87,7 +97,8 @@ export function DepartmentChip({ deptKey, interactive }: DepartmentChipProps) {
           ? "dept-chip-interactive inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium text-white shadow-sm"
           : "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium text-white shadow-sm"
       }
-      style={{ backgroundColor: dept.accent_color }}
+      style={{ backgroundColor: dept.accent_color, cursor: "help" }}
+      title={description}
     >
       {departmentLabel(dept.key, locale)}
     </span>

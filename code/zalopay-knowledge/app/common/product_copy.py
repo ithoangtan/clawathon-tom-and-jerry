@@ -51,12 +51,12 @@ def escalation_hint(lang: str = "en", departments: list[str] | None = None) -> s
         dept = get_department(key)
         if lang == "vi":
             lines.append(
-                f"- **{dept.display_name('vi')}**: Teams `{dept.channel_hint}` "
+                f"- **{dept.display_name('vi')}**: Teams **{dept.display_name('vi')}** "
                 f"hoặc {dept.head_manager_vi} (trưởng bộ phận)"
             )
         else:
             lines.append(
-                f"- **{dept.display_name('en')}**: Teams channel `{dept.channel_hint}` "
+                f"- **{dept.display_name('en')}**: Teams **{dept.display_name('en')}** "
                 f"or {dept.head_manager_en} (department head)"
             )
 

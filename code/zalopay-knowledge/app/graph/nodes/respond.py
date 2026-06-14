@@ -24,6 +24,7 @@ from typing import Callable
 
 from langchain_core.messages import AIMessage
 
+from app.common.departments import all_departments
 from app.common.product_copy import escalation_hint, maybe_append_high_stakes_disclaimer, out_of_scope_notice
 from app.config import Settings, get_settings
 from app.graph.nodes.router import OUT_OF_SCOPE_INTENTS, SHORT_CIRCUIT_INTENTS
@@ -163,18 +164,30 @@ def _canned_reply(intent: str, lang: str) -> str:
         )
     if intent == "capability_query":
         scope = out_of_scope_notice("vi" if vi else "en")
-        return (
-            "Tôi có thể trả lời câu hỏi dựa trên tài liệu nội bộ của các bộ phận "
-            "Risk, Grow Enablement và Bank Partnerships — kèm trích dẫn nguồn. "
-            "Tôi không truy cập internet và sẽ từ chối nếu tài liệu không hỗ trợ câu trả lời.\n\n"
-            f"{scope}"
-            if vi
-            else "I answer questions grounded in the internal documentation of the "
-            "Risk, Grow Enablement, and Bank Partnerships teams — always with "
-            "source citations. I never browse the internet and I'll refuse when "
-            "the documents don't support an answer.\n\n"
-            f"{scope}"
-        )
+        depts = all_departments()
+        if vi:
+            dept_lines = "\n".join(
+                f"- **{d.name_vi}** (`{d.key}`): {d.description_vi}" for d in depts
+            )
+            return (
+                f"Hiện tại có **{len(depts)} bộ phận** được hỗ trợ:\n\n"
+                f"{dept_lines}\n\n"
+                "Tôi trả lời câu hỏi dựa trên tài liệu nội bộ của các bộ phận trên — kèm trích dẫn nguồn. "
+                "Tôi không truy cập internet và sẽ từ chối nếu tài liệu không hỗ trợ câu trả lời.\n\n"
+                f"{scope}"
+            )
+        else:
+            dept_lines = "\n".join(
+                f"- **{d.name_en}** (`{d.key}`): {d.description_en}" for d in depts
+            )
+            return (
+                f"There are currently **{len(depts)} departments** covered:\n\n"
+                f"{dept_lines}\n\n"
+                "I answer questions grounded in the internal documentation of the teams above — "
+                "always with source citations. I never browse the internet and I'll refuse when "
+                "the documents don't support an answer.\n\n"
+                f"{scope}"
+            )
     # action_request
     return (
         "Tôi chỉ có thể tra cứu và trả lời thông tin từ tài liệu nội bộ, "
