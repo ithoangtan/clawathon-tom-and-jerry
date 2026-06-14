@@ -130,15 +130,24 @@ def _make_dept_branch(subgraph) -> Callable[[DeptState], dict]:
         emitter = PipelineEmitter(_safe_stream_writer(), department=department)
         try:
             emitter.branch_start()
-            result: dict = {}
-            for chunk in subgraph.stream(state, stream_mode="updates"):
-                for node_name, update in chunk.items():
-                    emitter.on_node_complete(node_name)
-                    if isinstance(update, dict):
-                        result.update(update)
+            # Use invoke() instead of stream() — LangGraph 0.2.76's stream_mode="updates"
+            # from inside a parent node doesn't yield per-node updates reliably; it
+            # conflates with the parent stream context and emits only a synthetic
+            # state-diff chunk rather than individual node outputs.
+            final_state = subgraph.invoke(state)
+            # Emit per-node completion events so the SSE pipeline tracker stays current.
+            for node_name in ["retrieve", "grade", "compress", "synthesize", "verify"]:
+                emitter.on_node_complete(node_name)
+            dept_results = list(final_state.get("dept_results") or [])
+            evidence = final_state.get("evidence") or {}
+            logger.info(
+                "dept_branch[%s]: returning dept_results=%r",
+                department,
+                [(r.get("department"), r.get("status")) for r in dept_results],
+            )
             return {
-                "dept_results": result.get("dept_results", []),
-                "evidence": result.get("evidence", {}),
+                "dept_results": dept_results,
+                "evidence": evidence,
             }
         except Exception:  # noqa: BLE001 — never let one branch kill the run
             logger.exception("dept branch %s failed; degrading to timeout", department)

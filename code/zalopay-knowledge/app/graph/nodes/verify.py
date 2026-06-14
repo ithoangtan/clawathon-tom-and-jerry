@@ -58,7 +58,23 @@ def make_verify_node(
         citations: list[Citation] = list(state.get("draft_citations") or [])
         graded: list[Chunk] = list(state.get("graded_chunks") or [])
 
-        # ── Refusal paths ─────────────────────────────────────────────────────
+        # ── Disabled / refusal paths ──────────────────────────────────────────
+        if not cfg.verify_enabled:
+            if not answer or answer == CANNOT_ANSWER or not graded:
+                return _emit(_refused(department, state.get("request_language", "en")))
+            logger.info("verify[%s]: skipped (VERIFY_ENABLED=false), passing through", department)
+            base_conf = _mean_score(graded)
+            return _emit(
+                DeptResult(
+                    department=department,
+                    status="answered",
+                    answer=answer,
+                    citations=citations,
+                    confidence=round(base_conf * 0.8, 3),
+                    warnings=["verification_disabled"],
+                )
+            )
+
         if not answer or answer == CANNOT_ANSWER or not graded:
             return _emit(_refused(department, state.get("request_language", "en")))
 

@@ -14,12 +14,13 @@ It performs no LLM calls.
 """
 
 import logging
+import time
 from typing import Callable, Optional
 
 from app.common.departments import iter_keys
 from app.config import Settings, get_settings
 from app.graph.nodes._helpers import build_retrieval_query, detect_language, format_conversation_history
-from app.graph.state import GraphState
+from app.graph.state import GraphState, _RESET_SENTINEL
 from app.ports.errors import RetrieverUnavailable
 from app.ports.retriever import RetrieverPort
 
@@ -51,7 +52,23 @@ def make_ingest_context_node(
     cfg = settings or get_settings()
 
     def ingest_context(state: GraphState) -> dict:
-        out: dict = {}
+        # Reset terminal state from any previous turn in this session so a
+        # prior refusal does not block routing for the current question.
+        # Also reset deadline_ts so a stale deadline from an interrupted run
+        # (e.g. server hot-reload mid-request) never causes instant budget exhaustion.
+        # dept_results uses a sentinel to discard stale results from prior turns.
+        out: dict = {
+            "status": None,
+            "answer": None,
+            "citations": [],
+            "conflicts": None,
+            "clarify_question": None,
+            "source_departments": [],
+            "errors": [],
+            "refusals": [],
+            "deadline_ts": time.time() + cfg.graph_budget_s,
+            "dept_results": [{_RESET_SENTINEL: True}],
+        }
 
         # ── Language ──────────────────────────────────────────────────────────
         lang = state.get("request_language") or detect_language(state.get("question", ""))

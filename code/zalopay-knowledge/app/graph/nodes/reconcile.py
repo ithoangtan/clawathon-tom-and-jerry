@@ -54,6 +54,12 @@ def make_reconcile_node(
         results: list[DeptResult] = list(state.get("dept_results") or [])
         lang = state.get("request_language", "en")
 
+        logger.info(
+            "reconcile: received %d dept_results: %s",
+            len(results),
+            [(r.get("department"), r.get("status"), bool(r.get("answer"))) for r in results],
+        )
+
         answered = [r for r in results if r.get("status") == "answered" and r.get("answer")]
         refusals = [r["department"] for r in results if r.get("status") != "answered"]
 

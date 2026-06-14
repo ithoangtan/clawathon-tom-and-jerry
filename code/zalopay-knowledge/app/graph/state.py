@@ -113,6 +113,26 @@ def merge_dict(a: dict, b: dict) -> dict:
     return {**a, **b}
 
 
+# Sentinel dict key used by ingest_context to signal a full reset of dept_results.
+_RESET_SENTINEL = "__reset__"
+
+
+def dept_results_reducer(a: list, b: list) -> list:
+    """Reducer for ``dept_results`` that supports per-turn reset.
+
+    Concurrent department branches APPEND their single :class:`DeptResult` to the
+    list (the normal ``operator.add`` behaviour).  ``ingest_context`` returns
+    ``[{_RESET_SENTINEL: True}]`` at the start of each turn to discard stale
+    results from previous turns before the new branches write their results.
+
+    The sentinel is never seen by reconcile because it is replaced by the real
+    dept_branch results within the same graph execution.
+    """
+    if b and isinstance(b[0], dict) and b[0].get(_RESET_SENTINEL):
+        return []  # Clear accumulated results from previous turns
+    return (a or []) + (b or [])
+
+
 # ── Graph state ───────────────────────────────────────────────────────────────
 
 class GraphState(TypedDict, total=False):
@@ -183,9 +203,9 @@ class GraphState(TypedDict, total=False):
     Written by concurrent ``retrieve`` nodes; merged by the ``merge_dict`` reducer."""
 
     # ── Department results (parallel writes, list append) ─────────────────────
-    dept_results: Annotated[list[DeptResult], operator.add]
+    dept_results: Annotated[list[DeptResult], dept_results_reducer]
     """Results from each department's synthesize→verify pipeline.
-    Written by concurrent branches; concatenated by the ``operator.add`` reducer."""
+    Written by concurrent branches; supports per-turn reset via dept_results_reducer."""
 
     # ── Response ─────────────────────────────────────────────────────────────
     citations: list[Citation]
@@ -296,6 +316,6 @@ class DeptState(TypedDict, total=False):
     evidence: Annotated[dict[str, list[Chunk]], merge_dict]
     """``{department: graded_chunks}`` — merged into the parent for audit/debug."""
 
-    dept_results: Annotated[list[DeptResult], operator.add]
+    dept_results: Annotated[list[DeptResult], dept_results_reducer]
     """A single-element list with this branch's :class:`DeptResult`,
-    concatenated into the parent by ``operator.add``."""
+    merged into the parent by ``dept_results_reducer``."""

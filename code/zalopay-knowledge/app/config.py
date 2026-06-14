@@ -184,6 +184,10 @@ class Settings(BaseSettings):
         default=True,
         description="Extract relevant sentences per graded chunk before synthesis (reduces synthesis tokens ~50%)",
     )
+    verify_enabled: bool = Field(
+        default=True,
+        description="Run citation-entailment verification on the draft answer before emitting DeptResult",
+    )
 
     # ── Graph timeouts ────────────────────────────────────────────────────────
 

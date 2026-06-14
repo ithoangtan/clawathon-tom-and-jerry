@@ -70,12 +70,14 @@ def rerank_candidates(
     pairs = [(query, p) for p in passages]
     scores = scorer.score_pairs(pairs)
 
+    import dataclasses
+
     ranked = sorted(
-        zip(scores, candidates, strict=True),
+        zip(scores, candidates),
         key=lambda item: item[0],
         reverse=True,
     )
     out: list[RetrievedChunk] = []
     for score, chunk in ranked[:final_k]:
-        out.append(RetrievedChunk(**{**chunk.__dict__, "score": max(0.0, min(1.0, score))}))
+        out.append(dataclasses.replace(chunk, score=max(0.0, min(1.0, score))))
     return out

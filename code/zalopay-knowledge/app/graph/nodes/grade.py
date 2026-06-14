@@ -77,12 +77,28 @@ def make_grade_node(
             graded = _gate_by_retriever_score(chunks, cfg.grade_threshold)
             return {"graded_chunks": graded, "evidence": {department: graded}}
 
+        # If the LLM returned valid JSON but no parseable scores (empty array,
+        # wrong schema, etc.), fall back to retriever cosine scores instead of
+        # silently dropping all chunks.
+        if not scores:
+            logger.warning(
+                "grade[%s]: LLM returned 0 valid scores for %d chunks "
+                "(raw response truncated): %r — falling back to retriever scores",
+                department, len(chunks), result.text[:300],
+            )
+            graded = _gate_by_retriever_score(chunks, cfg.grade_threshold)
+            return {"graded_chunks": graded, "evidence": {department: graded}}
+
+        logger.debug("grade[%s]: LLM scores: %s", department, scores)
+
         # Apply LLM scores, gate, and re-sort.
+        # For chunks the LLM didn't score (id missing from response), fall back
+        # to the retriever cosine score rather than silently dropping them.
         graded: list[Chunk] = []
         for idx, ch in enumerate(chunks):
             llm_score = scores.get(idx)
             if llm_score is None:
-                continue
+                llm_score = float(ch.get("score", 0.0))
             if llm_score >= cfg.grade_threshold:
                 scored = dict(ch)
                 scored["score"] = llm_score
