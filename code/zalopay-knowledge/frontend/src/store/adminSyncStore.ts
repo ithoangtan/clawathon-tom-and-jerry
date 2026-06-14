@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { normalizeAdminSyncPayload } from "@/lib/adminSyncAdapter";
 import { api } from "@/lib/apiClient";
 import { SCENARIO_MAP } from "@/lib/mockScenarios";
+import type { ScenarioKey } from "@/lib/mockScenarios";
 import type { AdminSyncStatus } from "@/lib/types";
 
 const IS_DEV = import.meta.env.DEV || window.location.hostname === "localhost";
@@ -40,7 +41,7 @@ export const useAdminSyncStore = create<AdminSyncStore>((set, get) => ({
     const { _scenarioKey, _subscribers } = get();
 
     if (IS_DEV && _scenarioKey) {
-      const s = SCENARIO_MAP[_scenarioKey];
+      const s = SCENARIO_MAP[_scenarioKey as ScenarioKey];
       set({ status: s.adminStatus, error: null, loading: false });
       return;
     }
