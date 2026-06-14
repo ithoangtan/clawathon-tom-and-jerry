@@ -1,0 +1,16 @@
+{
+  "name": "zalopay-knowledge",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names \"backend,frontend\" --prefix-colors \"cyan,magenta\" --kill-others-on-fail \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "mkdir -p index/faiss index/hf-cache && INDEX_DIR=./index .venv/bin/python main.py",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:backend": "rm -rf .venv && /usr/local/bin/python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt",
+    "install:frontend": "cd frontend && npm install",
+    "setup": "npm run install:backend && npm run install:frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

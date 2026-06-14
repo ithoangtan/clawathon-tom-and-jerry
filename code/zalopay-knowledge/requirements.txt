@@ -1,4 +1,4 @@
-# Zalopay Knowledge Agent — pinned runtime dependencies (Python 3.11)
+# Zalopay Knowledge Agent — pinned runtime dependencies (Python 3.13+)
 # Upper-bound on major versions to prevent breaking changes during automated installs.
 #
 # IMPORTANT: The following packages are added automatically at deploy time by
@@ -40,7 +40,7 @@ opensearch-py>=2.7,<3
 
 # --- Embeddings (local, multilingual VI+EN) ---
 sentence-transformers>=3,<4
-numpy>=1.26,<2
+numpy>=2.0,<3
 
 # --- HTTP client (Confluence, internal calls) ---
 httpx>=0.27,<1
