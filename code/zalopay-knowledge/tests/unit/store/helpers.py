@@ -26,6 +26,7 @@ def make_chunk_row(**overrides: object) -> dict:
         "source_type": "confluence",
         "page": None,
         "text": "Some chunk text about escalation.",
+        "chunk_type": "body",
     }
     row.update(overrides)
     if "labels" in overrides and not isinstance(row["labels"], str):

@@ -1,12 +1,22 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 
 import pytest
 
 from app.store.audit import AuditStore, _percentile
+from app.store.db import get_connection
 from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
+
+
+def _fetch_query(feedback_id: str) -> dict | None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM queries WHERE feedback_id = %s", (feedback_id,))
+            return cur.fetchone()
+    finally:
+        conn.close()
 
 
 class TestAuditStoreLogging:
@@ -39,16 +49,10 @@ class TestAuditStoreLogging:
             latency_ms=100,
             feedback_id="fb-pii",
         )
-        conn = sqlite3.connect(str(audit_store._path))
-        conn.row_factory = sqlite3.Row
-        try:
-            row = conn.execute(
-                "SELECT question FROM queries WHERE feedback_id = ?", ("fb-pii",)
-            ).fetchone()
-            assert "[email]" in row["question"]
-            assert "alice@example.com" not in row["question"]
-        finally:
-            conn.close()
+        row = _fetch_query("fb-pii")
+        assert row is not None
+        assert "[email]" in row["question"]
+        assert "alice@example.com" not in row["question"]
 
     def test_log_query_stores_departments_and_user_for_audit_trail(
         self, audit_store: AuditStore
@@ -66,22 +70,14 @@ class TestAuditStoreLogging:
             feedback_id="fb-audit-trail",
             tokens=42,
         )
-        conn = sqlite3.connect(str(audit_store._path))
-        conn.row_factory = sqlite3.Row
-        try:
-            row = conn.execute(
-                "SELECT user_id, session_id, role, departments, latency_ms, tokens "
-                "FROM queries WHERE feedback_id = ?",
-                ("fb-audit-trail",),
-            ).fetchone()
-            assert row["user_id"] == "user-42"
-            assert row["session_id"] == "sess-99"
-            assert row["role"] == RISK
-            assert json.loads(row["departments"]) == [RISK, GROW]
-            assert row["latency_ms"] == 512
-            assert row["tokens"] == 42
-        finally:
-            conn.close()
+        row = _fetch_query("fb-audit-trail")
+        assert row is not None
+        assert row["user_id"] == "user-42"
+        assert row["session_id"] == "sess-99"
+        assert row["role"] == RISK
+        assert json.loads(row["departments"]) == [RISK, GROW]
+        assert row["latency_ms"] == 512
+        assert row["tokens"] == 42
 
     def test_log_refusal(self, audit_store: AuditStore) -> None:
         audit_store.log_query(
@@ -95,17 +91,10 @@ class TestAuditStoreLogging:
             latency_ms=80,
             feedback_id="fb-refused",
         )
-        conn = sqlite3.connect(str(audit_store._path))
-        conn.row_factory = sqlite3.Row
-        try:
-            row = conn.execute(
-                "SELECT status, confidence FROM queries WHERE feedback_id = ?",
-                ("fb-refused",),
-            ).fetchone()
-            assert row["status"] == "refused"
-            assert row["confidence"] == 0.0
-        finally:
-            conn.close()
+        row = _fetch_query("fb-refused")
+        assert row is not None
+        assert row["status"] == "refused"
+        assert row["confidence"] == 0.0
 
 
 class TestAuditStoreRetrieval:
@@ -194,17 +183,10 @@ class TestAuditStoreRetrieval:
             latency_ms=120,
             feedback_id=feedback_id,
         )
-        conn = sqlite3.connect(str(audit_store._path))
-        conn.row_factory = sqlite3.Row
-        try:
-            row = conn.execute(
-                "SELECT feedback_id, citations_json FROM queries WHERE feedback_id = ?",
-                (feedback_id,),
-            ).fetchone()
-            assert row["feedback_id"] == feedback_id
-            assert json.loads(row["citations_json"]) == []
-        finally:
-            conn.close()
+        row = _fetch_query(feedback_id)
+        assert row is not None
+        assert row["feedback_id"] == feedback_id
+        assert json.loads(row["citations_json"]) == []
 
 
 class TestPercentile:

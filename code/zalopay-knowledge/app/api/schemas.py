@@ -40,7 +40,7 @@ def _validate_role(value: str) -> str:
 Department = Annotated[str, AfterValidator(_validate_department_key)]
 Role = Annotated[str, AfterValidator(_validate_role)]
 AnswerStatus = Literal["answered", "refused", "partial"]
-RefusalReason = Literal["out_of_scope"]
+RefusalReason = Literal["out_of_scope", "access_denied"]
 Lang = Literal["en", "vi"]
 
 

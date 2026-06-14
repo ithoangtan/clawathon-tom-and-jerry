@@ -9,7 +9,7 @@
   "departments": [
     {
       "key": "risk",
-      "name_en": "Risk",
+      "name_en": "Risk Management",
       "name_vi": "Quản lý Rủi ro",
       "accent_color": "#E63946",
       "channel_hint": "teams-risk-knowledge",

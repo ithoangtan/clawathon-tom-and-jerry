@@ -22,6 +22,20 @@ AUTH_HEADERS = {
 }
 
 
+@pytest.fixture(autouse=True)
+def _clean_mysql_tables() -> None:
+    from app.store.db import get_connection
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM queries")
+            cur.execute("DELETE FROM feedback")
+            cur.execute("DELETE FROM pending_feedback")
+        conn.commit()
+    finally:
+        conn.close()
+
+
 @pytest.fixture()
 def client() -> TestClient:
     return TestClient(create_app())

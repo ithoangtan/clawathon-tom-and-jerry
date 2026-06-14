@@ -6,8 +6,9 @@ Embeds chunks with the local E5 model and bulk-upserts them into GreenNode
 managed vector OpenSearch.  One index per department:
 ``{prefix}_{department}``  (e.g. ``zalopay_risk``).
 
-Index mapping uses ``knn_vector`` (384-dim, HNSW cosine) so that
-OpenSearchRetriever can run knn queries directly.
+Index mapping uses ``knn_vector`` (HNSW cosine) so that
+OpenSearchRetriever can run knn queries directly.  The vector dimension is
+read from the actual embedding model at runtime so any model works.
 
 The SQLite MetaStore is kept **only** for the ``sync_sources`` table used by
 :func:`~app.ingestion.sync_hash.resolve_document_chunks` to detect unchanged
@@ -23,44 +24,42 @@ from app.store.meta import MetaStore
 
 logger = logging.getLogger(__name__)
 
-_INDEX_MAPPING = {
-    "settings": {
-        "index": {
-            "knn": True,
-            "knn.algo_param.ef_search": 100,
-        }
-    },
-    "mappings": {
-        "properties": {
-            "chunk_id":        {"type": "keyword"},
-            "department":      {"type": "keyword"},
-            "doc_type":        {"type": "keyword"},
-            "title":           {"type": "text"},
-            "url":             {"type": "keyword"},
-            "section":         {"type": "text"},
-            "anchor":          {"type": "keyword"},
-            "source":          {"type": "keyword"},
-            "space":           {"type": "keyword"},
-            "labels":          {"type": "keyword"},
-            "last_modified":   {"type": "keyword"},
-            "author":          {"type": "keyword"},
-            "acl":             {"type": "keyword"},
-            "lifecycle_state": {"type": "keyword"},
-            "source_type":     {"type": "keyword"},
-            "page":            {"type": "integer"},
-            "text":            {"type": "text"},
-            "embedding": {
-                "type": "knn_vector",
-                "dimension": 384,
-                "method": {
-                    "name": "hnsw",
-                    "space_type": "cosinesimil",
-                    "engine": "lucene",
-                },
-            },
-        }
-    },
+_BASE_MAPPINGS_PROPERTIES = {
+    "chunk_id":        {"type": "keyword"},
+    "department":      {"type": "keyword"},
+    "doc_type":        {"type": "keyword"},
+    "title":           {"type": "text"},
+    "url":             {"type": "keyword"},
+    "section":         {"type": "text"},
+    "anchor":          {"type": "keyword"},
+    "source":          {"type": "keyword"},
+    "space":           {"type": "keyword"},
+    "labels":          {"type": "keyword"},
+    "last_modified":   {"type": "keyword"},
+    "author":          {"type": "keyword"},
+    "acl":             {"type": "keyword"},
+    "lifecycle_state": {"type": "keyword"},
+    "source_type":     {"type": "keyword"},
+    "page":            {"type": "integer"},
+    "text":            {"type": "text"},
 }
+
+
+def _build_index_mapping(dimension: int) -> dict:
+    props = dict(_BASE_MAPPINGS_PROPERTIES)
+    props["embedding"] = {
+        "type": "knn_vector",
+        "dimension": dimension,
+        "method": {
+            "name": "hnsw",
+            "space_type": "cosinesimil",
+            "engine": "lucene",
+        },
+    }
+    return {
+        "settings": {"index": {"knn": True, "knn.algo_param.ef_search": 100}},
+        "mappings": {"properties": props},
+    }
 
 _BULK_CHUNK_SIZE = 200
 
@@ -98,11 +97,40 @@ class OpenSearchIndexBuilder:
         return f"{self._prefix}_{department}"
 
     def _ensure_index(self, department: str) -> None:
-        """Create index with knn_vector mapping if it does not exist."""
+        """Create index with knn_vector mapping if it does not exist.
+
+        Recreates the index when the stored dimension doesn't match the current
+        embedding model — avoids silent bulk-insert failures on dimension mismatch.
+        """
         index = self._index_name(department)
-        if not self._client.indices.exists(index=index):
-            self._client.indices.create(index=index, body=_INDEX_MAPPING)
-            logger.info("Created OpenSearch index %s", index)
+        dim = self._embedder.dimension
+        mapping = _build_index_mapping(dim)
+
+        if self._client.indices.exists(index=index):
+            # Check if the existing index has the correct dimension.
+            try:
+                info = self._client.indices.get_mapping(index=index)
+                stored_dim = (
+                    info.get(index, {})
+                    .get("mappings", {})
+                    .get("properties", {})
+                    .get("embedding", {})
+                    .get("dimension")
+                )
+                if stored_dim is not None and int(stored_dim) != dim:
+                    logger.warning(
+                        "Index %s has dimension %d but embedder produces %d — recreating",
+                        index, stored_dim, dim,
+                    )
+                    self._client.indices.delete(index=index)
+                    self._client.indices.create(index=index, body=mapping)
+                    logger.info("Recreated OpenSearch index %s (dim=%d)", index, dim)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Could not check index mapping for %s: %s", index, exc)
+            return
+
+        self._client.indices.create(index=index, body=mapping)
+        logger.info("Created OpenSearch index %s (dim=%d)", index, dim)
 
     # ── Public interface (mirrors IndexBuilder) ───────────────────────────────
 

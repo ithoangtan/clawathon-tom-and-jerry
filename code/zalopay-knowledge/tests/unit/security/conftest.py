@@ -16,8 +16,10 @@ def test_settings() -> Settings:
         route_confidence_min=0.55,
         topk=3,
         branch_timeout_s=20.0,
+        verify_enabled=True,
         hybrid_search_enabled=False,
         reranker_enabled=False,
+        _env_file=None,
     )
 
 

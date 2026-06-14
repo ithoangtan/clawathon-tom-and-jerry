@@ -19,7 +19,7 @@ class TestSettingsDefaults:
     def test_default_app_env_and_version(self, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = self._isolated_settings(monkeypatch)
         assert settings.app_env == "local"
-        assert settings.app_version == "0.1.0"
+        assert settings.app_version == "1.0.0"
         assert settings.log_level == "info"
 
     def test_default_retrieval_thresholds(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -30,12 +30,12 @@ class TestSettingsDefaults:
 
     def test_default_embedding_model(self, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = self._isolated_settings(monkeypatch)
-        assert settings.embedding_model == "intfloat/multilingual-e5-small"
+        assert settings.embedding_model == "baai/bge-m3"
 
     def test_default_graph_timeouts(self, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = self._isolated_settings(monkeypatch)
         assert settings.graph_budget_s == 30.0
-        assert settings.branch_timeout_s == 20.0
+        assert settings.branch_timeout_s == 15.0
         assert settings.llm_request_timeout_s == 60.0
         assert settings.health_ping_timeout_s == 3.0
 

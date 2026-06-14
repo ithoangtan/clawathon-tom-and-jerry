@@ -33,8 +33,8 @@ def test_health_contract_shape() -> None:
     for key in CONFIG_KEYS:
         assert key in config, f"Missing config key: {key}"
 
-    assert config["embedding_model"] == "intfloat/multilingual-e5-small"
-    assert config["grade_threshold"] == 0.5
+    assert config["embedding_model"] == "baai/bge-m3"
+    assert config["grade_threshold"] == 0.3
     assert config["topk"] == 8
     assert config["route_confidence_min"] == 0.55
 

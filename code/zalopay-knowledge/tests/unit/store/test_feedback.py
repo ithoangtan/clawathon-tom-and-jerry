@@ -1,8 +1,37 @@
 from __future__ import annotations
 
-import sqlite3
-
+from app.store.db import get_connection
 from app.store.feedback import FeedbackStore
+
+
+def _count_pending() -> int:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS n FROM pending_feedback")
+            return cur.fetchone()["n"]
+    finally:
+        conn.close()
+
+
+def _fetch_feedback(feedback_id: str) -> dict | None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM feedback WHERE feedback_id = %s", (feedback_id,))
+            return cur.fetchone()
+    finally:
+        conn.close()
+
+
+def _fetch_pending(feedback_id: str) -> dict | None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 AS found FROM pending_feedback WHERE feedback_id = %s", (feedback_id,))
+            return cur.fetchone()
+    finally:
+        conn.close()
 
 
 class TestFeedbackSubmit:
@@ -58,22 +87,11 @@ class TestFeedbackSubmit:
             comment=None,
         )
 
-        conn = sqlite3.connect(str(feedback_store._path))
-        try:
-            pending = conn.execute(
-                "SELECT 1 FROM pending_feedback WHERE feedback_id = ?",
-                (feedback_id,),
-            ).fetchone()
-            assert pending is None
-
-            row = conn.execute(
-                "SELECT rating, user_id FROM feedback WHERE feedback_id = ?",
-                (feedback_id,),
-            ).fetchone()
-            assert row[0] == "up"
-            assert row[1] == "u1"
-        finally:
-            conn.close()
+        assert _fetch_pending(feedback_id) is None
+        row = _fetch_feedback(feedback_id)
+        assert row is not None
+        assert row["rating"] == "up"
+        assert row["user_id"] == "u1"
 
     def test_resubmit_updates_rating(self, feedback_store: FeedbackStore) -> None:
         feedback_id = "fb-resubmit"
@@ -102,15 +120,17 @@ class TestFeedbackCorrelation:
         feedback_store.register_pending(feedback_id)
         feedback_store.register_pending(feedback_id)
 
-        conn = sqlite3.connect(str(feedback_store._path))
+        conn = get_connection()
         try:
-            count = conn.execute(
-                "SELECT COUNT(*) FROM pending_feedback WHERE feedback_id = ?",
-                (feedback_id,),
-            ).fetchone()[0]
-            assert count == 1
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) AS n FROM pending_feedback WHERE feedback_id = %s",
+                    (feedback_id,),
+                )
+                count = cur.fetchone()["n"]
         finally:
             conn.close()
+        assert count == 1
 
     def test_multiple_feedback_ids_tracked_independently(
         self, feedback_store: FeedbackStore
@@ -127,9 +147,4 @@ class TestFeedbackCorrelation:
         assert up == 1
         assert down == 1
 
-        conn = sqlite3.connect(str(feedback_store._path))
-        try:
-            pending = conn.execute("SELECT COUNT(*) FROM pending_feedback").fetchone()[0]
-            assert pending == 1
-        finally:
-            conn.close()
+        assert _count_pending() == 1

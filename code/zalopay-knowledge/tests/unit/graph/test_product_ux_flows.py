@@ -118,6 +118,6 @@ def test_out_of_scope_short_circuit_includes_escalation(test_settings):
 
     assert api.status == "refused"
     assert api.refusal_reason == "out_of_scope"
-    assert "teams-risk-knowledge" in api.answer
+    assert "Risk Management" in api.answer
     assert "MVP scope" in api.answer
     assert api.citations == []

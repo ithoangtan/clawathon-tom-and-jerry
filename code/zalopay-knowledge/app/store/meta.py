@@ -46,6 +46,7 @@ CHUNK_COLUMNS: tuple[str, ...] = (
     "source_type",
     "page",
     "text",
+    "chunk_type",
 )
 
 # Added after initial MVP schema; applied idempotently by :meth:`MetaStore.ensure_schema`.
@@ -56,6 +57,7 @@ _SCHEMA_MIGRATIONS: tuple[tuple[str, str], ...] = (
     ("labels", "TEXT"),
     ("author", "TEXT"),
     ("acl", "TEXT"),
+    ("chunk_type", "TEXT"),
 )
 
 _CREATE_TABLE = """
@@ -77,7 +79,8 @@ CREATE TABLE IF NOT EXISTS chunks (
     lifecycle_state TEXT NOT NULL DEFAULT 'active',
     source_type     TEXT,
     page            INTEGER,
-    text            TEXT NOT NULL
+    text            TEXT NOT NULL,
+    chunk_type      TEXT
 )
 """
 
@@ -305,7 +308,7 @@ class MetaStore:
                     INSERT INTO chunks ({', '.join(CHUNK_COLUMNS)})
                     VALUES ({', '.join('?' for _ in CHUNK_COLUMNS)})
                     """,
-                    tuple(row[c] for c in CHUNK_COLUMNS),
+                    tuple(row.get(c) for c in CHUNK_COLUMNS),
                 )
             conn.commit()
             return len(rows)

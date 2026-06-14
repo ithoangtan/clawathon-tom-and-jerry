@@ -30,8 +30,10 @@ def test_build_deps_local_wires_sqlite_and_no_recall(
     mock_llm_cls, mock_retriever_cls = patched_adapters
     settings = Settings(
         app_env="local",
+        vector_store="faiss",
         index_dir=str(tmp_path / "index"),
         log_level="error",
+        _env_file=None,
     )
 
     deps = build_deps(settings)

@@ -18,21 +18,21 @@ from tests.department_fixtures import GROW, RISK
 def test_out_of_scope_lists_mvp_departments() -> None:
     en = out_of_scope_notice("en")
     assert "Risk" in en
-    assert "Grow Enablement" in en
+    assert "Growth Enablement" in en
     assert "Bank Partnerships" in en
     assert "No web search" in en
 
 
 def test_escalation_hint_includes_teams_channel() -> None:
     hint = escalation_hint("en", [RISK])
-    assert "teams-risk-knowledge" in hint
+    assert "Risk Management" in hint
     assert "Lan Nguyen" in hint
 
 
 def test_refusal_body_includes_escalation_and_scope() -> None:
     body = refusal_body("en", [RISK, GROW])
     assert "Not covered in the docs" in body
-    assert "teams-risk-knowledge" in body
+    assert "Risk Management" in body
     assert "MVP scope" in body
 
 

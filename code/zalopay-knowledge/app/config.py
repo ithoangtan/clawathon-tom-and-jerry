@@ -71,8 +71,8 @@ class Settings(BaseSettings):
     # ── Embeddings ────────────────────────────────────────────────────────────
 
     embedding_model: str = Field(
-        default="intfloat/multilingual-e5-small",
-        description="HuggingFace model id for local embeddings (384-dim, VI+EN)",
+        default="baai/bge-m3",
+        description="HuggingFace model id for local embeddings (VI+EN)",
     )
 
     # ── Confluence ────────────────────────────────────────────────────────────
@@ -252,6 +252,17 @@ class Settings(BaseSettings):
         ge=0.0,
         le=1.0,
         description="Router confidence threshold below which a clarifying question is emitted",
+    )
+
+    # ── Role-based department access control (FR-7.2) ───────────────────────
+
+    role_dept_access_json: str = Field(
+        default="",
+        description=(
+            'JSON object mapping role names to allowed department keys. '
+            'Example: {"business": ["grow_enablement", "bank_partnerships"]}. '
+            'Empty string = all roles can access all departments (open model).'
+        ),
     )
 
     # ── Memory (STM + LTM) ───────────────────────────────────────────────────

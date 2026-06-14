@@ -13,6 +13,7 @@ the pipeline depends on:
 It performs no LLM calls.
 """
 
+import json
 import logging
 import time
 from typing import Callable, Optional
@@ -79,8 +80,10 @@ def make_ingest_context_node(
         out["conversation_history"] = format_conversation_history(messages, exclude_last=True)
         out["retrieval_query"] = build_retrieval_query(state.get("question", ""), messages)
 
-        # ── Allowed departments (all — knowledge is open) ─────────────────────
-        out["allowed_departments"] = list(iter_keys())
+        # ── Allowed departments (FR-7.2 role-based access control) ───────────
+        role = state.get("role", "")
+        allowed_depts = _resolve_allowed_departments(role, cfg.role_dept_access_json)
+        out["allowed_departments"] = allowed_depts
 
         # ── Index readiness ───────────────────────────────────────────────────
         try:
@@ -112,6 +115,26 @@ def make_ingest_context_node(
         return out
 
     return ingest_context
+
+
+def _resolve_allowed_departments(role: str, role_dept_access_json: str) -> list[str]:
+    """Return the department keys this role may access.
+
+    When ``role_dept_access_json`` is empty or the role is not listed, all
+    departments are allowed (open-access default).
+    """
+    all_keys = list(iter_keys())
+    if not role_dept_access_json:
+        return all_keys
+    try:
+        mapping: dict[str, list[str]] = json.loads(role_dept_access_json)
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("Invalid role_dept_access_json — defaulting to all departments")
+        return all_keys
+    if role not in mapping:
+        return all_keys
+    allowed = [k for k in mapping[role] if k in set(all_keys)]
+    return allowed if allowed else all_keys
 
 
 def _kb_unavailable_message(lang: str) -> str:

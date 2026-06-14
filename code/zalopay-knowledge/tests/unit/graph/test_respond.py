@@ -62,7 +62,7 @@ def test_respond_out_of_scope_includes_escalation(test_settings: Settings):
     node = make_respond_node(settings=test_settings)
     out = node({"intent": "status_or_data", "request_language": "en"})
     assert out["status"] == "refused"
-    assert "teams-risk-knowledge" in out["answer"]
+    assert "Risk Management" in out["answer"]
     assert "MVP scope" in out["answer"]
     assert out["citations"] == []
 

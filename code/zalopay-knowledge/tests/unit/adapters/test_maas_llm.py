@@ -144,7 +144,7 @@ def test_complete_raises_llm_unavailable_after_transient_exhaustion(maas_llm: Vn
     )
 
     with patch("app.adapters.maas_llm._MAX_ATTEMPTS", 1):
-        with pytest.raises(LLMUnavailable, match="unavailable after retries"):
+        with pytest.raises(LLMUnavailable, match="All models exhausted"):
             maas_llm.complete(tier=ModelTier.SMALL, messages=[{"role": "user", "content": "x"}])
 
 
@@ -199,7 +199,7 @@ def test_complete_raises_llm_unavailable_on_api_timeout(maas_llm: VngMaasLLM) ->
     maas_llm._client.chat.completions.create.side_effect = APITimeoutError(request=MagicMock())
 
     with patch("app.adapters.maas_llm._MAX_ATTEMPTS", 1):
-        with pytest.raises(LLMUnavailable, match="unavailable after retries"):
+        with pytest.raises(LLMUnavailable, match="All models exhausted"):
             maas_llm.complete(
                 tier=ModelTier.SMALL,
                 messages=[{"role": "user", "content": "slow"}],

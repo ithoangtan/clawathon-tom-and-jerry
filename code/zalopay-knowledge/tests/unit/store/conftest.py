@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from app.store.audit import AuditStore
+from app.store.db import get_connection
 from app.store.feedback import FeedbackStore
 from app.store.meta import MetaStore
 from app.store.sync_state import SyncOrchestrator
@@ -25,14 +26,31 @@ def meta_store(tmp_db_dir: Path) -> MetaStore:
 
 @pytest.fixture
 def audit_store() -> AuditStore:
-    """AuditStore backed by MySQL — requires DB_HOST/DB_USER/DB_PASSWORD env vars."""
-    return AuditStore()
+    """AuditStore backed by MySQL — truncates tables before each test for isolation."""
+    store = AuditStore()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM queries")
+        conn.commit()
+    finally:
+        conn.close()
+    return store
 
 
 @pytest.fixture
 def feedback_store() -> FeedbackStore:
-    """FeedbackStore backed by MySQL — requires DB_HOST/DB_USER/DB_PASSWORD env vars."""
-    return FeedbackStore()
+    """FeedbackStore backed by MySQL — truncates tables before each test for isolation."""
+    store = FeedbackStore()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM feedback")
+            cur.execute("DELETE FROM pending_feedback")
+        conn.commit()
+    finally:
+        conn.close()
+    return store
 
 
 @pytest.fixture

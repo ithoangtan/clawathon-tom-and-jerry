@@ -19,7 +19,7 @@ class TestHealthRoute:
         assert "version" in body
         assert "index_ready" in body
         assert body["config"]["topk"] == 8
-        assert body["config"]["grade_threshold"] == 0.5
+        assert body["config"]["grade_threshold"] == 0.3
 
 
 class TestChatRoute:

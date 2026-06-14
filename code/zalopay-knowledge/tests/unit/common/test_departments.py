@@ -63,9 +63,9 @@ class TestDepartmentRegistry:
 
     def test_display_name_en_and_vi(self) -> None:
         risk = get_department(RISK)
-        assert risk.display_name("en") == "Risk"
+        assert risk.display_name("en") == "Risk Management"
         assert risk.display_name("vi") == "Quản lý Rủi ro"
-        assert risk.display_name() == "Risk"
+        assert risk.display_name() == "Risk Management"
 
     def test_space_env_var_helper(self) -> None:
         assert space_env_var(RISK) == "CONFLUENCE_SPACE_RISK"

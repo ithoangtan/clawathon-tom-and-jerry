@@ -70,6 +70,23 @@ def make_router_node(
         # ── Path 0: user-pinned departments bypass the LLM ────────────────────
         pinned_raw = list(state.get("pinned") or [])
         pinned = [d for d in pinned_raw if d in allowed]
+        if pinned_raw and not pinned:
+            # All pinned departments are outside the role's allowlist → deny.
+            logger.warning("Router: all pinned departments denied (role=%s, pinned=%s)", state.get("role"), pinned_raw)
+            denied_names = ", ".join(pinned_raw)
+            if lang == "vi":
+                msg = f"Bạn không có quyền truy cập các phòng ban: {denied_names}."
+            else:
+                msg = f"You do not have permission to access the requested department(s): {denied_names}."
+            return {
+                "intent": "pinned",
+                "target_departments": [],
+                "routing_confidence": 0.0,
+                "clarify_question": None,
+                "status": "refused",
+                "answer": msg,
+                "errors": ["access_denied"],
+            }
         if pinned_raw and pinned:
             logger.info("Router: honouring %d pinned department(s)", len(pinned))
             return {
@@ -128,6 +145,24 @@ def make_router_node(
                 "target_departments": [],
                 "routing_confidence": confidence,
                 "clarify_question": None,
+            }
+
+        # ── Path 2c: LLM routed to valid departments but all denied for this role ──
+        if raw_targets and not targets:
+            denied_names = ", ".join(raw_targets)
+            logger.warning("Router: all LLM targets denied (role=%s, targets=%s)", state.get("role"), raw_targets)
+            if lang == "vi":
+                msg = f"Bạn không có quyền truy cập các phòng ban: {denied_names}."
+            else:
+                msg = f"You do not have permission to access the requested department(s): {denied_names}."
+            return {
+                "intent": intent,
+                "target_departments": [],
+                "routing_confidence": confidence,
+                "clarify_question": None,
+                "status": "refused",
+                "answer": msg,
+                "errors": ["access_denied"],
             }
 
         # ── Path 3: clarify on low confidence / no usable target ──────────────

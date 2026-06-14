@@ -273,12 +273,15 @@ class TestAuditTrail:
                 headers=AUTH_HEADERS,
             )
 
+        import pymysql.cursors
         conn = get_audit_store()._connect()
         try:
-            row = conn.execute(
-                "SELECT question, departments, citations_json, answer_preview, status, user_id "
-                "FROM queries ORDER BY ts DESC LIMIT 1"
-            ).fetchone()
+            with conn.cursor(pymysql.cursors.DictCursor) as cur:
+                cur.execute(
+                    "SELECT question, departments, citations_json, answer_preview, status, user_id "
+                    "FROM queries ORDER BY ts DESC LIMIT 1"
+                )
+                row = cur.fetchone()
         finally:
             conn.close()
 

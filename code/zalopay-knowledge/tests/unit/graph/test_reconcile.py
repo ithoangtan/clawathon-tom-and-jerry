@@ -35,7 +35,7 @@ def test_reconcile_all_refused_fast_path(test_settings: Settings):
     assert out["citations"] == []
     assert out["conflicts"] == []
     assert "not covered in the docs" in out["answer"].lower()
-    assert "teams-risk-knowledge" in out["answer"]
+    assert "Risk Management" in out["answer"]
 
 
 def test_reconcile_all_refused_vietnamese_message(test_settings: Settings):
