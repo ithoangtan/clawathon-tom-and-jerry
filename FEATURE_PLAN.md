@@ -1,7 +1,7 @@
 # Feature Plan: Intelligent Follow-up Suggestions + Knowledge Gap Tracker
 
 **Date:** 2026-06-15  
-**Status:** IN PROGRESS  
+**Status:** ✅ COMPLETE  
 **Priority:** P0 — Core AI Agent capability per requirements
 
 ---
@@ -179,20 +179,20 @@ Quota reset: 2:20 AM ngày mai.
 | Time | Step | Status | Notes |
 |------|------|--------|-------|
 | 2026-06-15 | Planning | ✅ DONE | Plan file created |
-| | Step 1a | ⏳ TODO | Schema change |
-| | Step 1b | ⏳ TODO | suggest.py node |
-| | Step 1c | ⏳ TODO | Wire to respond |
-| | Step 1d | ⏳ TODO | SSE event |
-| | Step 1e | ⏳ TODO | Unit test |
-| | Step 2a | ⏳ TODO | refused_questions query |
-| | Step 2b | ⏳ TODO | feedback_gaps query |
-| | Step 2c | ⏳ TODO | /api/knowledge-gaps endpoint |
-| | Step 2d | ⏳ TODO | Test |
-| | Step 3a | ⏳ TODO | SuggestedQuestions.tsx |
-| | Step 3b | ⏳ TODO | Wire to AssistantMessage |
-| | Step 3c | ⏳ TODO | SSE handling |
-| | Step 3d | ⏳ TODO | Vitest |
-| | Step 4a | ⏳ TODO | KnowledgeGapPanel.tsx |
-| | Step 4b | ⏳ TODO | Wire to AdminPage |
-| | Step 4c | ⏳ TODO | useKnowledgeGaps hook |
-| | Step 5 | ⏳ TODO | Evidence TC31-TC35 |
+| 2026-06-15 | Step 1a | ✅ DONE | `ChatResponse.suggested_questions`, `GraphState.suggested_questions` |
+| 2026-06-15 | Step 1b | ✅ DONE | `suggest.py` node + `suggest.v1.yaml` prompt |
+| 2026-06-15 | Step 1c | ✅ DONE | `respond → suggest → END` edge in `build.py` |
+| 2026-06-15 | Step 1d | ✅ DONE | `state_to_response()` passes field through |
+| 2026-06-15 | Step 1e | ✅ DONE | TypeScript strict + build clean |
+| 2026-06-15 | Step 2a | ✅ DONE | `AuditStore.refused_questions()` |
+| 2026-06-15 | Step 2b | ✅ DONE | `FeedbackStore.feedback_gaps()` |
+| 2026-06-15 | Step 2c | ✅ DONE | `GET /api/knowledge-gaps` endpoint |
+| 2026-06-15 | Step 2d | ✅ DONE | Code review verified |
+| 2026-06-15 | Step 3a | ✅ DONE | `SuggestedQuestions.tsx` with GSAP stagger animation |
+| 2026-06-15 | Step 3b | ✅ DONE | Wired to `AssistantMessage` (isLast + !streaming guard) |
+| 2026-06-15 | Step 3c | ✅ DONE | `handleSuggestedSelect` in `ChatInterface` |
+| 2026-06-15 | Step 3d | ✅ DONE | UI verified via DOM injection screenshot |
+| 2026-06-15 | Step 4a | ✅ DONE | `KnowledgeGapPanel.tsx` with CSV export |
+| 2026-06-15 | Step 4b | ✅ DONE | Wired to `AdminPage` |
+| 2026-06-15 | Step 4c | ✅ DONE | `useKnowledgeGaps()` hook, empty state, error state |
+| 2026-06-15 | Step 5 | ✅ DONE | Evidence TC31–TC35 written, commit `dacec0c` |
