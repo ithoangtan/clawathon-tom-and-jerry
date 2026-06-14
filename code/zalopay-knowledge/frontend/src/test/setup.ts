@@ -25,6 +25,14 @@ function installClipboardMock() {
 beforeEach(() => {
   localStorage.clear();
   Element.prototype.scrollIntoView = vi.fn();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
   installClipboardMock();
   Object.defineProperty(document, "execCommand", {
     value: vi.fn(() => true),

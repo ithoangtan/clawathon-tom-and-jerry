@@ -130,6 +130,8 @@ export interface ChatResponse {
   refusal_reason?: RefusalReason | null;
   /** Departments queried but with no usable answer (partial tier). */
   refusals?: Department[] | null;
+  /** LLM model ID(s) that produced the answer. */
+  model_used?: string | null;
 }
 
 // ── Feedback ─────────────────────────────────────────────────────────────────
@@ -301,6 +303,8 @@ export interface HistoryItem {
   status: AnswerStatus;
   confidence: number;
   latency_ms: number;
+  /** LLM model ID that produced this answer. */
+  model_used?: string | null;
 }
 
 /** Body of GET /api/dashboard */

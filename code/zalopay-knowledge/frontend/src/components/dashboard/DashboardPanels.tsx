@@ -146,8 +146,11 @@ export function HistoryTable({ history }: HistoryTableProps) {
             <th className="py-2 pr-4 font-medium" scope="col">
               {t("historyStatus", locale)}
             </th>
-            <th className="py-2 font-medium" scope="col">
+            <th className="py-2 pr-4 font-medium" scope="col">
               {t("historyLatency", locale)}
+            </th>
+            <th className="py-2 font-medium" scope="col">
+              {t("historyModel", locale)}
             </th>
           </tr>
         </thead>
@@ -170,7 +173,16 @@ export function HistoryTable({ history }: HistoryTableProps) {
               <td className="py-3 pr-4">
                 <ConfidenceBadge confidence={item.confidence} status={item.status} />
               </td>
-              <td className="py-3 text-content-secondary">{formatMs(item.latency_ms)}</td>
+              <td className="py-3 pr-4 text-content-secondary">{formatMs(item.latency_ms)}</td>
+              <td className="py-3 text-content-secondary">
+                {item.model_used ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                    {item.model_used}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-slate-300">—</span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

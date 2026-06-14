@@ -1,5 +1,6 @@
 import { render, type RenderOptions } from "@testing-library/react";
 import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useUserStore } from "@/store/userStore";
@@ -37,4 +38,14 @@ export function resetStores(overrides: Partial<UserContext> = {}) {
 export function renderWithUser(ui: ReactElement, user: Partial<UserContext> = {}, options?: RenderOptions) {
   resetUserStore(user);
   return render(ui, options);
+}
+
+export function renderWithRouter(
+  ui: ReactElement,
+  initialPath = "/",
+  user: Partial<UserContext> = {},
+  options?: RenderOptions,
+) {
+  resetUserStore(user);
+  return render(<MemoryRouter initialEntries={[initialPath]}>{ui}</MemoryRouter>, options);
 }

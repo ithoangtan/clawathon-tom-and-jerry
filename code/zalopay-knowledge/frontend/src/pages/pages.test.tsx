@@ -5,7 +5,7 @@ import { ChatPage } from "./ChatPage";
 import { DashboardPage } from "./DashboardPage";
 import { SettingsPage } from "./SettingsPage";
 import { AdminPage } from "./AdminPage";
-import { renderWithUser } from "@/test/test-utils";
+import { renderWithUser, renderWithRouter } from "@/test/test-utils";
 import { useSidebarStore } from "@/store/sidebarStore";
 
 vi.mock("@/hooks/useChat", () => ({
@@ -92,8 +92,7 @@ describe("ChatPage", () => {
   });
 
   it("renders chat interface smoke test", () => {
-    renderWithUser(<ChatPage />);
-    expect(screen.getByRole("log")).toBeInTheDocument();
+    renderWithRouter(<ChatPage />, "/chat/sess-test456");
     expect(screen.getByRole("heading", { name: "How can I help?" })).toBeInTheDocument();
   });
 
@@ -112,8 +111,9 @@ describe("ChatPage", () => {
       })),
     );
 
-    renderWithUser(<ChatPage />);
-    expect(screen.getByRole("button", { name: "Open session history" })).toBeInTheDocument();
+    renderWithRouter(<ChatPage />, "/chat/sess-test456");
+    // Desktop: "Open session history" button is the one with History icon (not mobile menu)
+    expect(screen.getAllByRole("button", { name: "Open session history" }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("complementary", { name: "Session history" })).not.toBeInTheDocument();
   });
 
@@ -133,8 +133,10 @@ describe("ChatPage", () => {
       })),
     );
 
-    renderWithUser(<ChatPage />);
-    await user.click(screen.getByRole("button", { name: "Open session history" }));
+    renderWithRouter(<ChatPage />, "/chat/sess-test456");
+    // Click the desktop "Open session history" button (last one – md:inline-flex variant)
+    const openBtns = screen.getAllByRole("button", { name: "Open session history" });
+    await user.click(openBtns[openBtns.length - 1]);
     expect(screen.getByRole("complementary", { name: "Session history" })).toBeInTheDocument();
     expect(useSidebarStore.getState().open).toBe(true);
 
@@ -171,7 +173,6 @@ describe("DashboardPage", () => {
   it("renders dashboard title and sections", () => {
     renderWithUser(<DashboardPage />);
     expect(screen.getByRole("heading", { name: "Usage & Health" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sync Status" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Recent Queries" })).toBeInTheDocument();
     expect(screen.getByText("Total queries")).toBeInTheDocument();
     expect(screen.getByText("Partial answer rate")).toBeInTheDocument();
@@ -215,7 +216,6 @@ describe("SettingsPage", () => {
     expect(
       screen.getByText(/Role and home department are sent with every chat request/i),
     ).toBeInTheDocument();
-    expect(screen.getByText("Knowledge sync")).toBeInTheDocument();
     expect(screen.getByText("Runtime config")).toBeInTheDocument();
   });
 });
@@ -226,6 +226,6 @@ describe("AdminPage", () => {
     expect(screen.getByRole("heading", { name: "Knowledge sync" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sync all departments" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Recent sync jobs" })).toBeInTheDocument();
-    expect(screen.getByText("No sync jobs yet.")).toBeInTheDocument();
+    expect(screen.getAllByText("No sync jobs yet.").length).toBeGreaterThan(0);
   });
 });

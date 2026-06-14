@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ArrowRight, ChevronLeft, History, Menu, Plus, Search, Trash2, X } from "@/components/ui/icons";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-import { classNames, formatDate } from "@/lib/format";
+import { classNames, formatDate, generateSessionId } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import {
   matchesSearch,
@@ -17,6 +17,7 @@ import {
 import { useSessionStore } from "@/store/sessionStore";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useUserStore } from "@/store/userStore";
+import { useNavigate } from "react-router-dom";
 
 function statusLabel(status: ThreadStatus, locale: "en" | "vi"): string {
   switch (status) {
@@ -53,9 +54,8 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
   const locale = useUserStore((s) => s.locale);
   const activeSessionId = useUserStore((s) => s.sessionId);
   const threadsRecord = useSessionStore((s) => s.threads);
-  const requestNewSession = useSessionStore((s) => s.requestNewSession);
-  const requestSwitchSession = useSessionStore((s) => s.requestSwitchSession);
   const deleteThread = useSessionStore((s) => s.deleteThread);
+  const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
       onCloseMobile?.();
       return;
     }
-    requestSwitchSession(sessionId);
+    navigate(`/chat/${sessionId}`);
     onCloseMobile?.();
   }
 
@@ -78,7 +78,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
     deleteThread(sessionId);
     setPendingDeleteId(null);
     if (sessionId === activeSessionId) {
-      requestNewSession();
+      navigate(`/chat/${generateSessionId()}`);
     }
   }
 
@@ -113,7 +113,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
           variant="secondary"
           className="w-full justify-start"
           onClick={() => {
-            requestNewSession();
+            navigate(`/chat/${generateSessionId()}`);
             onCloseMobile?.();
           }}
         >

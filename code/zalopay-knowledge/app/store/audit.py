@@ -47,7 +47,8 @@ class AuditStore:
                     feedback_id TEXT,
                     citations_json TEXT,
                     answer_preview TEXT,
-                    tokens INTEGER DEFAULT 0
+                    tokens INTEGER DEFAULT 0,
+                    model_used TEXT
                 )
                 """
             )
@@ -60,6 +61,8 @@ class AuditStore:
                 conn.execute("ALTER TABLE queries ADD COLUMN answer_preview TEXT")
             if "stage_trace_json" not in columns:
                 conn.execute("ALTER TABLE queries ADD COLUMN stage_trace_json TEXT")
+            if "model_used" not in columns:
+                conn.execute("ALTER TABLE queries ADD COLUMN model_used TEXT")
             conn.commit()
         finally:
             conn.close()
@@ -80,6 +83,7 @@ class AuditStore:
         answer_preview: str = "",
         tokens: int = 0,
         stage_trace: dict | None = None,
+        model_used: str | None = None,
     ) -> str:
         """Record one query/answer event. Returns the audit row id."""
         row_id = str(uuid.uuid4())
@@ -91,8 +95,8 @@ class AuditStore:
                 INSERT INTO queries (
                     id, ts, user_id, session_id, role, question, departments,
                     status, confidence, latency_ms, feedback_id, citations_json,
-                    answer_preview, tokens, stage_trace_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    answer_preview, tokens, stage_trace_json, model_used
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     row_id,
@@ -110,6 +114,7 @@ class AuditStore:
                     preview,
                     tokens,
                     json.dumps(stage_trace) if stage_trace else None,
+                    model_used or None,
                 ),
             )
             conn.commit()
@@ -155,7 +160,7 @@ class AuditStore:
 
             history_rows = conn.execute(
                 """
-                SELECT ts, question, departments, status, confidence, latency_ms
+                SELECT ts, question, departments, status, confidence, latency_ms, model_used
                 FROM queries ORDER BY ts DESC LIMIT ?
                 """,
                 (history_limit,),
@@ -175,6 +180,7 @@ class AuditStore:
                         "status": r["status"],
                         "confidence": r["confidence"],
                         "latency_ms": r["latency_ms"],
+                        "model_used": r["model_used"] or None,
                     }
                 )
 

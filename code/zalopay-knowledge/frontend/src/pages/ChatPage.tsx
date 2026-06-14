@@ -4,8 +4,11 @@ import { SessionSidebar, SessionSidebarPanel } from "@/components/chat/SessionSi
 import { SidebarResizeHandle } from "@/components/chat/SidebarResizeHandle";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { t } from "@/lib/i18n";
+import { useSessionStore } from "@/store/sessionStore";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useUserStore } from "@/store/userStore";
+import { useEffect } from "react";
+import { useParams } from "react-router-dom";
 
 const DESKTOP_MQ = "(min-width: 768px)";
 
@@ -15,6 +18,16 @@ const SIDEBAR_MIN_PX = 180;
 const SIDEBAR_MAX_PX = 420;
 
 export function ChatPage() {
+  const { sessionId: urlSessionId } = useParams<{ sessionId: string }>();
+  const currentSessionId = useUserStore((s) => s.sessionId);
+  const requestSwitchSession = useSessionStore((s) => s.requestSwitchSession);
+
+  useEffect(() => {
+    if (urlSessionId && urlSessionId !== currentSessionId) {
+      requestSwitchSession(urlSessionId);
+    }
+  }, [urlSessionId, currentSessionId, requestSwitchSession]);
+
   const locale = useUserStore((s) => s.locale);
   const sidebarOpen = useSidebarStore((s) => s.open);
   const setSidebarOpen = useSidebarStore((s) => s.setOpen);

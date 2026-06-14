@@ -151,6 +151,7 @@ def record_chat_outcome(
         citations=[c.model_dump() for c in response.citations],
         answer_preview=response.answer,
         stage_trace=stage_trace,
+        model_used=response.model_used,
     )
 
 

@@ -10,6 +10,8 @@ import { PartialGapBanner } from "@/components/chat/PartialGapBanner";
 import { RefusalPanel } from "@/components/chat/RefusalPanel";
 import { Card } from "@/components/ui/Card";
 import { classNames } from "@/lib/format";
+import { t } from "@/lib/i18n";
+import { useUserStore } from "@/store/userStore";
 import type { ChatResponse, Department } from "@/lib/types";
 
 interface AnswerCardProps {
@@ -27,6 +29,7 @@ export function AnswerCard({
   variant = "card",
   streaming,
 }: AnswerCardProps) {
+  const locale = useUserStore((s) => s.locale);
   const {
     answer,
     citations,
@@ -38,6 +41,7 @@ export function AnswerCard({
     feedback_id,
     refusal_reason,
     refusals,
+    model_used,
   } = response;
 
   const isMessage = variant === "message";
@@ -70,12 +74,23 @@ export function AnswerCard({
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <ConfidenceBadge
-          confidence={confidence}
-          status={status}
-          refusalReason={refusal_reason}
-          clarifying={isClarifying}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <ConfidenceBadge
+            confidence={confidence}
+            status={status}
+            refusalReason={refusal_reason}
+            clarifying={isClarifying}
+          />
+          {model_used && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500"
+              title={`${t("modelUsedLabel", locale)}: ${model_used}`}
+            >
+              <span className="opacity-60">⚙</span>
+              {model_used}
+            </span>
+          )}
+        </div>
         {status !== "refused" && !isClarifying && answer.trim() && !streaming && (
           <MessageCopyButton text={answer} />
         )}
@@ -87,7 +102,7 @@ export function AnswerCard({
             question={clarifying_question!}
             onSelect={onClarifySelect!}
           />
-          {!streaming && feedback_id && <FeedbackBar feedbackId={feedback_id} />}
+          {!streaming && feedback_id && <FeedbackBar feedbackId={feedback_id} modelUsed={model_used ?? undefined} />}
         </div>
       ) : status === "refused" ? (
         <>
@@ -113,7 +128,7 @@ export function AnswerCard({
           {!streaming && conflicts && conflicts.length > 0 && (
             <ConflictPanel conflicts={conflicts} />
           )}
-          {!streaming && feedback_id && <FeedbackBar feedbackId={feedback_id} />}
+          {!streaming && feedback_id && <FeedbackBar feedbackId={feedback_id} modelUsed={model_used ?? undefined} />}
         </>
       )}
     </Card>

@@ -306,6 +306,8 @@ const strings: Strings = {
   historyDepartments: { en: "Departments", vi: "Phòng ban" },
   historyStatus: { en: "Status", vi: "Trạng thái" },
   historyLatency: { en: "Latency", vi: "Độ trễ" },
+  historyModel: { en: "Model", vi: "Model" },
+  modelUsedLabel: { en: "Model", vi: "Model" },
   sourceConfluence: { en: "Confluence", vi: "Confluence" },
   sourceGdrive: { en: "Google Drive", vi: "Google Drive" },
   syncStateRunning: { en: "running", vi: "đang chạy" },

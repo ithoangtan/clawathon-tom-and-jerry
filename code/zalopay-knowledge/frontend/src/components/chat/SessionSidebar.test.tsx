@@ -1,106 +1,127 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
-import { SessionSidebar } from "./SessionSidebar";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SessionSidebar, SessionSidebarPanel } from "./SessionSidebar";
 import { useSessionStore } from "@/store/sessionStore";
-import { resetStores, renderWithUser } from "@/test/test-utils";
+import { resetStores, renderWithRouter } from "@/test/test-utils";
 
-function getSidebarRegion() {
-  return screen.getByRole("complementary", { name: "Session history", hidden: true });
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
+function seedThreads() {
+  useSessionStore.getState().saveThread(
+    "sess-active",
+    [
+      {
+        id: "user-1",
+        role: "user",
+        content: "Settlement policy question",
+        timestamp: "2024-01-01T10:00:00.000Z",
+      },
+      {
+        id: "assistant-1",
+        role: "assistant",
+        content: "Policy details",
+        timestamp: "2024-01-01T10:01:00.000Z",
+        response: {
+          answer: "Policy details",
+          citations: [],
+          source_departments: ["risk"],
+          confidence: 0.9,
+          feedback_id: "fb-1",
+          status: "answered",
+        },
+      },
+    ],
+    ["risk"],
+    false,
+  );
+  useSessionStore.getState().saveThread(
+    "sess-other",
+    [
+      {
+        id: "user-2",
+        role: "user",
+        content: "KYC thresholds",
+        timestamp: "2024-01-02T10:00:00.000Z",
+      },
+    ],
+    [],
+    true,
+  );
 }
 
-describe("SessionSidebar", () => {
+describe("SessionSidebarPanel", () => {
   beforeEach(() => {
+    mockNavigate.mockClear();
     resetStores({ sessionId: "sess-active" });
-    useSessionStore.getState().saveThread(
-      "sess-active",
-      [
-        {
-          id: "user-1",
-          role: "user",
-          content: "Settlement policy question",
-          timestamp: "2024-01-01T10:00:00.000Z",
-        },
-        {
-          id: "assistant-1",
-          role: "assistant",
-          content: "Policy details",
-          timestamp: "2024-01-01T10:01:00.000Z",
-          response: {
-            answer: "Policy details",
-            citations: [],
-            source_departments: ["risk"],
-            confidence: 0.9,
-            feedback_id: "fb-1",
-            status: "answered",
-          },
-        },
-      ],
-      ["risk"],
-      false,
-    );
-    useSessionStore.getState().saveThread(
-      "sess-other",
-      [
-        {
-          id: "user-2",
-          role: "user",
-          content: "KYC thresholds",
-          timestamp: "2024-01-02T10:00:00.000Z",
-        },
-      ],
-      [],
-      true,
-    );
+    seedThreads();
   });
 
   it("lists sessions with active aria-current and filters by search", async () => {
     const user = userEvent.setup();
-    renderWithUser(<SessionSidebar />, { sessionId: "sess-active" });
+    renderWithRouter(<SessionSidebarPanel />, "/chat/sess-active", { sessionId: "sess-active" });
 
-    const history = getSidebarRegion();
-    const active = within(history).getByRole("button", { name: /Settlement policy question/i });
+    const active = screen.getByRole("button", { name: /Settlement policy question/i });
     expect(active).toHaveAttribute("aria-current", "true");
 
-    const search = within(history).getByRole("searchbox", { name: "Search sessions" });
+    const search = screen.getByRole("searchbox", { name: "Search sessions" });
     await user.type(search, "KYC");
-    expect(within(history).getByText("KYC thresholds")).toBeInTheDocument();
-    expect(within(history).queryByText(/Settlement policy question/i)).not.toBeInTheDocument();
+    expect(screen.getByText("KYC thresholds")).toBeInTheDocument();
+    expect(screen.queryByText(/Settlement policy question/i)).not.toBeInTheDocument();
   });
 
-  it("requests session switch when another thread is selected", async () => {
+  it("navigates to the correct session URL when another thread is selected", async () => {
     const user = userEvent.setup();
-    renderWithUser(<SessionSidebar />, { sessionId: "sess-active" });
+    renderWithRouter(<SessionSidebarPanel />, "/chat/sess-active", { sessionId: "sess-active" });
 
-    const history = getSidebarRegion();
-    await user.click(within(history).getByRole("button", { name: /KYC thresholds/i }));
+    await user.click(screen.getByRole("button", { name: /KYC thresholds/i }));
 
-    expect(useSessionStore.getState().sessionAction).toEqual({
-      type: "switch",
-      sessionId: "sess-other",
-    });
+    expect(mockNavigate).toHaveBeenCalledWith("/chat/sess-other");
+    expect(useSessionStore.getState().sessionAction).toBeNull();
   });
 
-  it("confirms delete and starts a new session when active thread is removed", async () => {
+  it("navigates to a new session URL when the active thread is deleted", async () => {
     const user = userEvent.setup();
-    renderWithUser(<SessionSidebar />, { sessionId: "sess-active" });
+    renderWithRouter(<SessionSidebarPanel />, "/chat/sess-active", { sessionId: "sess-active" });
 
-    const history = getSidebarRegion();
-    const activeItem = within(history).getByRole("button", { name: /Settlement policy question/i });
-    const row = activeItem.parentElement;
-    expect(row).toBeTruthy();
-    await user.click(within(row as HTMLElement).getByRole("button", { name: "Delete session" }));
+    const activeItem = screen.getByRole("button", { name: /Settlement policy question/i });
+    const row = activeItem.parentElement!;
+    await user.click(within(row).getByRole("button", { name: "Delete session" }));
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(useSessionStore.getState().getThread("sess-active")).toBeUndefined();
-    expect(useSessionStore.getState().sessionAction).toEqual({ type: "new" });
+    expect(mockNavigate).toHaveBeenCalledWith(expect.stringMatching(/^\/chat\/sess-/));
+  });
+
+  it("does not navigate when clicking the already-active session", async () => {
+    const user = userEvent.setup();
+    renderWithRouter(<SessionSidebarPanel />, "/chat/sess-active", { sessionId: "sess-active" });
+
+    await user.click(screen.getByRole("button", { name: /Settlement policy question/i }));
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});
+
+describe("SessionSidebar", () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+    resetStores({ sessionId: "sess-active" });
+    seedThreads();
   });
 
   it("opens mobile drawer with dialog semantics", async () => {
     const user = userEvent.setup();
-    renderWithUser(<SessionSidebar />, { sessionId: "sess-active" });
+    renderWithRouter(<SessionSidebar />, "/chat/sess-active", { sessionId: "sess-active" });
 
-    await user.click(screen.getByRole("button", { name: "Open session history" }));
+    // Two "Open session history" buttons exist (mobile + desktop); click the mobile one (first)
+    const openBtns = screen.getAllByRole("button", { name: "Open session history" });
+    await user.click(openBtns[0]);
+
     expect(screen.getByRole("dialog", { name: "Session history" })).toBeInTheDocument();
   });
 });

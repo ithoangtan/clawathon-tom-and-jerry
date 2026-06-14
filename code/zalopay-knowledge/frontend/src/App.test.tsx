@@ -78,11 +78,12 @@ vi.mock("@/hooks/useAdminSyncStatus", () => ({
 }));
 
 describe("App navigation", () => {
-  it("renders chat at / and navigates to dashboard", async () => {
+  it("renders chat after redirect and navigates to dashboard", async () => {
     const user = userEvent.setup();
     renderWithUser(<App />);
 
-    expect(screen.getByRole("heading", { name: "How can I help?" })).toBeInTheDocument();
+    // / redirects to /chat/<sessionId>; ChatPage renders the empty-state heading
+    expect(await screen.findByRole("heading", { name: "How can I help?" })).toBeInTheDocument();
     const header = screen.getByRole("banner");
     expect(within(header).getByRole("button", { name: "Switch to Vietnamese" })).toBeInTheDocument();
 
@@ -99,6 +100,8 @@ describe("App navigation", () => {
   it("switches UI language from the header control", async () => {
     const user = userEvent.setup();
     renderWithUser(<App />);
+
+    await screen.findByRole("heading", { name: "How can I help?" });
 
     const header = screen.getByRole("banner");
     await user.click(within(header).getByRole("button", { name: "Switch to Vietnamese" }));

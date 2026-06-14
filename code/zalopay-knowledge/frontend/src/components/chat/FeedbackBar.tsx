@@ -6,16 +6,38 @@ import { t } from "@/lib/i18n";
 import { getUserContext, useUserStore } from "@/store/userStore";
 import { useCallback, useState } from "react";
 
-interface FeedbackBarProps {
-  feedbackId: string;
+const STORAGE_PREFIX = "feedback:";
+
+function loadPersistedRating(feedbackId: string): "up" | "down" | null {
+  try {
+    const v = localStorage.getItem(STORAGE_PREFIX + feedbackId);
+    if (v === "up" || v === "down") return v;
+  } catch {
+    // ignore
+  }
+  return null;
 }
 
-export function FeedbackBar({ feedbackId }: FeedbackBarProps) {
+function persistRating(feedbackId: string, rating: "up" | "down") {
+  try {
+    localStorage.setItem(STORAGE_PREFIX + feedbackId, rating);
+  } catch {
+    // ignore
+  }
+}
+
+interface FeedbackBarProps {
+  feedbackId: string;
+  modelUsed?: string;
+}
+
+export function FeedbackBar({ feedbackId, modelUsed }: FeedbackBarProps) {
   const locale = useUserStore((s) => s.locale);
-  const [rating, setRating] = useState<"up" | "down" | null>(null);
+  const persisted = loadPersistedRating(feedbackId);
+  const [rating, setRating] = useState<"up" | "down" | null>(persisted);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(persisted !== null);
   const [error, setError] = useState<string | null>(null);
 
   const submit = useCallback(
@@ -34,6 +56,7 @@ export function FeedbackBar({ feedbackId }: FeedbackBarProps) {
           },
           getUserContext(),
         );
+        persistRating(feedbackId, selected);
         setDone(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : t("errorGeneric", locale));
@@ -44,11 +67,41 @@ export function FeedbackBar({ feedbackId }: FeedbackBarProps) {
     [comment, feedbackId, locale],
   );
 
-  if (done) {
+  if (done && rating !== null) {
     return (
-      <p className="text-sm text-emerald-600" role="status" aria-live="polite">
-        {t("feedbackThanks", locale)}
-      </p>
+      <div
+        className="mt-4 border-t border-slate-100/80 pt-3"
+        role="status"
+        aria-live="polite"
+      >
+        <p className="text-xs text-slate-500 mb-2">{t("feedbackPrompt", locale)}</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant={rating === "up" ? "primary" : "secondary"}
+            disabled
+            aria-pressed={rating === "up"}
+            aria-label={t("feedbackUp", locale)}
+            className={rating !== "up" ? "opacity-30" : ""}
+          >
+            <ThumbsUp size="sm" />
+          </Button>
+          <Button
+            variant={rating === "down" ? "primary" : "secondary"}
+            disabled
+            aria-pressed={rating === "down"}
+            aria-label={t("feedbackDown", locale)}
+            className={rating !== "down" ? "opacity-30" : ""}
+          >
+            <ThumbsDown size="sm" />
+          </Button>
+          <span className="text-xs text-emerald-600 ml-1">{t("feedbackThanks", locale)}</span>
+          {modelUsed && (
+            <span className="ml-auto text-[11px] text-slate-400">
+              {t("modelUsedLabel", locale)}: <span className="font-medium text-slate-500">{modelUsed}</span>
+            </span>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -105,6 +158,11 @@ export function FeedbackBar({ feedbackId }: FeedbackBarProps) {
         >
           <ThumbsDown size="sm" />
         </Button>
+        {modelUsed && (
+          <span className="ml-auto text-[11px] text-slate-400">
+            {t("modelUsedLabel", locale)}: <span className="font-medium text-slate-500">{modelUsed}</span>
+          </span>
+        )}
       </div>
 
       {error && (

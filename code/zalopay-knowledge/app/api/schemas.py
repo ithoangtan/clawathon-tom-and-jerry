@@ -344,6 +344,8 @@ class HistoryItem(_Base):
     status: AnswerStatus
     confidence: float = Field(..., ge=0.0, le=1.0)
     latency_ms: int
+    model_used: Optional[str] = None
+    """LLM model ID that produced this answer."""
 
 
 class DashboardData(_Base):
