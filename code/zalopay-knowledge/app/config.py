@@ -152,6 +152,28 @@ class Settings(BaseSettings):
         description="Identity service URL (auto-injected at deploy)",
     )
 
+    # ── Vector store backend ─────────────────────────────────────────────────
+
+    vector_store: str = Field(
+        default="faiss",
+        description="Vector store backend: 'faiss' (local) or 'opensearch' (AgentBase)",
+    )
+
+    # OpenSearch settings (used when vector_store=opensearch)
+    opensearch_host: str = Field(default="", description="OpenSearch host (no scheme)")
+    opensearch_port: int = Field(default=9200, description="OpenSearch port")
+    opensearch_user: str = Field(default="", description="OpenSearch username")
+    opensearch_password: str = Field(default="", description="OpenSearch password")
+    opensearch_use_ssl: bool = Field(default=True, description="Use SSL for OpenSearch connection")
+    opensearch_verify_certs: bool = Field(
+        default=False,
+        description="Verify TLS certificates (set False for GreenNode self-signed certs)",
+    )
+    opensearch_index_prefix: str = Field(
+        default="zalopay",
+        description="Prefix for OpenSearch index names (e.g. zalopay_risk, zalopay_grow)",
+    )
+
     # ── Index & retrieval ────────────────────────────────────────────────────
 
     index_dir: str = Field(
@@ -246,6 +268,14 @@ class Settings(BaseSettings):
             "Blank locally → LTM recall disabled."
         ),
     )
+
+    # ── MySQL (Audit + Feedback store) ───────────────────────────────────────
+
+    db_host: str = Field(default="127.0.0.1", description="MySQL host (VDB private endpoint in prod)")
+    db_port: int = Field(default=3306, description="MySQL port")
+    db_user: str = Field(default="", description="MySQL username")
+    db_password: str = Field(default="", description="MySQL password")
+    db_name: str = Field(default="zalopay_knowledge", description="MySQL database name")
 
     # ── Security (MVP checklist §5–6) ─────────────────────────────────────────
 

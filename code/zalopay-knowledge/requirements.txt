@@ -35,6 +35,9 @@ tenacity>=8.2,<9
 # --- Vector index ---
 faiss-cpu>=1.8,<2
 
+# --- Vector OpenSearch (GreenNode AgentBase managed, VECTOR_STORE=opensearch) ---
+opensearch-py>=2.7,<3
+
 # --- Embeddings (local, multilingual VI+EN) ---
 sentence-transformers>=3,<4
 numpy>=1.26,<2
@@ -59,6 +62,9 @@ langdetect>=1,<2
 
 # --- Prompt loader ---
 PyYAML>=6,<7
+
+# --- MySQL client ---
+PyMySQL>=1.1,<2
 
 # --- Tests (CI / local) ---
 pytest>=8,<9

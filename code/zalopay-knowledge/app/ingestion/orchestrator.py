@@ -44,7 +44,15 @@ class SyncService:
         self._cfg = settings or get_settings()
         meta = MetaStore(Path(self._cfg.index_dir) / "meta.db")
         self._orchestrator = SyncOrchestrator(meta)
-        self._indexer = IndexBuilder(self._cfg)
+
+        if self._cfg.vector_store == "opensearch":
+            from app.ingestion.opensearch_indexer import OpenSearchIndexBuilder
+            self._indexer = OpenSearchIndexBuilder(self._cfg)
+            logger.info("SyncService using OpenSearchIndexBuilder (VECTOR_STORE=opensearch)")
+        else:
+            self._indexer = IndexBuilder(self._cfg)
+            logger.info("SyncService using IndexBuilder (VECTOR_STORE=faiss)")
+
         self._confluence = ConfluenceClient(self._cfg)
         self._gdrive = GDriveClient(self._cfg)
 

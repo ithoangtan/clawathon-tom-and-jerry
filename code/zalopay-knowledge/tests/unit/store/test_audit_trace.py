@@ -7,7 +7,7 @@ from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAU
 
 
 def test_log_query_persists_stage_trace(tmp_path) -> None:
-    store = AuditStore(tmp_path / "audit.db")
+    store = AuditStore()
     trace = {
         "query": "What is KYC?",
         "rewrite": "KYC policy",
@@ -32,10 +32,12 @@ def test_log_query_persists_stage_trace(tmp_path) -> None:
 
     conn = store._connect()
     try:
-        row = conn.execute(
-            "SELECT stage_trace_json FROM queries WHERE id = ?",
-            (row_id,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT stage_trace_json FROM queries WHERE id = %s",
+                (row_id,),
+            )
+            row = cur.fetchone()
     finally:
         conn.close()
 

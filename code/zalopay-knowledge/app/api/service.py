@@ -35,18 +35,12 @@ _executor = ThreadPoolExecutor(max_workers=4)
 
 @lru_cache(maxsize=1)
 def get_audit_store() -> AuditStore:
-    cfg = get_settings()
-    from pathlib import Path
-
-    return AuditStore(Path(cfg.index_dir) / "audit.db")
+    return AuditStore()
 
 
 @lru_cache(maxsize=1)
 def get_feedback_store() -> FeedbackStore:
-    cfg = get_settings()
-    from pathlib import Path
-
-    return FeedbackStore(Path(cfg.index_dir) / "feedback.db")
+    return FeedbackStore()
 
 
 def _initial_state(ctx: UserContext, request: ChatRequest, cfg: Settings) -> dict[str, Any]:

@@ -7,16 +7,16 @@ ports and callables.  This module constructs that bundle for the active
 environment (``APP_ENV``), so the graph and node code never know which concrete
 adapter they're talking to:
 
-| Port            | local (APP_ENV=local) | agentbase (APP_ENV=agentbase) |
+| Port            | VECTOR_STORE=faiss    | VECTOR_STORE=opensearch       |
 |-----------------|-----------------------|-------------------------------|
 | LLMPort         | VngMaasLLM            | VngMaasLLM (same MaaS API)    |
-| RetrieverPort   | FaissRetriever        | FaissRetriever (index baked)  |
+| RetrieverPort   | FaissRetriever        | OpenSearchRetriever           |
 | CheckpointerPort| SqliteCheckpointer    | AgentBaseCheckpointer         |
 | recall (STM)    | None (stateless)      | make_agentbase_recall(...)    |
 
 ``get_deps()`` memoizes the bundle for the process: constructing the retriever
-loads the embedding model and FAISS partitions, which is expensive and must
-happen exactly once at boot — never per request.
+loads the embedding model (and FAISS partitions when vector_store=faiss), which
+is expensive and must happen exactly once at boot — never per request.
 """
 
 import logging
@@ -47,7 +47,14 @@ def build_deps(settings: Settings | None = None) -> GraphDeps:
     cfg = settings or get_settings()
 
     llm = VngMaasLLM(cfg)
-    retriever = FaissRetriever(cfg)
+
+    if cfg.vector_store == "opensearch":
+        from app.adapters.opensearch_retriever import OpenSearchRetriever
+        retriever = OpenSearchRetriever(cfg)
+        logger.info("Using OpenSearchRetriever (VECTOR_STORE=opensearch)")
+    else:
+        retriever = FaissRetriever(cfg)
+        logger.info("Using FaissRetriever (VECTOR_STORE=faiss)")
 
     if cfg.is_agentbase:
         checkpointer = AgentBaseCheckpointer(cfg)

@@ -5,6 +5,25 @@
 # (see deploy/network-policy.md). Local compose does not simulate VPC egress rules.
 
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: zalopay-knowledge-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: zalopay
+      MYSQL_DATABASE: zalopay_knowledge
+      MYSQL_USER: zalopay
+      MYSQL_PASSWORD: zalopay
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uzalopay", "-pzalopay"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   agent:
     build:
       context: .
@@ -19,9 +38,17 @@ services:
       APP_ENV: local
       INDEX_DIR: /data/index
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Override DB_HOST to reach the local MySQL container (not the VDB private IP)
+      DB_HOST: mysql
+      DB_USER: zalopay
+      DB_PASSWORD: zalopay
+      DB_NAME: zalopay_knowledge
     volumes:
       - faiss-index:/data/index
       - ./corpus/pdfs:/app/corpus/pdfs
+    depends_on:
+      mysql:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -39,3 +66,5 @@ services:
 volumes:
   faiss-index:
     name: zalopay-knowledge-faiss-index
+  mysql-data:
+    name: zalopay-knowledge-mysql-data
