@@ -286,15 +286,18 @@ def stream_chat(ctx: UserContext, request: ChatRequest) -> Iterator[dict[str, An
         yield {"event": "error", "data": {"detail": str(exc)}}
         return
 
-    # Merge with any values only set on the full state
+    # If the respond node did not emit an answer via the stream updates (e.g. it
+    # wrote only to the root state snapshot), load the final state from the
+    # checkpointer rather than re-invoking the full graph.  Re-invoking with a
+    # fresh _initial_state resets the conversation context and can trigger a
+    # second expensive pipeline run on top of whatever the checkpointer saved.
     if not final_state.get("answer"):
         try:
-            final_state = graph.invoke(
-                _initial_state(ctx, request, cfg),
-                _graph_config(ctx),
-            )
+            snapshot = graph.get_state(_graph_config(ctx))
+            if snapshot and snapshot.values:
+                final_state = {**snapshot.values, **final_state}
         except Exception as exc:
-            logger.error("stream_chat fallback invoke failed: %s", exc, exc_info=True)
+            logger.error("stream_chat get_state fallback failed: %s", exc, exc_info=True)
 
     response = state_to_response(final_state)
     latency_ms = int((time.perf_counter() - started) * 1000)

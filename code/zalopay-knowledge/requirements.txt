@@ -19,9 +19,12 @@ pydantic-settings>=2.3,<3
 python-dotenv>=1,<2
 
 # --- LangGraph / LangChain core ---
-langgraph>=0.2,<0.3
+# Pin exact versions — greennode-agent-bridge[langgraph] installs AFTER this file
+# and can silently upgrade langgraph to 0.3+ which removes JsonPlusSerializer.dumps().
+# These pins are re-enforced in the Dockerfile after the bridge install.
+langgraph==0.2.76
 langchain-core>=0.3,<0.4
-langgraph-checkpoint-sqlite>=1,<3
+langgraph-checkpoint-sqlite==2.0.11
 
 # --- LLM client (OpenAI-compatible, targets VNG MaaS) ---
 openai>=1.40,<2

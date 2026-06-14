@@ -1,4 +1,4 @@
-.PHONY: up down logs build docker-build docker-build-amd64 validate-runtime-env fe-dev fe-build test sync-confluence sync-gdrive
+.PHONY: up down logs build docker-build docker-build-amd64 validate-runtime-env fe-dev fe-build test sync-confluence sync-gdrive dev dev-backend
 
 # ── Docker Compose ──────────────────────────────────────────────────────────
 
@@ -31,6 +31,16 @@ validate-runtime-env:
 	bash scripts/validate-runtime-env.sh deploy/agentbase-runtime.env.example deploy/.runtime.env
 
 # ── Frontend ────────────────────────────────────────────────────────────────
+
+## Run backend directly (no Docker; index stored in ./index, hot-reload on).
+## Use this when greennode-agent-bridge is not available (not on public PyPI).
+## Run `make dev-backend` in one terminal and `make fe-dev` in another.
+dev-backend:
+	@mkdir -p ./index/faiss ./index/hf-cache
+	INDEX_DIR=./index python main.py
+
+## Run backend + hint for frontend (convenience alias)
+dev: dev-backend
 
 ## Start Vite dev server (hot-reload; proxies /api → localhost:8080)
 fe-dev:
