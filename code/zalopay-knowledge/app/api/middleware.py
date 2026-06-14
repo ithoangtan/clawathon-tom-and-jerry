@@ -64,6 +64,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         latency_ms = int((time.perf_counter() - start) * 1000)
         status = response.status_code
+        if request.url.path in {"/health", "/health/live", "/health/ready"}:
+            return response
         if status >= 500:
             logger.error(
                 "%s %s → %d (%dms)",
