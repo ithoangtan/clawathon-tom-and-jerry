@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/hooks/useI18n";
-import { useTutorialContext } from "@/hooks/useTutorial";
+import { useTutorialContext, pathToTutorialKey } from "@/hooks/useTutorial";
 import { classNames } from "@/lib/format";
+import { useLocation } from "react-router-dom";
 
 function HelpIcon() {
   return (
@@ -24,6 +25,12 @@ function HelpIcon() {
 export function TutorialHelpButton() {
   const { t } = useI18n();
   const { startTutorial, isRunning } = useTutorialContext();
+  const location = useLocation();
+
+  function handleClick() {
+    const key = pathToTutorialKey(location.pathname);
+    startTutorial(key, 0);
+  }
 
   return (
     <Button
@@ -32,7 +39,7 @@ export function TutorialHelpButton() {
       aria-label={t("tutorialHelpAria")}
       title={t("tutorialHelpTitle")}
       className={classNames("gap-1.5", isRunning && "ring-2 ring-brand/40")}
-      onClick={() => startTutorial(0)}
+      onClick={handleClick}
     >
       <HelpIcon />
       <span className="hidden sm:inline">{t("tutorialHelp")}</span>

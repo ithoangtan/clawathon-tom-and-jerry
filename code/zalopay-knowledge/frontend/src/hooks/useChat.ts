@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { api, ApiError, chatStream } from "@/lib/apiClient";
 import {
   applyPipelineEvent,
@@ -104,6 +105,8 @@ function resetChatState(
 }
 
 export function useChat() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const chatScenarioKey = useMockStore((s) => s.chatScenario);
   const sessionId = useUserStore((s) => s.sessionId);
   const sessionAction = useSessionStore((s) => s.sessionAction);
@@ -245,6 +248,10 @@ export function useChat() {
     async (question: string, overrideDepts?: Department[]) => {
       const trimmed = question.trim();
       if (!trimmed || loading) return;
+
+      if (location.pathname === "/") {
+        navigate(`/chat/${sessionId}`, { replace: true });
+      }
 
       const now = new Date().toISOString();
       const userMsg: ChatMessage = {
@@ -394,7 +401,7 @@ export function useChat() {
         setStreamingStatus(null);
       }
     },
-    [loading, targetDepartments, targetAutoRoute, appendAssistant, chatScenarioKey],
+    [loading, targetDepartments, targetAutoRoute, appendAssistant, chatScenarioKey, location.pathname, sessionId, navigate],
   );
 
   const retryLast = useCallback(() => {

@@ -5,12 +5,14 @@ import { Card } from "@/components/ui/Card";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { t } from "@/lib/i18n";
 import { useDashboard } from "@/hooks/useDashboard";
+import { usePageTutorial } from "@/hooks/useTutorial";
 import { useUserStore } from "@/store/userStore";
 import { MOCK_DASHBOARD } from "@/lib/mockDashboard";
 
 export function DashboardPage() {
   const locale = useUserStore((s) => s.locale);
   const { data, error, loading, refresh } = useDashboard();
+  usePageTutorial("dashboard");
 
   const displayData = data ?? (error ? MOCK_DASHBOARD : null);
 
@@ -59,11 +61,13 @@ export function DashboardPage() {
           <LoadingSpinner />
         </div>
       ) : displayData ? (
-        <MetricsGrid data={displayData} />
+        <div data-tour="dashboard-metrics">
+          <MetricsGrid data={displayData} />
+        </div>
       ) : null}
 
       {displayData && (
-        <section aria-labelledby="history-heading">
+        <section aria-labelledby="history-heading" data-tour="dashboard-history">
           <Card>
             <h3 id="history-heading" className="section-title mb-0">
               {t("queryHistory", locale)}

@@ -3,11 +3,13 @@ import { ConfigPanel } from "@/components/settings/ConfigPanel";
 import { UserIdentityForm } from "@/components/settings/UserIdentityForm";
 import { t } from "@/lib/i18n";
 import { useHealth } from "@/hooks/useHealth";
+import { usePageTutorial } from "@/hooks/useTutorial";
 import { useUserStore } from "@/store/userStore";
 
 export function SettingsPage() {
   const locale = useUserStore((s) => s.locale);
   const { health } = useHealth();
+  usePageTutorial("settings");
 
   return (
     <ScrollablePage>
@@ -18,8 +20,12 @@ export function SettingsPage() {
       </header>
 
       <div className="space-y-6">
-        <UserIdentityForm />
-        <ConfigPanel health={health} />
+        <div data-tour="settings-identity">
+          <UserIdentityForm />
+        </div>
+        <div data-tour="settings-sync">
+          <ConfigPanel health={health} />
+        </div>
       </div>
     </div>
     </ScrollablePage>

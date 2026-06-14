@@ -1,5 +1,5 @@
-import { TUTORIAL_STEPS } from "@/lib/onboarding";
-import type { TutorialRoute, TutorialStepDefinition } from "@/lib/onboarding";
+import { TUTORIAL_STEPS_BY_KEY } from "@/lib/onboarding";
+import type { TutorialKey, TutorialStepDefinition, TutorialRoute } from "@/lib/onboarding";
 import { t } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
 import { useTutorialStore } from "@/store/tutorialStore";
@@ -18,21 +18,26 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 const NAV_WAIT_MS = 80;
 
-/**
- * Maps the current pathname to the canonical TutorialRoute used in step definitions.
- * The chat page lives at /chat/:sessionId, which is semantically equivalent to "/".
- */
 function normalizePathToTutorialRoute(pathname: string): TutorialRoute {
   if (pathname === "/" || pathname.startsWith("/chat/")) return "/";
   if (pathname.startsWith("/dashboard")) return "/dashboard";
   if (pathname.startsWith("/settings")) return "/settings";
+  if (pathname.startsWith("/admin")) return "/admin";
   return "/";
 }
 
+export function pathToTutorialKey(pathname: string): TutorialKey {
+  if (pathname.startsWith("/dashboard")) return "dashboard";
+  if (pathname.startsWith("/settings")) return "settings";
+  if (pathname.startsWith("/admin")) return "admin";
+  return "chat";
+}
+
 interface TutorialContextValue {
-  startTutorial: (fromStep?: number) => void;
+  startTutorial: (key: TutorialKey, fromStep?: number) => void;
   pauseTutorial: () => void;
   isRunning: boolean;
+  activeKey: TutorialKey | null;
 }
 
 const TutorialContext = createContext<TutorialContextValue | null>(null);
@@ -177,12 +182,12 @@ function useTutorialController() {
   const location = useLocation();
   const locale = useUserStore((s) => s.locale);
   const setDismissed = useTutorialStore((s) => s.setDismissed);
-  const dismissed = useTutorialStore((s) => s.dismissed);
   const hasHydrated = useTutorialStore((s) => s.hasHydrated);
   const driverRef = useRef<Driver | null>(null);
   const dismissPendingRef = useRef(false);
-  const autoStartedRef = useRef(false);
+  const activeKeyRef = useRef<TutorialKey | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [activeKey, setActiveKey] = useState<TutorialKey | null>(null);
 
   const navigateForTour = useCallback(
     async (route: TutorialRoute) => {
@@ -197,12 +202,17 @@ function useTutorialController() {
     driverRef.current?.destroy();
     driverRef.current = null;
     setIsRunning(false);
+    setActiveKey(null);
+    activeKeyRef.current = null;
   }, []);
 
   const startTutorial = useCallback(
-    (fromStep = 0) => {
+    (key: TutorialKey, fromStep = 0) => {
       destroyTour();
       dismissPendingRef.current = false;
+      activeKeyRef.current = key;
+
+      const steps = TUTORIAL_STEPS_BY_KEY[key];
 
       const tour = driver({
         animate: true,
@@ -217,7 +227,7 @@ function useTutorialController() {
         prevBtnText: t("tutorialBack", locale),
         doneBtnText: t("tutorialDone", locale),
         popoverClass: "zp-tutorial-popover",
-        steps: buildDriveSteps(TUTORIAL_STEPS, locale, {
+        steps: buildDriveSteps(steps, locale, {
           onNavigate: navigateForTour,
           onDismissChange: (dismiss) => {
             dismissPendingRef.current = dismiss;
@@ -225,29 +235,30 @@ function useTutorialController() {
           getDismiss: () => dismissPendingRef.current,
         }),
         onDestroyed: () => {
-          if (dismissPendingRef.current) {
-            setDismissed(true);
+          if (dismissPendingRef.current && activeKeyRef.current) {
+            setDismissed(activeKeyRef.current, true);
           }
           driverRef.current = null;
           setIsRunning(false);
+          setActiveKey(null);
+          activeKeyRef.current = null;
         },
       });
 
       driverRef.current = tour;
       setIsRunning(true);
+      setActiveKey(key);
 
-      if (fromStep === 0) {
-        // Create a fresh empty session so ChatEmptyState (and data-tour="example-questions") is visible.
+      if (key === "chat" && fromStep === 0) {
         const { newSession } = useUserStore.getState();
         newSession();
         const freshSessionId = useUserStore.getState().sessionId;
         navigate(`/chat/${freshSessionId}`);
-        // Wait for the chat input to appear before driving step 0.
         void waitForElement('[data-tour="chat-input"]').then(() => tour.drive(0));
         return;
       }
 
-      const firstStep = TUTORIAL_STEPS[fromStep];
+      const firstStep = steps[fromStep];
       if (firstStep && normalizePathToTutorialRoute(location.pathname) !== firstStep.route) {
         void navigateForTour(firstStep.route).then(() => tour.drive(fromStep));
         return;
@@ -260,27 +271,29 @@ function useTutorialController() {
 
   useEffect(() => () => destroyTour(), [destroyTour]);
 
-  // Wait for persist hydration so returning users with "Don't show again" are not auto-started.
-  // Auto-start on any chat route ("/chat/:id" normalizes to "/") after a 3-second delay.
+  // Auto-start chat tutorial on first visit
+  const chatDismissed = useTutorialStore((s) => s.dismissed["chat"] ?? false);
+  const autoStartedRef = useRef(false);
+
   useEffect(() => {
-    if (!hasHydrated || dismissed || autoStartedRef.current || isRunning) return;
+    if (!hasHydrated || chatDismissed || autoStartedRef.current || isRunning) return;
     if (normalizePathToTutorialRoute(location.pathname) !== "/") return;
     autoStartedRef.current = true;
-    const timerId = window.setTimeout(() => startTutorial(0), 3000);
+    const timerId = window.setTimeout(() => startTutorial("chat", 0), 3000);
     return () => window.clearTimeout(timerId);
-  }, [hasHydrated, dismissed, isRunning, startTutorial, location.pathname]);
+  }, [hasHydrated, chatDismissed, isRunning, startTutorial, location.pathname]);
 
   const pauseTutorial = useCallback(() => {
     destroyTour();
   }, [destroyTour]);
 
-  return { startTutorial, pauseTutorial, isRunning };
+  return { startTutorial, pauseTutorial, isRunning, activeKey };
 }
 
 export function TutorialProvider({ children }: { children: ReactNode }) {
-  const { startTutorial, pauseTutorial, isRunning } = useTutorialController();
+  const { startTutorial, pauseTutorial, isRunning, activeKey } = useTutorialController();
   return (
-    <TutorialContext.Provider value={{ startTutorial, pauseTutorial, isRunning }}>
+    <TutorialContext.Provider value={{ startTutorial, pauseTutorial, isRunning, activeKey }}>
       {children}
     </TutorialContext.Provider>
   );
@@ -292,6 +305,26 @@ export function useTutorialContext(): TutorialContextValue {
     throw new Error("useTutorialContext must be used within TutorialProvider");
   }
   return ctx;
+}
+
+/** Hook for page-level auto-show. Call once at the top of a page component. */
+export function usePageTutorial(key: TutorialKey, delayMs = 1500) {
+  const { startTutorial, isRunning, activeKey } = useTutorialContext();
+  const isDismissed = useTutorialStore((s) => s.dismissed[key] ?? false);
+  const hasHydrated = useTutorialStore((s) => s.hasHydrated);
+  const autoStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (!hasHydrated || isDismissed || autoStartedRef.current || isRunning) return;
+    autoStartedRef.current = true;
+    const timer = window.setTimeout(() => startTutorial(key, 0), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [hasHydrated, isDismissed, isRunning, startTutorial, key, delayMs]);
+
+  return {
+    startTutorial: () => startTutorial(key, 0),
+    isRunning: isRunning && activeKey === key,
+  };
 }
 
 /** Safe outside TutorialProvider — used by department picker to pause an active tour. */

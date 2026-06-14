@@ -434,9 +434,123 @@ const strings: Strings = {
     en: "Reopen this tour anytime from Help. Set your role and home department in Settings so answers match your context.",
     vi: "Mở lại tour bất cứ lúc nào từ Trợ giúp. Đặt vai trò và phòng ban chính trong Cài đặt để câu trả lời phù hợp ngữ cảnh của bạn.",
   },
+  "tutorial.response.welcome.title": {
+    en: "How to read an answer",
+    vi: "Cách đọc câu trả lời",
+  },
+  "tutorial.response.welcome.description": {
+    en: "Every answer is grounded in internal documents only. This quick guide shows you what each part of the response means.",
+    vi: "Mỗi câu trả lời đều được căn cứ hoàn toàn từ tài liệu nội bộ. Hướng dẫn này giải thích ý nghĩa từng phần của câu trả lời.",
+  },
+  "tutorial.response.answer.title": {
+    en: "The answer",
+    vi: "Câu trả lời",
+  },
+  "tutorial.response.answer.description": {
+    en: "The main answer synthesized from indexed documents. It may include a confidence badge (High / Medium / Low) and the AI model used to generate it.",
+    vi: "Câu trả lời tổng hợp từ tài liệu đã lập chỉ mục. Có thể kèm nhãn độ tin cậy (Cao / Trung bình / Thấp) và model AI đã tạo ra câu trả lời.",
+  },
+  "tutorial.response.citations.title": {
+    en: "Sources & citations",
+    vi: "Nguồn & trích dẫn",
+  },
+  "tutorial.response.citations.description": {
+    en: "Each numbered source links to the exact Confluence page or Drive file. Click any source to open the evidence panel with the matching excerpt. Always verify before acting on policy guidance.",
+    vi: "Mỗi nguồn được đánh số dẫn đến đúng trang Confluence hoặc file Drive. Nhấn vào nguồn để mở bảng minh chứng với đoạn trích khớp. Luôn xác minh trước khi áp dụng hướng dẫn chính sách.",
+  },
+  "tutorial.response.feedback.title": {
+    en: "Give feedback",
+    vi: "Phản hồi",
+  },
+  "tutorial.response.feedback.description": {
+    en: "Let us know if the answer was helpful. Your feedback improves future answers. Click ? anytime to replay this guide.",
+    vi: "Cho chúng tôi biết câu trả lời có hữu ích không. Phản hồi của bạn giúp cải thiện câu trả lời sau này. Nhấn ? bất cứ lúc nào để xem lại hướng dẫn.",
+  },
+  "tutorial.dashboard.welcome.title": {
+    en: "Usage & Health Dashboard",
+    vi: "Bảng điều khiển Sử dụng & Sức khoẻ",
+  },
+  "tutorial.dashboard.welcome.description": {
+    en: "Monitor your knowledge agent's usage, sync health, and query history from this page.",
+    vi: "Theo dõi mức độ sử dụng, tình trạng đồng bộ và lịch sử truy vấn của trợ lý tri thức tại đây.",
+  },
+  "tutorial.dashboard.metrics.title": {
+    en: "Usage metrics",
+    vi: "Số liệu sử dụng",
+  },
+  "tutorial.dashboard.metrics.description": {
+    en: "Key metrics at a glance: total queries, deflection rate, refusal rate, latency, and evaluation scores. Use these to gauge agent effectiveness.",
+    vi: "Số liệu chính: tổng truy vấn, tỷ lệ giải quyết, tỷ lệ từ chối, độ trễ và điểm đánh giá. Dùng để đánh giá hiệu quả của trợ lý.",
+  },
+  "tutorial.dashboard.history.title": {
+    en: "Recent query history",
+    vi: "Lịch sử truy vấn gần đây",
+  },
+  "tutorial.dashboard.history.description": {
+    en: "Browse recent queries with their status, latency, departments routed to, and the model used. Use this to audit answers or spot patterns.",
+    vi: "Duyệt các truy vấn gần đây với trạng thái, độ trễ, phòng ban được định tuyến và model sử dụng. Dùng để kiểm tra câu trả lời hoặc nhận biết xu hướng.",
+  },
+  "tutorial.settings.welcome.title": {
+    en: "Settings",
+    vi: "Cài đặt",
+  },
+  "tutorial.settings.welcome.description": {
+    en: "Configure your identity, sync preferences, and runtime config here. Your role and home department are sent with every query to personalize answers.",
+    vi: "Cấu hình danh tính, tùy chọn đồng bộ và runtime tại đây. Vai trò và phòng ban chính được gửi kèm mỗi truy vấn để cá nhân hoá câu trả lời.",
+  },
+  "tutorial.settings.identity.title": {
+    en: "Your identity",
+    vi: "Danh tính của bạn",
+  },
+  "tutorial.settings.identity.description": {
+    en: "Set your role and home department. These are included in every chat request so the agent can tailor answers to your context.",
+    vi: "Đặt vai trò và phòng ban chính của bạn. Thông tin này được gửi kèm mỗi yêu cầu chat để trợ lý điều chỉnh câu trả lời theo ngữ cảnh của bạn.",
+  },
+  "tutorial.settings.sync.title": {
+    en: "Knowledge sync",
+    vi: "Đồng bộ tri thức",
+  },
+  "tutorial.settings.sync.description": {
+    en: "Trigger manual sync from Confluence or Google Drive. Use this when the index is pending or documents have been updated.",
+    vi: "Kích hoạt đồng bộ thủ công từ Confluence hoặc Google Drive. Dùng khi chỉ mục chưa sẵn sàng hoặc tài liệu đã được cập nhật.",
+  },
+  "tutorial.admin.welcome.title": {
+    en: "Knowledge Sync Admin",
+    vi: "Quản trị Đồng bộ Tri thức",
+  },
+  "tutorial.admin.welcome.description": {
+    en: "Trigger Confluence and Drive sync jobs, monitor their status, and view per-department index health from this page.",
+    vi: "Kích hoạt job đồng bộ Confluence và Drive, theo dõi trạng thái và xem sức khoẻ chỉ mục theo phòng ban tại đây.",
+  },
+  "tutorial.admin.cards.title": {
+    en: "Index summary",
+    vi: "Tóm tắt chỉ mục",
+  },
+  "tutorial.admin.cards.description": {
+    en: "At-a-glance stats: total documents indexed, total chunks, sources synced, and the last update time.",
+    vi: "Số liệu tổng quan: tổng tài liệu đã lập chỉ mục, tổng đoạn, nguồn đã đồng bộ và thời gian cập nhật cuối.",
+  },
+  "tutorial.admin.sources.title": {
+    en: "Knowledge sources",
+    vi: "Nguồn tri thức",
+  },
+  "tutorial.admin.sources.description": {
+    en: "Per-department sync status table. Shows each Confluence space or Drive folder, page/file count, freshness, and lets you trigger a targeted sync.",
+    vi: "Bảng trạng thái đồng bộ theo phòng ban. Hiển thị từng không gian Confluence hoặc thư mục Drive, số trang/file, độ mới và cho phép đồng bộ mục tiêu.",
+  },
+  "tutorial.admin.jobs.title": {
+    en: "Recent sync jobs",
+    vi: "Job đồng bộ gần đây",
+  },
+  "tutorial.admin.jobs.description": {
+    en: "Live and historical sync job log. Check status, start time, finish time, and any errors for each job run.",
+    vi: "Nhật ký job đồng bộ hiện tại và lịch sử. Kiểm tra trạng thái, thời gian bắt đầu, kết thúc và lỗi của từng lần chạy.",
+  },
   tutorialHelp: { en: "Help", vi: "Trợ giúp" },
   tutorialHelpAria: { en: "Help and tutorial", vi: "Trợ giúp và hướng dẫn" },
   tutorialHelpTitle: { en: "Help & tutorial", vi: "Trợ giúp & hướng dẫn" },
+  tutorialResponseHelp: { en: "How to read this answer", vi: "Cách đọc câu trả lời này" },
+  tutorialResponseHelpAria: { en: "Guide: how to read this answer", vi: "Hướng dẫn đọc câu trả lời" },
   tutorialDismiss: {
     en: "Don't show again on startup",
     vi: "Không hiện lại khi khởi động",

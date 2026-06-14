@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ArrowRight, ChevronLeft, History, Menu, Plus, Search, Trash2, X } from "@/components/ui/icons";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-import { classNames, formatDate, generateSessionId } from "@/lib/format";
+import { classNames, formatDate } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import {
   matchesSearch,
@@ -53,6 +53,7 @@ interface SessionSidebarPanelProps {
 export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSidebarPanelProps) {
   const locale = useUserStore((s) => s.locale);
   const activeSessionId = useUserStore((s) => s.sessionId);
+  const newSession = useUserStore((s) => s.newSession);
   const threadsRecord = useSessionStore((s) => s.threads);
   const deleteThread = useSessionStore((s) => s.deleteThread);
   const navigate = useNavigate();
@@ -78,7 +79,8 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
     deleteThread(sessionId);
     setPendingDeleteId(null);
     if (sessionId === activeSessionId) {
-      navigate(`/chat/${generateSessionId()}`);
+      newSession();
+      navigate("/");
     }
   }
 
@@ -113,7 +115,8 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
           variant="secondary"
           className="w-full justify-start"
           onClick={() => {
-            navigate(`/chat/${generateSessionId()}`);
+            newSession();
+            navigate("/");
             onCloseMobile?.();
           }}
         >

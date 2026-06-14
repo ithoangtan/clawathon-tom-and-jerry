@@ -112,7 +112,7 @@ export function AnswerCard({
       ) : (
         <>
           {status === "partial" && <PartialGapBanner refusals={refusals} />}
-          <div className="mt-4">
+          <div className="mt-4" data-tour="response-answer">
             <AnswerMarkdown
               answer={answer}
               citations={citations}
@@ -121,7 +121,7 @@ export function AnswerCard({
             />
           </div>
           {!streaming && citations.length > 0 && (
-            <div className="mt-5 border-t border-border pt-4">
+            <div className="mt-5 border-t border-border pt-4" data-tour="response-citations">
               <CitationList citations={citations} onCitationClick={onCitationClick} />
             </div>
           )}

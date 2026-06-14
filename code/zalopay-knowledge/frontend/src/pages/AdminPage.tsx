@@ -5,12 +5,14 @@ import { AdminSyncTimeline } from "@/components/admin/AdminSyncTimeline";
 import { RecentJobsSection } from "@/components/admin/AdminSyncStatusPanel";
 import { Database } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
+import { usePageTutorial } from "@/hooks/useTutorial";
 import { useUserStore } from "@/store/userStore";
 import { useAdminSyncStatus } from "@/hooks/useAdminSyncStatus";
 
 export function AdminPage() {
   const locale = useUserStore((s) => s.locale);
   const { status } = useAdminSyncStatus();
+  usePageTutorial("admin");
 
   return (
     <ScrollablePage>
@@ -35,16 +37,22 @@ export function AdminPage() {
         </header>
 
         {/* Dashboard summary cards */}
-        <AdminDashboardCards status={status} />
+        <div data-tour="admin-cards">
+          <AdminDashboardCards status={status} />
+        </div>
 
         {/* Unified sources table */}
-        <AdminSyncTable />
+        <div data-tour="admin-sources">
+          <AdminSyncTable />
+        </div>
 
         {/* Timeline chart */}
         <AdminSyncTimeline />
 
         {/* Recent jobs */}
-        <RecentJobsSection />
+        <div data-tour="admin-jobs">
+          <RecentJobsSection />
+        </div>
       </div>
     </ScrollablePage>
   );

@@ -5,15 +5,9 @@ import { AdminPage } from "@/pages/AdminPage";
 import { ChatPage } from "@/pages/ChatPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { SettingsPage } from "@/pages/SettingsPage";
-import { useUserStore } from "@/store/userStore";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 const IS_DEV = import.meta.env.DEV || window.location.hostname === "localhost";
-
-function RootRedirect() {
-  const sessionId = useUserStore((s) => s.sessionId);
-  return <Navigate to={`/chat/${sessionId}`} replace />;
-}
 
 export default function App() {
   return (
@@ -21,7 +15,7 @@ export default function App() {
       <TutorialProvider>
         <AppShell>
           <Routes>
-            <Route path="/" element={<RootRedirect />} />
+            <Route path="/" element={<ChatPage />} />
             <Route path="/chat/:sessionId" element={<ChatPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/admin" element={<AdminPage />} />

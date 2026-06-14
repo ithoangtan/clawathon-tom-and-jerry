@@ -3,8 +3,38 @@ import { ThumbsDown, ThumbsUp } from "@/components/ui/icons";
 import { api } from "@/lib/apiClient";
 import { runChipPop } from "@/lib/gsap";
 import { t } from "@/lib/i18n";
+import { useTutorialContext } from "@/hooks/useTutorial";
 import { getUserContext, useUserStore } from "@/store/userStore";
 import { useCallback, useState } from "react";
+
+function ResponseHelpButton() {
+  const locale = useUserStore((s) => s.locale);
+  const { startTutorial } = useTutorialContext();
+  return (
+    <button
+      type="button"
+      data-tour="response-help"
+      aria-label={t("tutorialResponseHelpAria", locale)}
+      title={t("tutorialResponseHelp", locale)}
+      onClick={() => startTutorial("response", 0)}
+      className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-400 transition-colors hover:border-brand/40 hover:bg-brand/5 hover:text-brand"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        className="h-3 w-3"
+        aria-hidden
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.5 9.5a2.5 2.5 0 1 1 4.2 1.8c-.8.6-1.2 1.2-1.2 2.2" strokeLinecap="round" />
+        <circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none" />
+      </svg>
+    </button>
+  );
+}
 
 const STORAGE_PREFIX = "feedback:";
 
@@ -70,6 +100,7 @@ export function FeedbackBar({ feedbackId, modelUsed }: FeedbackBarProps) {
   if (done && rating !== null) {
     return (
       <div
+        data-tour="response-feedback"
         className="mt-4 border-t border-slate-100/80 pt-3"
         role="status"
         aria-live="polite"
@@ -100,6 +131,7 @@ export function FeedbackBar({ feedbackId, modelUsed }: FeedbackBarProps) {
               {t("modelUsedLabel", locale)}: <span className="font-medium text-slate-500">{modelUsed}</span>
             </span>
           )}
+          <ResponseHelpButton />
         </div>
       </div>
     );
@@ -110,6 +142,7 @@ export function FeedbackBar({ feedbackId, modelUsed }: FeedbackBarProps) {
   return (
     <div
       data-feedback-bar
+      data-tour="response-feedback"
       className="mt-4 border-t border-slate-100/80 pt-3"
       role="group"
       aria-label={t("feedbackPrompt", locale)}
@@ -163,6 +196,7 @@ export function FeedbackBar({ feedbackId, modelUsed }: FeedbackBarProps) {
             {t("modelUsedLabel", locale)}: <span className="font-medium text-slate-500">{modelUsed}</span>
           </span>
         )}
+        <ResponseHelpButton />
       </div>
 
       {error && (

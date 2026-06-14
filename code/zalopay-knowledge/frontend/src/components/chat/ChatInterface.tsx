@@ -18,7 +18,9 @@ import { useSmoothScroll } from "@/hooks/useSmoothScroll";
 import { useUserStore } from "@/store/userStore";
 import { useMockStore } from "@/store/mockStore";
 import type { Citation, Department } from "@/lib/types";
-import { useCallback, useEffect, useState } from "react";
+import { useTutorialContext } from "@/hooks/useTutorial";
+import { useTutorialStore } from "@/store/tutorialStore";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const IS_DEV = import.meta.env.DEV || window.location.hostname === "localhost";
 import { Link } from "react-router-dom";
@@ -57,6 +59,28 @@ export function ChatInterface() {
   } = useChat();
 
   const scrollRef = useSmoothScroll([messages, loading, streamingStatus, pipelineProgress]);
+
+  const { startTutorial, isRunning } = useTutorialContext();
+  const responseDismissed = useTutorialStore((s) => s.dismissed["response"] ?? false);
+  const hasHydrated = useTutorialStore((s) => s.hasHydrated);
+  const autoStartedResponseRef = useRef(false);
+
+  useEffect(() => {
+    const hasCompletedResponse = messages.some(
+      (m) => m.role === "assistant" && m.response && !m.streaming,
+    );
+    if (
+      hasCompletedResponse &&
+      hasHydrated &&
+      !responseDismissed &&
+      !autoStartedResponseRef.current &&
+      !isRunning
+    ) {
+      autoStartedResponseRef.current = true;
+      const timer = window.setTimeout(() => startTutorial("response", 0), 1500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [messages, hasHydrated, responseDismissed, isRunning, startTutorial]);
 
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [inspector, setInspector] = useState<CitationInspectorState | null>(null);
