@@ -132,6 +132,8 @@ export interface ChatResponse {
   refusals?: Department[] | null;
   /** LLM model ID(s) that produced the answer. */
   model_used?: string | null;
+  /** Up to 3 proactive follow-up questions generated from the retrieved context. */
+  suggested_questions?: string[] | null;
 }
 
 // ── Feedback ─────────────────────────────────────────────────────────────────

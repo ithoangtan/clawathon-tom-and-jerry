@@ -189,6 +189,11 @@ export function ChatInterface() {
     sendMessage(question);
   }
 
+  function handleSuggestedSelect(question: string) {
+    setInput(question);
+    sendMessage(question);
+  }
+
   function mapError(err: string): string {
     if (err.includes("timeout") || err.includes("408")) return t("errorTimeout", locale);
     if (err.includes("not ready") || err.includes("503")) return t("errorKbNotReady", locale);
@@ -239,8 +244,11 @@ export function ChatInterface() {
           >
             <div className="mx-auto max-w-3xl px-4 py-6">
               <div className="space-y-8">
-                {messages.map((msg) =>
-                  msg.role === "user" ? (
+                {messages.map((msg, idx) => {
+                  const isLastAssistant =
+                    msg.role === "assistant" &&
+                    !messages.slice(idx + 1).some((m) => m.role === "assistant");
+                  return msg.role === "user" ? (
                     <UserMessage
                       key={msg.id}
                       content={msg.content}
@@ -252,11 +260,13 @@ export function ChatInterface() {
                       response={msg.response}
                       timestamp={msg.timestamp}
                       streaming={msg.streaming}
+                      isLast={isLastAssistant}
                       onClarifySelect={handleClarify}
                       onCitationClick={(index) => openCitation(msg.response!.citations, index)}
+                      onSuggestedSelect={handleSuggestedSelect}
                     />
-                  ) : null,
-                )}
+                  ) : null;
+                })}
 
                 {(loading || pipelineProgress?.phase === "collapsed") && pipelineProgress && (
                   <PipelineProgress

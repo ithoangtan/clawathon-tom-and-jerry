@@ -586,6 +586,50 @@ const strings: Strings = {
     en: "Source department for this answer",
     vi: "Phòng ban nguồn cho câu trả lời này",
   },
+  suggestedQuestionsTitle: {
+    en: "You might also ask:",
+    vi: "Bạn có thể hỏi tiếp:",
+  },
+  suggestedQuestionsAriaLabel: {
+    en: "Suggested follow-up questions",
+    vi: "Câu hỏi gợi ý tiếp theo",
+  },
+  knowledgeGapsTitle: {
+    en: "Knowledge Gaps",
+    vi: "Lỗ hổng kiến thức",
+  },
+  knowledgeGapsSubtitle: {
+    en: "Questions the agent couldn't answer — potential documentation gaps",
+    vi: "Câu hỏi agent không trả lời được — đây là những lỗ hổng tài liệu tiềm năng",
+  },
+  knowledgeGapsRefused: {
+    en: "Unanswered Questions",
+    vi: "Câu hỏi chưa có câu trả lời",
+  },
+  knowledgeGapsLowRated: {
+    en: "Documents Needing Attention",
+    vi: "Tài liệu cần cải thiện",
+  },
+  knowledgeGapsEmpty: {
+    en: "No gaps detected yet — all questions are being answered!",
+    vi: "Chưa phát hiện lỗ hổng nào — tất cả câu hỏi đều được trả lời!",
+  },
+  knowledgeGapsExport: {
+    en: "Export Report",
+    vi: "Xuất báo cáo",
+  },
+  knowledgeGapsAskedTimes: {
+    en: "{count}× refused",
+    vi: "Từ chối {count} lần",
+  },
+  knowledgeGapsDownRating: {
+    en: "{down} 👎 / {up} 👍",
+    vi: "{down} 👎 / {up} 👍",
+  },
+  knowledgeGapsLoading: {
+    en: "Loading gap analysis…",
+    vi: "Đang tải phân tích lỗ hổng…",
+  },
 };
 
 export function syncStateLabel(state: string, locale: Lang): string {

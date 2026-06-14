@@ -104,3 +104,47 @@ class FeedbackStore:
             return int(up), int(down)
         finally:
             conn.close()
+
+    def feedback_gaps(self, *, limit: int = 20) -> list[dict]:
+        """Return documents with most 👎 feedback, joined with audit citations."""
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT q.citations_json, f.rating
+                    FROM feedback f
+                    JOIN queries q ON q.feedback_id = f.feedback_id
+                    WHERE q.citations_json IS NOT NULL
+                    ORDER BY f.created_at DESC
+                    LIMIT 200
+                    """
+                )
+                rows = cur.fetchall()
+        finally:
+            conn.close()
+
+        import json
+        doc_stats: dict[str, dict] = {}
+        for row in rows:
+            try:
+                citations = json.loads(row["citations_json"] or "[]")
+            except Exception:
+                citations = []
+            for cit in citations:
+                title = cit.get("title", "")
+                url = cit.get("url", "")
+                if not title:
+                    continue
+                key = url or title
+                if key not in doc_stats:
+                    doc_stats[key] = {"title": title, "url": url, "up": 0, "down": 0}
+                if row["rating"] == "up":
+                    doc_stats[key]["up"] += 1
+                else:
+                    doc_stats[key]["down"] += 1
+
+        # Sort by down count descending, include only docs with any down
+        result = [v for v in doc_stats.values() if v["down"] > 0]
+        result.sort(key=lambda x: x["down"], reverse=True)
+        return result[:limit]

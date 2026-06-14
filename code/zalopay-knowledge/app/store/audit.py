@@ -200,6 +200,47 @@ class AuditStore:
             conn.close()
 
 
+    def refused_questions(self, *, limit: int = 20, days: int = 30) -> list[dict]:
+        """Return recent refused questions — potential documentation gaps."""
+        conn = get_connection()
+        cutoff = time.time() - days * 86400
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT question, departments, COUNT(*) AS cnt,
+                           MAX(ts) AS last_seen
+                    FROM queries
+                    WHERE status = 'refused'
+                      AND ts >= %s
+                      AND question IS NOT NULL
+                    GROUP BY question, departments
+                    ORDER BY cnt DESC, last_seen DESC
+                    LIMIT %s
+                    """,
+                    (cutoff, limit),
+                )
+                rows = cur.fetchall()
+            from datetime import datetime, timezone
+            result = []
+            for r in rows:
+                last = datetime.fromtimestamp(r["last_seen"], tz=timezone.utc).isoformat().replace("+00:00", "Z")
+                depts = []
+                try:
+                    depts = json.loads(r["departments"] or "[]")
+                except Exception:
+                    pass
+                result.append({
+                    "question": r["question"],
+                    "count": int(r["cnt"]),
+                    "last_seen": last,
+                    "departments": depts,
+                })
+            return result
+        finally:
+            conn.close()
+
+
 def _percentile(sorted_vals: list[int], pct: float) -> float:
     if not sorted_vals:
         return 0.0

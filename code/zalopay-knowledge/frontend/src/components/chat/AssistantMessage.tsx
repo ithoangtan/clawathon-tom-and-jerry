@@ -1,5 +1,6 @@
 import { AnswerCard } from "@/components/chat/AnswerCard";
 import { ChatAvatar } from "@/components/chat/ChatAvatar";
+import { SuggestedQuestions } from "@/components/chat/SuggestedQuestions";
 import { formatMessageTime } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import { runMessageEnter, useGSAP } from "@/lib/gsap";
@@ -11,16 +12,20 @@ interface AssistantMessageProps {
   response: ChatResponse;
   timestamp: string;
   streaming?: boolean;
+  isLast?: boolean;
   onClarifySelect?: (dept: Department) => void;
   onCitationClick?: (index: number) => void;
+  onSuggestedSelect?: (question: string) => void;
 }
 
 export function AssistantMessage({
   response,
   timestamp,
   streaming,
+  isLast,
   onClarifySelect,
   onCitationClick,
+  onSuggestedSelect,
 }: AssistantMessageProps) {
   const locale = useUserStore((s) => s.locale);
   const timeLabel = formatMessageTime(timestamp, locale);
@@ -58,6 +63,12 @@ export function AssistantMessage({
             variant="message"
             streaming={streaming}
           />
+          {!streaming && isLast && onSuggestedSelect && (response.suggested_questions?.length ?? 0) > 0 && (
+            <SuggestedQuestions
+              questions={response.suggested_questions!}
+              onSelect={onSuggestedSelect}
+            />
+          )}
         </div>
       </div>
     </article>

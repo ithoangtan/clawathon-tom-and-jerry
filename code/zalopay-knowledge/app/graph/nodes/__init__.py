@@ -5,7 +5,7 @@ dependencies (LLM, retriever, …) and returns a plain LangGraph node callable.
 This keeps nodes pure and dependency-injected so the graph assembly module can
 wire local vs. AgentBase adapters without touching node code.
 
-Top-level (GraphState):  ingest_context → router → … → reconcile → respond
+Top-level (GraphState):  ingest_context → router → … → reconcile → respond → suggest
 Per-department (DeptState):           retrieve → grade → synthesize → verify
 """
 

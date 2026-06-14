@@ -46,6 +46,7 @@ from app.graph.nodes import (
     make_synthesize_node,
     make_verify_node,
 )
+from app.graph.nodes.suggest import make_suggest_node
 from app.graph.nodes.ingest_context import RecallFn
 from app.graph.state import DeptResult, DeptState, GraphState
 from app.ports.checkpointer import CheckpointerPort
@@ -189,6 +190,7 @@ def build_graph(deps: GraphDeps):
     g.add_node(DEPT_SUBGRAPH, _make_dept_branch(dept_subgraph))
     g.add_node("reconcile", make_reconcile_node(deps.llm, settings=cfg))
     g.add_node("respond", make_respond_node(settings=cfg))
+    g.add_node("suggest", make_suggest_node(deps.llm, settings=cfg))
 
     g.add_edge(START, "ingest_context")
 
@@ -206,10 +208,11 @@ def build_graph(deps: GraphDeps):
         [DEPT_SUBGRAPH, "respond"],
     )
 
-    # every department branch converges on reconcile, then respond.
+    # every department branch converges on reconcile, then respond, then suggest.
     g.add_edge(DEPT_SUBGRAPH, "reconcile")
     g.add_edge("reconcile", "respond")
-    g.add_edge("respond", END)
+    g.add_edge("respond", "suggest")
+    g.add_edge("suggest", END)
 
     saver = deps.checkpointer.get_saver() if deps.checkpointer else None
     compiled = g.compile(checkpointer=saver)

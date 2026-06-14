@@ -3,6 +3,7 @@ import { AdminDashboardCards } from "@/components/admin/AdminDashboardCards";
 import { AdminSyncTable } from "@/components/admin/AdminSyncTable";
 import { AdminSyncTimeline } from "@/components/admin/AdminSyncTimeline";
 import { RecentJobsSection } from "@/components/admin/AdminSyncStatusPanel";
+import { KnowledgeGapPanel } from "@/components/admin/KnowledgeGapPanel";
 import { Database } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import { usePageTutorial } from "@/hooks/useTutorial";
@@ -53,6 +54,12 @@ export function AdminPage() {
         <div data-tour="admin-jobs">
           <RecentJobsSection />
         </div>
+
+        {/* Knowledge gap tracker */}
+        <section aria-labelledby="knowledge-gaps-heading">
+          <h3 id="knowledge-gaps-heading" className="sr-only">{t("knowledgeGapsTitle", locale)}</h3>
+          <KnowledgeGapPanel />
+        </section>
       </div>
     </ScrollablePage>
   );

@@ -107,6 +107,7 @@ def state_to_response(state: dict[str, Any]) -> ChatResponse:
     refusals_raw = state.get("refusals") or []
     refusals = list(refusals_raw) if refusals_raw else None
 
+    suggested = state.get("suggested_questions") or None
     return ChatResponse(
         answer=state.get("answer") or "",
         citations=citations,
@@ -120,6 +121,7 @@ def state_to_response(state: dict[str, Any]) -> ChatResponse:
         refusal_reason=refusal_reason,
         refusals=refusals,
         model_used=state.get("model_used") or None,
+        suggested_questions=suggested if suggested else None,
     )
 
 

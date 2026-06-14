@@ -171,6 +171,10 @@ class ChatResponse(_Base):
     model_used: Optional[str] = None
     """LLM model ID(s) that produced the answer — useful for debugging quota switches."""
 
+    suggested_questions: Optional[list[str]] = None
+    """Up to 3 proactive follow-up questions generated from the retrieved context.
+    Sent as a trailing SSE 'suggestions' event so the main answer is not delayed."""
+
 
 class SyncStartResponse(_Base):
     """Body returned by ``POST /sync/confluence`` and ``POST /sync/gdrive``."""

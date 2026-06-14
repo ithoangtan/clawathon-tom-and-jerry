@@ -145,3 +145,11 @@ def dashboard() -> DashboardData:
         eval_snapshot=load_eval_snapshot(),
     )
     return DashboardData(**metrics)
+
+
+@router.get("/api/knowledge-gaps")
+def knowledge_gaps() -> JSONResponse:
+    """Return refused questions and low-rated documents for the Admin gap tracker."""
+    refused = get_audit_store().refused_questions(limit=20, days=30)
+    low_rated = get_feedback_store().feedback_gaps(limit=20)
+    return JSONResponse(content={"refused_questions": refused, "low_rated_docs": low_rated})
