@@ -242,6 +242,7 @@ class SyncOrchestrator:
                     "chunk_count": count,
                     "doc_count": self._meta.doc_count(dept),
                     "has_data": count > 0,
+                    "last_synced_at": self._meta.last_synced_at(dept),
                 }
 
             return {"jobs": jobs, "departments_indexed": departments_indexed}

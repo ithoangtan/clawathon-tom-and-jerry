@@ -210,6 +210,7 @@ export interface AdminDepartmentIndexWire {
   chunk_count: number;
   doc_count: number;
   has_data: boolean;
+  last_synced_at?: string | null;
 }
 
 /** Body of GET /api/admin/sync/status (wire). */

@@ -21,7 +21,7 @@ type Filter = "all" | "confluence" | "gdrive";
 export function AdminSyncTable() {
   const locale = useUserStore((s) => s.locale);
   const { status, loading, error, refresh } = useAdminSyncStatus();
-  const { loadingKey, message, syncError, anyRunning, trigger } = useSyncTableActions();
+  const { loadingKey, message, syncError, anyRunning, trigger, triggerAll } = useSyncTableActions();
   const [selectedRow, setSelectedRow] = useState<ModalRow | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -73,12 +73,12 @@ export function AdminSyncTable() {
                 </button>
               ))}
             </div>
-            {/* Sync all */}
+            {/* Sync all sources in parallel */}
             <Button
               variant="primary"
-              loading={loadingKey === "confluence"}
+              loading={loadingKey === "all"}
               disabled={anyRunning}
-              onClick={() => trigger("confluence")}
+              onClick={triggerAll}
             >
               <RotateCw size="sm" />
               {anyRunning ? t("syncing", locale) : t("adminSyncAll", locale)}
@@ -183,7 +183,32 @@ function useSyncTableActions() {
     }
   }
 
-  return { loadingKey, message, syncError, anyRunning, trigger };
+  async function triggerAll() {
+    setLoadingKey("all");
+    setMessage(null);
+    setSyncError(null);
+    try {
+      // Fire both sources in parallel — they have independent locks on the BE
+      const results = await Promise.allSettled([
+        api.adminSync({ source: "confluence", department: null }, getUserContext()),
+        api.adminSync({ source: "gdrive", department: null }, getUserContext()),
+      ]);
+      const started = results.filter((r) => r.status === "fulfilled" && r.value.started);
+      const failed = results.filter((r) => r.status === "rejected");
+      if (started.length > 0) {
+        setMessage(t("adminSyncStarted", locale));
+      }
+      if (failed.length > 0) {
+        setSyncError(t("adminSyncFailed", locale));
+      }
+      refresh();
+      refreshHealth();
+    } finally {
+      setLoadingKey(null);
+    }
+  }
+
+  return { loadingKey, message, syncError, anyRunning, trigger, triggerAll };
 }
 
 interface RowProps {

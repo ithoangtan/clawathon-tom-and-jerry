@@ -114,8 +114,14 @@ function buildDepartments(
     const state = result
       ? mapDeptStatusToState(result.status ?? "pending")
       : "idle";
+    // Prefer the job-level timestamp from a completed department result.
+    // Fall back to the persisted synced_at from SQLite (survives server restarts).
     const lastSuccessAt =
-      result?.status === "success" ? (confluenceJob?.last_success_at ?? null) : null;
+      result?.status === "success"
+        ? (confluenceJob?.last_success_at ?? indexed.last_synced_at ?? null)
+        : (!result && (indexed.has_data || indexed.last_synced_at))
+          ? (indexed.last_synced_at ?? null)
+          : null;
 
     return {
       department: key,

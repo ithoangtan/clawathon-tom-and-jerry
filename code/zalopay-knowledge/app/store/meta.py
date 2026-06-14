@@ -468,3 +468,20 @@ class MetaStore:
             return 0
         finally:
             conn.close()
+
+    def last_synced_at(self, department: str) -> str | None:
+        """Return the most recent synced_at timestamp for *department*, or None."""
+        if not self._path.exists():
+            return None
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                "SELECT MAX(synced_at) AS ts FROM sync_sources WHERE department = ?",
+                (department,),
+            ).fetchone()
+            return row["ts"] if row and row["ts"] else None
+        except sqlite3.Error as exc:
+            logger.warning("MetaStore.last_synced_at(%s) failed: %s", department, exc)
+            return None
+        finally:
+            conn.close()
