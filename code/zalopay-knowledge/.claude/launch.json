@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "/Users/lap15800/.nvm/versions/node/v20.19.0/bin/npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "/Users/lap15800/Documents/clawathon/code/zalopay-knowledge/frontend",
+      "port": 5173,
+      "autoPort": false
+    }
+  ]
+}

@@ -86,7 +86,7 @@ def make_synthesize_node(
         if not answer:
             answer = CANNOT_ANSWER
 
-        logger.info("synthesize[%s]: %d chars, %d citations", department, len(answer), len(citations))
-        return {"draft_answer": answer, "draft_citations": citations}
+        logger.info("synthesize[%s]: %d chars, %d citations model=%s", department, len(answer), len(citations), result.model_used)
+        return {"draft_answer": answer, "draft_citations": citations, "model_used": result.model_used}
 
     return synthesize

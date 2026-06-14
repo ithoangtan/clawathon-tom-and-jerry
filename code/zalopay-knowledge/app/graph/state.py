@@ -91,6 +91,7 @@ class DeptResult(TypedDict, total=False):
     citations: list[Citation]
     confidence: float
     warnings: list[str]
+    model_used: str  # actual LLM model ID that produced the answer
 
 
 # ── Reducers ──────────────────────────────────────────────────────────────────
@@ -238,6 +239,9 @@ class GraphState(TypedDict, total=False):
     """Conversation message history.  Uses LangGraph's built-in ``add_messages``
     reducer so concurrent writes are handled safely."""
 
+    model_used: str
+    """LLM model ID(s) that produced the final answer — set by ``respond`` node."""
+
     # ── Meta / audit ─────────────────────────────────────────────────────────
     feedback_id: str
     """UUID issued by ``respond`` node — used by ``POST /feedback`` to correlate."""
@@ -311,6 +315,9 @@ class DeptState(TypedDict, total=False):
 
     draft_citations: list[Citation]
     """Citations indexed 1:1 with the ``[n]`` markers in ``draft_answer``."""
+
+    model_used: str
+    """Model ID that produced ``draft_answer`` — propagated into :class:`DeptResult`."""
 
     # ── Outputs reduced into the parent GraphState ────────────────────────────
     evidence: Annotated[dict[str, list[Chunk]], merge_dict]

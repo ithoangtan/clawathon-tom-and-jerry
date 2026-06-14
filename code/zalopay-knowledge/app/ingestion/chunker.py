@@ -7,6 +7,11 @@ import re
 import uuid
 from typing import Iterator
 
+# Sentinel used to protect blank lines inside atomic blocks (code fences) from
+# the blank-line split in _split_segments.  Must never appear in normal text.
+_BLANK_SENTINEL = "\x00\x00"
+_CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
+
 from app.common.departments import default_doc_type
 from app.ingestion.metadata import (
     DOC_TYPES,
@@ -127,6 +132,7 @@ def chunk_text(
                     "source_type": source_type,
                     "page": page,
                     "text": piece,
+                    "chunk_type": _classify_chunk_type(piece),
                     **meta_defaults,
                     "anchor": chunk_anchor,
                 }
@@ -145,9 +151,39 @@ def _segment_heading(segment: str) -> tuple[str | None, str | None]:
     return heading, slug or None
 
 
+_TABLE_LINE_RE = re.compile(r"^(\|.*)$", re.MULTILINE)
+
+
+def _protect_atomic_blocks(text: str) -> str:
+    """Replace \\n\\n inside code fences and table runs with sentinel so they survive the blank-line split."""
+    # Protect code fences
+    protected = _CODE_FENCE_RE.sub(
+        lambda m: m.group(0).replace("\n\n", _BLANK_SENTINEL), text
+    )
+    # Protect contiguous table rows (lines starting with |)
+    lines = protected.split("\n")
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        if lines[i].startswith("|"):
+            table_lines: list[str] = []
+            while i < len(lines) and (lines[i].startswith("|") or lines[i].strip() == ""):
+                table_lines.append(lines[i])
+                i += 1
+            result.append("\n".join(table_lines))
+        else:
+            result.append(lines[i])
+            i += 1
+    return "\n".join(result)
+
+
 def _split_segments(text: str) -> list[str]:
-    """Split on markdown headings / blank lines to respect semantic boundaries."""
-    parts = re.split(r"(?m)(?=^#{1,4}\s)|(?<=\n\n)", text)
+    """Split on markdown headings / blank lines to respect semantic boundaries.
+
+    Code fences and table runs are protected from blank-line splits via a sentinel.
+    """
+    protected = _protect_atomic_blocks(text)
+    parts = re.split(r"(?m)(?=^#{1,4}\s)|(?<=\n\n)", protected)
     merged: list[str] = []
     buf = ""
     for part in parts:
@@ -162,7 +198,7 @@ def _split_segments(text: str) -> list[str]:
             buf = part
     if buf:
         merged.append(buf)
-    return merged or [text]
+    return [seg.replace(_BLANK_SENTINEL, "\n\n") for seg in merged] or [text]
 
 
 def _window(segment: str) -> Iterator[str]:
@@ -176,6 +212,18 @@ def _window(segment: str) -> Iterator[str]:
         if end >= len(segment):
             break
         start = max(end - _OVERLAP_CHARS, start + _MIN_CHARS)
+
+
+def _classify_chunk_type(text: str) -> str:
+    """Classify a chunk as 'code', 'table', or 'prose'."""
+    if "```" in text:
+        return "code"
+    lines = text.splitlines()
+    if lines:
+        table_lines = sum(1 for ln in lines if ln.strip().startswith("|"))
+        if table_lines / len(lines) > 0.3:
+            return "table"
+    return "prose"
 
 
 def _chunk_id(department: str, url: str, text: str) -> str:

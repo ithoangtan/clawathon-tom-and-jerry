@@ -40,6 +40,9 @@ class LLMResult:
     degraded: bool = False
     """True when a retry or fallback was invoked — surfaced in the cost dashboard."""
 
+    model_used: str = ""
+    """Actual model ID that produced this result (may differ from the configured primary when a fallback was used)."""
+
 
 # ── Retriever types ───────────────────────────────────────────────────────────
 

@@ -41,7 +41,7 @@ SHORT_CIRCUIT_INTENTS = frozenset(
 )
 
 # Out-of-scope intents — refusal with escalation pointer (no retrieval).
-OUT_OF_SCOPE_INTENTS = frozenset({"status_or_data"})
+OUT_OF_SCOPE_INTENTS = frozenset({"status_or_data", "customer_facing_info", "external_system_info"})
 
 _VALID_DEPARTMENTS = frozenset(iter_keys())
 

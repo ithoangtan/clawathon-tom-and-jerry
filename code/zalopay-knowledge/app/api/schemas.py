@@ -168,6 +168,9 @@ class ChatResponse(_Base):
     refusals: Optional[list[Department]] = None
     """Departments that were queried but returned no usable answer (partial tier)."""
 
+    model_used: Optional[str] = None
+    """LLM model ID(s) that produced the answer — useful for debugging quota switches."""
+
 
 class SyncStartResponse(_Base):
     """Body returned by ``POST /sync/confluence`` and ``POST /sync/gdrive``."""

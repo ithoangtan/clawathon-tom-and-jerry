@@ -59,6 +59,14 @@ class Settings(BaseSettings):
     )
     small_model: str = Field(default="", description="Model id for routing/grading/verify tier")
     main_model: str = Field(default="", description="Model id for synthesis/reconcile tier")
+    small_model_fallbacks: list[str] = Field(
+        default_factory=list,
+        description="Ordered fallback model ids for SMALL tier when primary hits daily quota (429)",
+    )
+    main_model_fallbacks: list[str] = Field(
+        default_factory=list,
+        description="Ordered fallback model ids for MAIN tier when primary hits daily quota (429)",
+    )
 
     # ── Embeddings ────────────────────────────────────────────────────────────
 
@@ -157,10 +165,10 @@ class Settings(BaseSettings):
         description="Min relevance score for a chunk to pass the grade gate (0–1)",
     )
     retrieve_pool: int = Field(
-        default=40,
+        default=60,
         ge=10,
         le=100,
-        description="Dense candidate pool size before hybrid fusion + rerank (30–50)",
+        description="Dense candidate pool size before hybrid fusion + rerank (30–60)",
     )
     topk: int = Field(
         default=8,
@@ -171,6 +179,10 @@ class Settings(BaseSettings):
     hybrid_search_enabled: bool = Field(
         default=True,
         description="Fuse dense retrieval with BM25 lexical scores (RRF)",
+    )
+    query_expansion_enabled: bool = Field(
+        default=True,
+        description="Rule-based query expansion for technical patterns (HTTP, /api/, SQL dialect names)",
     )
     reranker_enabled: bool = Field(
         default=True,

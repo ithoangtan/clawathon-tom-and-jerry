@@ -57,6 +57,7 @@ def make_verify_node(
         answer = (state.get("draft_answer") or "").strip()
         citations: list[Citation] = list(state.get("draft_citations") or [])
         graded: list[Chunk] = list(state.get("graded_chunks") or [])
+        model_used: str = state.get("model_used") or ""
 
         # ── Disabled / refusal paths ──────────────────────────────────────────
         if not cfg.verify_enabled:
@@ -72,6 +73,7 @@ def make_verify_node(
                     citations=citations,
                     confidence=round(base_conf * 0.8, 3),
                     warnings=["verification_disabled"],
+                    model_used=model_used,
                 )
             )
 

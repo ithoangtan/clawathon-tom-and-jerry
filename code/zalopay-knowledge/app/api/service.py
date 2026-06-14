@@ -123,6 +123,7 @@ def state_to_response(state: dict[str, Any]) -> ChatResponse:
         lang=state.get("request_language"),
         refusal_reason=refusal_reason,
         refusals=refusals,
+        model_used=state.get("model_used") or None,
     )
 
 

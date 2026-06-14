@@ -11,17 +11,15 @@ export function useDashboard(pollMs = 30_000) {
   const scenarioKey = useMockStore((s) => s.syncScenario);
 
   const [data, setData] = useState<DashboardData | null>(() => {
-    if (!IS_DEV) return null;
-    if (scenarioKey) return SCENARIO_MAP[scenarioKey].dashboard;
-    return MOCK_DASHBOARD;
+    if (IS_DEV && scenarioKey) return SCENARIO_MAP[scenarioKey].dashboard;
+    return null;
   });
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(!IS_DEV);
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (IS_DEV) {
-      const d = scenarioKey ? SCENARIO_MAP[scenarioKey].dashboard : MOCK_DASHBOARD;
-      setData(d);
+    if (IS_DEV && scenarioKey) {
+      setData(SCENARIO_MAP[scenarioKey].dashboard);
       setLoading(false);
       return;
     }
@@ -37,10 +35,6 @@ export function useDashboard(pollMs = 30_000) {
   }, [scenarioKey]);
 
   useEffect(() => {
-    if (IS_DEV) {
-      refresh();
-      return;
-    }
     refresh();
     const id = setInterval(refresh, pollMs);
     return () => clearInterval(id);

@@ -83,7 +83,7 @@ def make_respond_node(
         if intent in OUT_OF_SCOPE_INTENTS:
             out.update(
                 status="refused",
-                answer=_out_of_scope_reply(lang),
+                answer=_out_of_scope_reply(lang, intent=intent),
                 citations=[],
                 confidence=0.0,
                 source_departments=[],
@@ -107,6 +107,10 @@ def make_respond_node(
         source_departments = [
             r["department"] for r in results if r.get("status") == "answered" and r.get("answer")
         ]
+        # Collect distinct model IDs that produced answers (typically one)
+        models_used = list(dict.fromkeys(
+            r["model_used"] for r in results if r.get("model_used")
+        ))
 
         answer = state.get("answer") or _empty_message(lang)
         status = state.get("status") or ("answered" if source_departments else "refused")
@@ -126,6 +130,7 @@ def make_respond_node(
             confidence=float(state.get("confidence", 0.0)),
             source_departments=source_departments,
             conflicts=list(state.get("conflicts") or []),
+            model_used=", ".join(models_used) if models_used else "",
         )
         refusals = state.get("refusals")
         if refusals:
@@ -180,12 +185,26 @@ def _canned_reply(intent: str, lang: str) -> str:
     )
 
 
-def _out_of_scope_reply(lang: str) -> str:
-    lead = (
-        "Câu hỏi này nằm ngoài phạm vi tài liệu đã lập chỉ mục (ví dụ: số liệu thời gian thực)."
-        if lang == "vi"
-        else "This question is outside indexed documentation (e.g. live or real-time data)."
-    )
+def _out_of_scope_reply(lang: str, intent: str = "status_or_data") -> str:
+    vi = lang == "vi"
+    if intent == "customer_facing_info":
+        lead = (
+            "Thông tin liên hệ dành cho khách hàng không có trong tài liệu nội bộ của Zalopay."
+            if vi
+            else "Customer-facing contact information is not in Zalopay's internal knowledge base."
+        )
+    elif intent == "external_system_info":
+        lead = (
+            "Thông tin về hệ thống bên ngoài hoặc sản phẩm của bên thứ ba không có trong tài liệu nội bộ."
+            if vi
+            else "Information about external systems or third-party products is not in the internal knowledge base."
+        )
+    else:
+        lead = (
+            "Câu hỏi này nằm ngoài phạm vi tài liệu đã lập chỉ mục (ví dụ: số liệu thời gian thực)."
+            if vi
+            else "This question is outside indexed documentation (e.g. live or real-time data)."
+        )
     return f"{lead}\n\n{escalation_hint(lang)}\n\n{out_of_scope_notice(lang)}"
 
 

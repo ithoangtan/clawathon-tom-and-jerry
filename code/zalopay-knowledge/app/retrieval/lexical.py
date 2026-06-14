@@ -7,11 +7,25 @@ import re
 from collections import Counter
 
 _TOKEN_RE = re.compile(r"[\w\u00C0-\u1EF9]+", re.UNICODE)
+_CAMEL_RE = re.compile(r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
 
 
 def tokenize(text: str) -> list[str]:
-    """Lowercase word tokens for VI/EN mixed text."""
-    return [t.lower() for t in _TOKEN_RE.findall(text or "") if t.strip()]
+    """Lowercase word tokens for VI/EN mixed text, with camelCase expansion."""
+    base = [t.lower() for t in _TOKEN_RE.findall(text or "") if t.strip()]
+    expanded: list[str] = []
+    seen: dict[str, None] = {}
+    for tok in base:
+        if tok not in seen:
+            seen[tok] = None
+            expanded.append(tok)
+        if len(tok) > 5:
+            for sub in _CAMEL_RE.split(tok):
+                sub = sub.lower()
+                if sub and sub not in seen:
+                    seen[sub] = None
+                    expanded.append(sub)
+    return expanded
 
 
 def bm25_scores(query: str, documents: list[str], *, k1: float = 1.5, b: float = 0.75) -> list[float]:
