@@ -111,13 +111,14 @@ class TestAdminSyncRoutes:
         assert resp.status_code == 400
         mock_svc.trigger_gdrive.assert_not_called()
 
-    def test_admin_sync_status_no_auth_required(
+    def _make_sync_status_snapshot(
         self,
-        client: TestClient,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        mock_svc = MagicMock()
-        mock_svc.orchestrator.admin_status_snapshot.return_value = {
+        *,
+        risk_last_synced_at: str | None = None,
+        grow_last_synced_at: str | None = None,
+        bank_last_synced_at: str | None = None,
+    ) -> dict:
+        return {
             "jobs": {
                 "confluence": {
                     "job_id": None,
@@ -134,15 +135,36 @@ class TestAdminSyncRoutes:
                 }
             },
             "departments_indexed": {
-                RISK: {"chunk_count": 0, "doc_count": 0, "has_data": False},
-                GROW: {"chunk_count": 0, "doc_count": 0, "has_data": False},
+                RISK: {
+                    "chunk_count": 0,
+                    "doc_count": 0,
+                    "has_data": False,
+                    "last_synced_at": risk_last_synced_at,
+                },
+                GROW: {
+                    "chunk_count": 0,
+                    "doc_count": 0,
+                    "has_data": False,
+                    "last_synced_at": grow_last_synced_at,
+                },
                 BANK: {
                     "chunk_count": 0,
                     "doc_count": 0,
                     "has_data": False,
+                    "last_synced_at": bank_last_synced_at,
                 },
             },
         }
+
+    def test_admin_sync_status_no_auth_required(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        mock_svc = MagicMock()
+        mock_svc.orchestrator.admin_status_snapshot.return_value = (
+            self._make_sync_status_snapshot()
+        )
         monkeypatch.setattr("app.api.admin_routes.get_sync_service", lambda: mock_svc)
 
         resp = client.get("/api/admin/sync/status")
@@ -150,6 +172,31 @@ class TestAdminSyncRoutes:
         body = resp.json()
         assert body["jobs"]["confluence"]["status"] == "pending"
         assert RISK in body["departments_indexed"]
+
+    def test_admin_sync_status_last_synced_at_propagated(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Regression: last_synced_at from sync_state must survive schema validation.
+
+        AdminDepartmentIndexStatus had extra="forbid" and was missing last_synced_at,
+        causing 422 on production while mock-based tests passed.
+        """
+        mock_svc = MagicMock()
+        mock_svc.orchestrator.admin_status_snapshot.return_value = (
+            self._make_sync_status_snapshot(
+                risk_last_synced_at="2026-06-14T08:00:00Z",
+                grow_last_synced_at=None,
+            )
+        )
+        monkeypatch.setattr("app.api.admin_routes.get_sync_service", lambda: mock_svc)
+
+        resp = client.get("/api/admin/sync/status")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["departments_indexed"][RISK]["last_synced_at"] == "2026-06-14T08:00:00Z"
+        assert body["departments_indexed"][GROW]["last_synced_at"] is None
 
     def test_admin_sync_history(
         self,

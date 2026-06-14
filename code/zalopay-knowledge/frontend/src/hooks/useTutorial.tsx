@@ -18,6 +18,17 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 const NAV_WAIT_MS = 80;
 
+/**
+ * Maps the current pathname to the canonical TutorialRoute used in step definitions.
+ * The chat page lives at /chat/:sessionId, which is semantically equivalent to "/".
+ */
+function normalizePathToTutorialRoute(pathname: string): TutorialRoute {
+  if (pathname === "/" || pathname.startsWith("/chat/")) return "/";
+  if (pathname.startsWith("/dashboard")) return "/dashboard";
+  if (pathname.startsWith("/settings")) return "/settings";
+  return "/";
+}
+
 interface TutorialContextValue {
   startTutorial: (fromStep?: number) => void;
   pauseTutorial: () => void;
@@ -148,7 +159,7 @@ function buildDriveSteps(
     }
 
     driveStep.onHighlightStarted = async (_el, _step, { driver: tour }) => {
-      if (window.location.pathname !== step.route) {
+      if (normalizePathToTutorialRoute(window.location.pathname) !== step.route) {
         await handlers.onNavigate(step.route);
       }
       if (step.target) {
@@ -175,7 +186,7 @@ function useTutorialController() {
 
   const navigateForTour = useCallback(
     async (route: TutorialRoute) => {
-      if (location.pathname === route) return;
+      if (normalizePathToTutorialRoute(location.pathname) === route) return;
       navigate(route);
       await new Promise((resolve) => setTimeout(resolve, NAV_WAIT_MS));
     },
@@ -225,24 +236,35 @@ function useTutorialController() {
       driverRef.current = tour;
       setIsRunning(true);
 
+      if (fromStep === 0) {
+        // Create a fresh empty session so ChatEmptyState (and data-tour="example-questions") is visible.
+        const { newSession } = useUserStore.getState();
+        newSession();
+        const freshSessionId = useUserStore.getState().sessionId;
+        navigate(`/chat/${freshSessionId}`);
+        // Wait for the chat input to appear before driving step 0.
+        void waitForElement('[data-tour="chat-input"]').then(() => tour.drive(0));
+        return;
+      }
+
       const firstStep = TUTORIAL_STEPS[fromStep];
-      if (firstStep && location.pathname !== firstStep.route) {
+      if (firstStep && normalizePathToTutorialRoute(location.pathname) !== firstStep.route) {
         void navigateForTour(firstStep.route).then(() => tour.drive(fromStep));
         return;
       }
 
       tour.drive(fromStep);
     },
-    [destroyTour, locale, location.pathname, navigateForTour, setDismissed],
+    [destroyTour, locale, location.pathname, navigate, navigateForTour, setDismissed],
   );
 
   useEffect(() => () => destroyTour(), [destroyTour]);
 
   // Wait for persist hydration so returning users with "Don't show again" are not auto-started.
-  // Only auto-start on the chat route ("/") after a 3-second delay.
+  // Auto-start on any chat route ("/chat/:id" normalizes to "/") after a 3-second delay.
   useEffect(() => {
     if (!hasHydrated || dismissed || autoStartedRef.current || isRunning) return;
-    if (location.pathname !== "/") return;
+    if (normalizePathToTutorialRoute(location.pathname) !== "/") return;
     autoStartedRef.current = true;
     const timerId = window.setTimeout(() => startTutorial(0), 3000);
     return () => window.clearTimeout(timerId);

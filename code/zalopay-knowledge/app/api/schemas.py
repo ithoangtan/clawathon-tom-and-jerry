@@ -293,6 +293,7 @@ class AdminDepartmentIndexStatus(_Base):
     chunk_count: int = 0
     doc_count: int = 0
     has_data: bool = False
+    last_synced_at: Optional[str] = None
 
 
 class AdminSyncStatusResponse(_Base):

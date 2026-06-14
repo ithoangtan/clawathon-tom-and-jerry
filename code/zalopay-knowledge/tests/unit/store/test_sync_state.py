@@ -207,3 +207,39 @@ class TestSyncOrchestratorAdmin:
         assert job_id is not None
         sync_orchestrator.finish("gdrive", success=True, doc_count=1, chunk_count=1)
         assert sync_orchestrator.current_job_id("gdrive") == job_id
+
+    def test_admin_status_snapshot_includes_last_synced_at(
+        self,
+        meta_store: MetaStore,
+        sync_orchestrator: SyncOrchestrator,
+    ) -> None:
+        """Regression: admin_status_snapshot must emit last_synced_at per department.
+
+        AdminDepartmentIndexStatus previously lacked this field and had extra="forbid",
+        causing 422 on GET /api/admin/sync/status in production.
+        """
+        snapshot = sync_orchestrator.admin_status_snapshot()
+
+        # All departments must have last_synced_at key (None when no data yet).
+        for dept_key, dept_info in snapshot["departments_indexed"].items():
+            assert "last_synced_at" in dept_info, (
+                f"departments_indexed[{dept_key!r}] missing 'last_synced_at'"
+            )
+            assert dept_info["last_synced_at"] is None
+
+    def test_admin_status_snapshot_last_synced_at_after_meta_upsert(
+        self,
+        meta_store: MetaStore,
+        sync_orchestrator: SyncOrchestrator,
+    ) -> None:
+        """last_synced_at reflects the most recent sync timestamp from MetaStore."""
+        meta_store.record_source_hashes(
+            RISK,
+            [{"url": "https://example.com/doc1", "content_hash": "abc123", "source_id": "1"}],
+        )
+
+        snapshot = sync_orchestrator.admin_status_snapshot()
+        risk_info = snapshot["departments_indexed"][RISK]
+        # After recording source hashes, last_synced_at should be a non-null ISO string.
+        assert risk_info["last_synced_at"] is not None
+        assert risk_info["last_synced_at"].endswith("Z") or "T" in risk_info["last_synced_at"]
