@@ -41,6 +41,9 @@ export function AdminDashboardCards({ status }: Props) {
   const totalDocs =
     depts.reduce((a, d) => a + (d.doc_count ?? 0), 0) + (gdrive?.doc_count ?? 0);
 
+  const totalPages =
+    depts.reduce((a, d) => a + (d.page_count ?? 0), 0);
+
   const totalChunks =
     depts.reduce((a, d) => a + (d.chunk_count ?? 0), 0) + (gdrive?.chunk_count ?? 0);
 
@@ -71,8 +74,10 @@ export function AdminDashboardCards({ status }: Props) {
       <StatCard
         icon={<FileText size="md" />}
         label={t("adminTotalDocs", locale)}
-        value={totalDocs.toLocaleString()}
-        sub={`${totalChunks.toLocaleString()} ${t("chunks", locale)}`}
+        value={totalDocs === 0 && totalPages > 0 ? totalPages.toLocaleString() : totalDocs.toLocaleString()}
+        sub={totalDocs === 0 && totalPages > 0
+          ? t("adminPagesLabel", locale)
+          : `${totalChunks.toLocaleString()} ${t("chunks", locale)}`}
         accent="bg-brand-muted text-brand"
       />
       <StatCard

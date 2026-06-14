@@ -88,12 +88,12 @@ export function AdminSyncTable() {
 
         {/* Feedback */}
         {message && (
-          <p className="border-b border-emerald-100 bg-emerald-50 px-5 py-2 text-sm text-emerald-700" role="status">
+          <p className="border-b border-emerald-200 bg-emerald-50 px-5 py-2 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400" role="status">
             {message}
           </p>
         )}
         {syncError && (
-          <p className="border-b border-red-100 bg-red-50 px-5 py-2 text-sm text-red-600" role="alert">
+          <p className="border-b border-red-200 bg-red-50 px-5 py-2 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400" role="alert">
             {syncError}
           </p>
         )}
@@ -228,7 +228,8 @@ function SyncTableRow({ row, anyRunning, loadingKey, onSync, onDetail }: RowProp
     try { meta = getDepartment(dept.department); } catch { /* skip */ }
     const syncKey = dept.department;
     const isLoading = loadingKey === syncKey;
-    const stateTone = dept.state === "running" ? "info" : dept.state === "error" ? "danger" : "default";
+    const effectiveState = isLoading ? "running" : dept.state;
+    const stateTone = effectiveState === "running" ? "info" : effectiveState === "error" ? "danger" : "default";
 
     return (
       <tr className="group border-b border-border/60 transition-colors hover:bg-surface-glass last:border-0">
@@ -246,14 +247,23 @@ function SyncTableRow({ row, anyRunning, loadingKey, onSync, onDetail }: RowProp
         </td>
         <td className="px-4 py-3.5">
           <div className="flex flex-col gap-1">
-            <Badge tone={stateTone}>{syncStateLabel(dept.state, locale)}</Badge>
+            <Badge tone={stateTone}>{syncStateLabel(effectiveState, locale)}</Badge>
             <FreshnessBadge lastSuccessAt={dept.last_success_at} freshnessHours={dept.freshness_hours} />
           </div>
         </td>
         <td className="px-4 py-3.5 text-right tabular-nums">
-          <p className="font-medium text-content-primary">{(dept.doc_count ?? 0).toLocaleString()}</p>
-          {dept.page_count > 0 && (
-            <p className="text-xs text-content-muted">{dept.page_count.toLocaleString()} {t("adminPagesLabel", locale)}</p>
+          {(dept.doc_count ?? 0) === 0 && dept.page_count > 0 ? (
+            <>
+              <p className="font-medium text-content-primary">{dept.page_count.toLocaleString()}</p>
+              <p className="text-xs text-content-muted">{t("adminPagesLabel", locale)}</p>
+            </>
+          ) : (
+            <>
+              <p className="font-medium text-content-primary">{(dept.doc_count ?? 0).toLocaleString()}</p>
+              {dept.page_count > 0 && (
+                <p className="text-xs text-content-muted">{dept.page_count.toLocaleString()} {t("adminPagesLabel", locale)}</p>
+              )}
+            </>
           )}
         </td>
         <td className="px-4 py-3.5 text-right tabular-nums font-medium text-content-primary">
@@ -292,7 +302,8 @@ function SyncTableRow({ row, anyRunning, loadingKey, onSync, onDetail }: RowProp
   // GDrive row
   const { source } = row;
   const isLoading = loadingKey === "gdrive";
-  const stateTone = source.state === "running" ? "info" : source.state === "error" ? "danger" : "default";
+  const effectiveState = isLoading ? "running" : source.state;
+  const stateTone = effectiveState === "running" ? "info" : effectiveState === "error" ? "danger" : "default";
 
   return (
     <tr className="group border-b border-border/60 transition-colors hover:bg-surface-glass last:border-0">
@@ -307,7 +318,7 @@ function SyncTableRow({ row, anyRunning, loadingKey, onSync, onDetail }: RowProp
       </td>
       <td className="px-4 py-3.5">
         <div className="flex flex-col gap-1">
-          <Badge tone={stateTone}>{syncStateLabel(source.state, locale)}</Badge>
+          <Badge tone={stateTone}>{syncStateLabel(effectiveState, locale)}</Badge>
           <FreshnessBadge lastSuccessAt={source.last_success_at} freshnessHours={source.freshness_hours} />
         </div>
       </td>
