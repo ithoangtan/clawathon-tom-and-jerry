@@ -239,13 +239,14 @@ class SyncService:
             self._indexer.reload_retriever()
             self._orchestrator.finish(
                 "confluence",
+                department=department,
                 success=True,
                 doc_count=total_docs,
                 chunk_count=total_chunks,
             )
         except Exception as exc:  # noqa: BLE001
             logger.exception("Confluence sync failed")
-            self._orchestrator.finish("confluence", success=False, error=str(exc))
+            self._orchestrator.finish("confluence", department=department, success=False, error=str(exc))
         finally:
             if on_complete:
                 on_complete()

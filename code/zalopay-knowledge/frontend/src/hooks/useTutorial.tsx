@@ -278,8 +278,10 @@ function useTutorialController() {
   useEffect(() => {
     if (!hasHydrated || chatDismissed || autoStartedRef.current || isRunning) return;
     if (normalizePathToTutorialRoute(location.pathname) !== "/") return;
-    autoStartedRef.current = true;
-    const timerId = window.setTimeout(() => startTutorial("chat", 0), 3000);
+    const timerId = window.setTimeout(() => {
+      autoStartedRef.current = true;
+      startTutorial("chat", 0);
+    }, 3000);
     return () => window.clearTimeout(timerId);
   }, [hasHydrated, chatDismissed, isRunning, startTutorial, location.pathname]);
 
@@ -316,8 +318,10 @@ export function usePageTutorial(key: TutorialKey, delayMs = 1500) {
 
   useEffect(() => {
     if (!hasHydrated || isDismissed || autoStartedRef.current || isRunning) return;
-    autoStartedRef.current = true;
-    const timer = window.setTimeout(() => startTutorial(key, 0), delayMs);
+    const timer = window.setTimeout(() => {
+      autoStartedRef.current = true;
+      startTutorial(key, 0);
+    }, delayMs);
     return () => window.clearTimeout(timer);
   }, [hasHydrated, isDismissed, isRunning, startTutorial, key, delayMs]);
 

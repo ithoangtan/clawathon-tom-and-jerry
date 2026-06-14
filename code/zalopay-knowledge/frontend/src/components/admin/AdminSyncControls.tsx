@@ -13,18 +13,23 @@ import { useEffect, useRef, useState } from "react";
 function useSyncTrigger() {
   const { refresh, status } = useAdminSyncStatus();
   const { refresh: refreshHealth } = useHealth();
-  const [loadingKey, setLoadingKey] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadingKeys, setLoadingKeys] = useState<Set<string>>(new Set());
+  const [messages, setMessages] = useState<Map<string, string>>(new Map());
+  const [errors, setErrors] = useState<Map<string, string>>(new Map());
   const wasRunningRef = useRef(false);
   const locale = useUserStore((s) => s.locale);
 
   const sources = status?.sources ?? [];
   const departments = status?.departments ?? [];
-  const anyRunning =
-    status?.running ||
-    sources.some((s) => s.state === "running") ||
-    departments.some((d) => d.state === "running");
+  const confluenceSource = sources.find((s) => s.source === "confluence");
+  const gdriveSource = sources.find((s) => s.source === "gdrive");
+
+  // sync-all is running (blocks per-dept buttons)
+  const syncAllRunning = confluenceSource?.sync_all_running ?? false;
+  // any confluence sync is running (blocks the Sync All button)
+  const confluenceRunning = confluenceSource?.state === "running";
+  const gdriveRunning = gdriveSource?.state === "running";
+  const anyRunning = confluenceRunning || gdriveRunning;
 
   useEffect(() => {
     if (wasRunningRef.current && !anyRunning) {
@@ -33,38 +38,66 @@ function useSyncTrigger() {
     wasRunningRef.current = Boolean(anyRunning);
   }, [anyRunning, refreshHealth]);
 
+  function isDeptRunning(dept: Department): boolean {
+    return departments.find((d) => d.department === dept)?.state === "running";
+  }
+
   async function trigger(source: "confluence" | "gdrive", department?: Department) {
     const key = department ?? source;
-    setLoadingKey(key);
-    setMessage(null);
-    setError(null);
+    setLoadingKeys((prev) => new Set(prev).add(key));
+    setMessages((prev) => { const m = new Map(prev); m.delete(key); return m; });
+    setErrors((prev) => { const m = new Map(prev); m.delete(key); return m; });
     try {
       const res = await api.adminSync(
         { source, department: department ?? null },
         getUserContext(),
       );
-      setMessage(res.message || t("adminSyncStarted", locale));
+      setMessages((prev) => new Map(prev).set(key, res.message || t("adminSyncStarted", locale)));
       if (!res.started) {
-        setError(t("adminSyncInProgress", locale));
+        setErrors((prev) => new Map(prev).set(key, t("adminSyncInProgress", locale)));
       }
       refresh();
       refreshHealth();
     } catch (e) {
-      setError(
-        e instanceof ApiError ? (e.detail ?? e.message) : t("adminSyncFailed", locale),
+      setErrors((prev) =>
+        new Map(prev).set(
+          key,
+          e instanceof ApiError ? (e.detail ?? e.message) : t("adminSyncFailed", locale),
+        ),
       );
     } finally {
-      setLoadingKey(null);
+      setLoadingKeys((prev) => { const s = new Set(prev); s.delete(key); return s; });
     }
   }
 
-  return { status, loadingKey, message, error, anyRunning, trigger };
+  return {
+    status,
+    loadingKeys,
+    messages,
+    errors,
+    syncAllRunning,
+    confluenceRunning,
+    gdriveRunning,
+    isDeptRunning,
+    trigger,
+  };
 }
 
 export function ConfluenceSyncControls() {
   const locale = useUserStore((s) => s.locale);
-  const { status, loadingKey, message, error, anyRunning, trigger } = useSyncTrigger();
-  const departments = status?.departments ?? [];
+  const {
+    loadingKeys,
+    messages,
+    errors,
+    syncAllRunning,
+    confluenceRunning,
+    isDeptRunning,
+    trigger,
+  } = useSyncTrigger();
+
+  // Collect all messages/errors to show (latest non-null entries)
+  const latestMessage = Array.from(messages.values()).at(-1) ?? null;
+  const latestError = Array.from(errors.values()).at(-1) ?? null;
 
   return (
     <Card>
@@ -84,25 +117,26 @@ export function ConfluenceSyncControls() {
       <div className="mt-4 flex flex-wrap gap-3">
         <Button
           variant="primary"
-          loading={loadingKey === "confluence"}
-          disabled={Boolean(anyRunning)}
+          loading={loadingKeys.has("confluence")}
+          disabled={confluenceRunning}
           onClick={() => trigger("confluence")}
         >
-          {anyRunning ? t("syncing", locale) : t("adminSyncAll", locale)}
+          {syncAllRunning ? t("syncing", locale) : t("adminSyncAll", locale)}
         </Button>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {DEPARTMENTS.map((dept) => {
           const label = departmentMetaLabel(dept, locale);
-          const deptRunning =
-            departments.find((d) => d.department === dept.key)?.state === "running";
+          const deptRunning = isDeptRunning(dept.key);
+          // Disable if sync-all is running OR this specific dept is already syncing
+          const isDisabled = syncAllRunning || deptRunning;
           return (
             <Button
               key={dept.key}
               variant="secondary"
-              loading={loadingKey === dept.key}
-              disabled={Boolean(anyRunning)}
+              loading={loadingKeys.has(dept.key)}
+              disabled={isDisabled}
               onClick={() => trigger("confluence", dept.key)}
               className="justify-start truncate"
             >
@@ -114,14 +148,14 @@ export function ConfluenceSyncControls() {
         })}
       </div>
 
-      {message && (
+      {latestMessage && (
         <p className="mt-4 text-sm text-emerald-700" role="status">
-          {message}
+          {latestMessage}
         </p>
       )}
-      {error && (
+      {latestError && (
         <p className="mt-2 text-sm text-red-600" role="alert">
-          {error}
+          {latestError}
         </p>
       )}
     </Card>
@@ -130,9 +164,10 @@ export function ConfluenceSyncControls() {
 
 export function GDriveSyncControls() {
   const locale = useUserStore((s) => s.locale);
-  const { status, loadingKey, message, error, anyRunning, trigger } = useSyncTrigger();
+  const { status, loadingKeys, messages, errors, gdriveRunning, trigger } = useSyncTrigger();
   const gdriveSource = status?.sources.find((s) => s.source === "gdrive");
-  const gdriveRunning = gdriveSource?.state === "running";
+  const gdriveMessage = messages.get("gdrive") ?? null;
+  const gdriveError = errors.get("gdrive") ?? null;
 
   return (
     <Card>
@@ -152,8 +187,8 @@ export function GDriveSyncControls() {
       <div className="mt-4 flex flex-wrap items-center gap-4">
         <Button
           variant="secondary"
-          loading={loadingKey === "gdrive"}
-          disabled={Boolean(anyRunning)}
+          loading={loadingKeys.has("gdrive")}
+          disabled={gdriveRunning}
           onClick={() => trigger("gdrive")}
         >
           {gdriveRunning ? t("syncing", locale) : t("syncGdrive", locale)}
@@ -173,14 +208,14 @@ export function GDriveSyncControls() {
         )}
       </div>
 
-      {message && (
+      {gdriveMessage && (
         <p className="mt-4 text-sm text-emerald-700" role="status">
-          {message}
+          {gdriveMessage}
         </p>
       )}
-      {error && (
+      {gdriveError && (
         <p className="mt-2 text-sm text-red-600" role="alert">
-          {error}
+          {gdriveError}
         </p>
       )}
     </Card>

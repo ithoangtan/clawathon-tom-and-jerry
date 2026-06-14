@@ -91,6 +91,7 @@ function buildSources(jobs: AdminSyncStatusWire["jobs"]): SourceStatus[] {
       freshness_hours: freshnessHoursFromIso(job.last_success_at),
       errors: job.errors ?? [],
       progress: job.progress ?? null,
+      sync_all_running: job.sync_all_running ?? false,
     };
   });
 }

@@ -169,6 +169,8 @@ export interface SourceStatus {
   errors: string[];
   /** Optional running-sync progress payload. */
   progress?: Record<string, unknown> | null;
+  /** True only when a sync-all job is running (not a per-dept sync). */
+  sync_all_running?: boolean;
 }
 
 /** Body of GET /sync/status */
@@ -197,6 +199,8 @@ export interface AdminJobStatusWireBody {
   job_id?: string | null;
   status: AdminJobStatusWire;
   started_at?: string | null;
+  /** True only when a sync-all job is running (not per-dept). */
+  sync_all_running?: boolean;
   finished_at?: string | null;
   last_success_at?: string | null;
   target_department?: Department | null;
