@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/apiClient";
-import { MOCK_DASHBOARD } from "@/lib/mockDashboard";
 import { SCENARIO_MAP } from "@/lib/mockScenarios";
 import { useMockStore } from "@/store/mockStore";
 import type { DashboardData } from "@/lib/types";
