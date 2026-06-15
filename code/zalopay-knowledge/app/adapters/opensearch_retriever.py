@@ -32,11 +32,12 @@ class OpenSearchRetriever:
     def __init__(self, settings: Settings | None = None) -> None:
         from pathlib import Path
 
+        from app.adapters.openai_credentials import resolve_openai_api_key
+
         self._cfg = settings or get_settings()
         self._embedder = Embedder(
             self._cfg.embedding_model,
-            base_url=self._cfg.llm_base_url,
-            api_key=self._cfg.llm_api_key,
+            api_key=resolve_openai_api_key(self._cfg),
         )
         self._client = self._build_client()
         self._prefix = self._cfg.opensearch_index_prefix

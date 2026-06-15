@@ -85,10 +85,11 @@ class OpenSearchIndexBuilder:
             # Fallback: local SQLite (only used when MySQL not configured).
             index_dir = Path(self._cfg.index_dir)
             self._meta = MetaStore(index_dir / "meta.db")
+        from app.adapters.openai_credentials import resolve_openai_api_key
+
         self._embedder = Embedder(
             self._cfg.embedding_model,
-            base_url=self._cfg.llm_base_url,
-            api_key=self._cfg.llm_api_key,
+            api_key=resolve_openai_api_key(self._cfg),
         )
         self._prefix = self._cfg.opensearch_index_prefix
         self._client = self._build_client()

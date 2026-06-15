@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 _CREATE_CHECKPOINTS = """
 CREATE TABLE IF NOT EXISTS lg_checkpoints (
-    thread_id            VARCHAR(255) NOT NULL,
-    checkpoint_ns        VARCHAR(255) NOT NULL DEFAULT '',
-    checkpoint_id        VARCHAR(255) NOT NULL,
-    parent_checkpoint_id VARCHAR(255),
+    thread_id            VARCHAR(191) NOT NULL,
+    checkpoint_ns        VARCHAR(191) NOT NULL DEFAULT '',
+    checkpoint_id        VARCHAR(191) NOT NULL,
+    parent_checkpoint_id VARCHAR(191),
     type                 VARCHAR(50),
     checkpoint           MEDIUMBLOB   NOT NULL,
     metadata             MEDIUMTEXT,
@@ -31,10 +31,10 @@ CREATE TABLE IF NOT EXISTS lg_checkpoints (
 
 _CREATE_WRITES = """
 CREATE TABLE IF NOT EXISTS lg_checkpoint_writes (
-    thread_id     VARCHAR(255) NOT NULL,
-    checkpoint_ns VARCHAR(255) NOT NULL DEFAULT '',
-    checkpoint_id VARCHAR(255) NOT NULL,
-    task_id       VARCHAR(255) NOT NULL,
+    thread_id     VARCHAR(191) NOT NULL,
+    checkpoint_ns VARCHAR(191) NOT NULL DEFAULT '',
+    checkpoint_id VARCHAR(191) NOT NULL,
+    task_id       VARCHAR(191) NOT NULL,
     idx           INT          NOT NULL,
     channel       VARCHAR(255) NOT NULL,
     type          VARCHAR(50),
@@ -73,6 +73,21 @@ class MySQLCheckpointer:
         except Exception as exc:  # noqa: BLE001
             logger.warning("MySQLCheckpointer unhealthy: %s", exc)
             return False
+
+
+def _load_metadata(saver, raw: str | None) -> dict:
+    """Deserialize metadata stored by _MySQLSaver.put().
+
+    Supports two formats:
+    - New: ``"<serde_type>||<hex_bytes>"`` — written by the serde-aware put().
+    - Legacy: plain JSON string — written by the old json.dumps() put().
+    """
+    if not raw:
+        return {}
+    if "||" in raw:
+        mt, mhex = raw.split("||", 1)
+        return saver.serde.loads_typed((mt, bytes.fromhex(mhex)))  # type: ignore[attr-defined]
+    return json.loads(raw)
 
 
 # ── Inner saver: BaseCheckpointSaver impl ─────────────────────────────────────
@@ -159,7 +174,7 @@ class _MySQLSaver:
 
         cp_data = bytes(row["checkpoint"]) if row["checkpoint"] else b""
         checkpoint = self.serde.loads_typed((row["type"], cp_data))  # type: ignore[attr-defined]
-        metadata = json.loads(row["metadata"]) if row["metadata"] else {}
+        metadata = _load_metadata(self, row["metadata"])
         pending = [
             (
                 wr["task_id"],
@@ -236,7 +251,7 @@ class _MySQLSaver:
         for row in rows:
             cp_data = bytes(row["checkpoint"]) if row["checkpoint"] else b""
             checkpoint = self.serde.loads_typed((row["type"], cp_data))  # type: ignore[attr-defined]
-            metadata = json.loads(row["metadata"]) if row["metadata"] else {}
+            metadata = _load_metadata(self, row["metadata"])
             parent_config = (
                 {
                     "configurable": {
@@ -275,7 +290,11 @@ class _MySQLSaver:
         parent_checkpoint_id = config["configurable"].get("checkpoint_id")
 
         type_, cp_bytes = self.serde.dumps_typed(checkpoint)  # type: ignore[attr-defined]
-        meta_str = json.dumps(metadata)
+        # Use serde for metadata too — LangGraph 0.2.x can put LangChain
+        # message objects (HumanMessage, etc.) into metadata, which plain
+        # json.dumps() cannot handle.
+        meta_type, meta_bytes = self.serde.dumps_typed(metadata)  # type: ignore[attr-defined]
+        meta_str = meta_type + "||" + meta_bytes.hex()
 
         conn = self._connect()
         try:

@@ -57,11 +57,14 @@ def build_deps(settings: Settings | None = None) -> GraphDeps:
         retriever = FaissRetriever(cfg)
         logger.info("Using FaissRetriever (VECTOR_STORE=faiss)")
 
-    if cfg.is_agentbase:
-        checkpointer = AgentBaseCheckpointer(cfg)
-        recall = make_agentbase_recall(cfg)
-        logger.info("Wired AgentBase deps (platform Memory checkpointer + recall)")
-    elif cfg.db_host and cfg.db_user:
+    # --- AgentBase checkpointer/memory (commented out — using MySQL + OpenAI) ---
+    # if cfg.is_agentbase:
+    #     checkpointer = AgentBaseCheckpointer(cfg)
+    #     recall = make_agentbase_recall(cfg)
+    #     logger.info("Wired AgentBase deps (platform Memory checkpointer + recall)")
+    # --- end AgentBase ---
+
+    if cfg.db_host and cfg.db_user:
         checkpointer = MySQLCheckpointer(cfg)
         recall = None
         logger.info("Wired local deps (MySQLCheckpointer, stateless recall)")

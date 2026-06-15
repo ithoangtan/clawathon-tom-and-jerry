@@ -57,8 +57,8 @@ class Settings(BaseSettings):
         validation_alias="GREENNODE_API_KEY",
         description="Platform-injected MaaS key on AgentBase (fallback when LLM_API_KEY unset)",
     )
-    small_model: str = Field(default="", description="Model id for routing/grading/verify tier")
-    main_model: str = Field(default="", description="Model id for synthesis/reconcile tier")
+    small_model: str = Field(default="gpt-5.4-nano", description="OpenAI model id for routing/grading/verify tier")
+    main_model: str = Field(default="gpt-5.4-nano", description="OpenAI model id for synthesis/reconcile tier")
     small_model_fallbacks: list[str] = Field(
         default_factory=list,
         description="Ordered fallback model ids for SMALL tier when primary hits daily quota (429)",
@@ -71,8 +71,23 @@ class Settings(BaseSettings):
     # ── Embeddings ────────────────────────────────────────────────────────────
 
     embedding_model: str = Field(
-        default="baai/bge-m3",
-        description="HuggingFace model id for local embeddings (VI+EN)",
+        default="text-embedding-3-large",
+        description="OpenAI embedding model id",
+    )
+
+    # ── OpenAI ────────────────────────────────────────────────────────────────
+
+    openai_api_key: str = Field(
+        default="",
+        description="OpenAI API key (local dev; on AgentBase fetched from Identity provider)",
+    )
+    openai_api_key_provider: str = Field(
+        default="identity-openai",
+        description="AgentBase Identity apikey provider name for the OpenAI key",
+    )
+    openai_base_url: str = Field(
+        default="https://api.openai.com/v1",
+        description="OpenAI-compatible API base URL",
     )
 
     # ── Confluence ────────────────────────────────────────────────────────────

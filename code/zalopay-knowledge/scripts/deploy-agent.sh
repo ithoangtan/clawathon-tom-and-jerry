@@ -6,6 +6,7 @@
 #   bash scripts/deploy-agent.sh --push-only      # skip build, push existing local image + update runtime
 #   bash scripts/deploy-agent.sh --tag <tag>      # use specific tag
 #   bash scripts/deploy-agent.sh --dry-run        # preview only, no changes
+#   bash scripts/deploy-agent.sh --clean          # prune old local images + build from scratch (--no-cache)
 #
 # First-time setup:
 #   1. Copy .env.example → .env and fill secrets (see variable comments in .env.example).
@@ -19,7 +20,7 @@ set -euo pipefail
 
 RUNTIME_NAME="zalopay-knowledge"
 RUNTIME_DESCRIPTION="ZaloPay Knowledge Agent"
-FLAVOR_ID="runtime-s2-general-2x4"  # 2 CPU, 8 GB
+FLAVOR_ID="runtime-s2-general-4x8"  # 2 CPU, 8 GB
 ENV_FILE=".env"
 PLATFORM="linux/amd64"
 
@@ -31,6 +32,8 @@ AGENTBASE_SCRIPTS="$(cd "$(dirname "$0")/../.." && pwd)/greennode-agentbase-skil
 TAG="v$(date +%Y%m%d%H%M%S)"
 DRY_RUN=false
 SKIP_BUILD=false
+CLEAN_BUILD=false
+NO_CACHE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -39,8 +42,9 @@ while [[ $# -gt 0 ]]; do
     --flavor)     FLAVOR_ID="$2"; shift 2 ;;
     --push-only)  SKIP_BUILD=true; shift ;;
     --dry-run)    DRY_RUN=true; shift ;;
+    --clean)      CLEAN_BUILD=true; NO_CACHE="--no-cache"; shift ;;
     --help|-h)
-      sed -n '2,13p' "$0" | sed 's/^# *//'
+      sed -n '2,14p' "$0" | sed 's/^# *//'
       exit 0 ;;
     *) echo "ERROR: Unknown option: $1" >&2; exit 1 ;;
   esac
@@ -102,18 +106,37 @@ if [ "$DRY_RUN" = true ]; then
   exit 0
 fi
 
-# ── Step 1: Build (skippable) ──────────────────────────────────────────────────
+# ── Step 1: Clean (optional) ───────────────────────────────────────────────────
+
+if [ "$CLEAN_BUILD" = true ] && [ "$SKIP_BUILD" = false ]; then
+  echo "==> Cleaning old local images for '$RUNTIME_NAME'..."
+  OLD_IMAGES=$(docker images --filter "reference=*/${RUNTIME_NAME}:*" --filter "reference=${RUNTIME_NAME}:*" -q 2>/dev/null || true)
+  if [ -n "$OLD_IMAGES" ]; then
+    # shellcheck disable=SC2086
+    docker rmi -f $OLD_IMAGES 2>/dev/null || true
+    echo "  Removed old images."
+  else
+    echo "  No old images found."
+  fi
+  echo "==> Pruning dangling images and stopped containers..."
+  docker container prune -f --filter "label=app=zalopay-knowledge" 2>/dev/null || true
+  docker image prune -f 2>/dev/null || true
+  echo ""
+fi
+
+# ── Step 2: Build (skippable) ──────────────────────────────────────────────────
 
 if [ "$SKIP_BUILD" = true ]; then
   echo "==> Skipping build (--push-only), using local image $IMAGE_FULL"
   echo ""
 else
-  echo "==> Building Docker image ($PLATFORM)..."
-  docker build --platform "$PLATFORM" -t "$IMAGE_FULL" .
+  echo "==> Building Docker image ($PLATFORM)${NO_CACHE:+ [no-cache]}..."
+  # shellcheck disable=SC2086
+  docker build --platform "$PLATFORM" $NO_CACHE -t "$IMAGE_FULL" .
   echo ""
 fi
 
-# ── Step 2: Login & Push ───────────────────────────────────────────────────────
+# ── Step 3: Login & Push ───────────────────────────────────────────────────────
 
 echo "==> Logging in to AgentBase Container Registry..."
 bash "$AGENTBASE_SCRIPTS/cr.sh" credentials docker-login
@@ -123,7 +146,7 @@ echo "==> Pushing image..."
 docker push "$IMAGE_FULL"
 echo ""
 
-# ── Step 3: Create or Update Runtime ──────────────────────────────────────────
+# ── Step 4: Create or Update Runtime ──────────────────────────────────────────
 
 echo "==> Checking for existing runtime '$RUNTIME_NAME'..."
 RUNTIME_LIST=$(bash "$AGENTBASE_SCRIPTS/runtime.sh" list)
