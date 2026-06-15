@@ -11,7 +11,7 @@
 
 ## Feature: Proactive Intelligence
 
-This is the top feature added to the Zalopay Knowledge AI Agent. It makes the agent proactively helpful — instead of passively answering questions, it anticipates what the user might want to know next, and surfaces documentation gaps to admins.
+This is the top feature added to the Zalopay Wiki Agent AI Agent. It makes the agent proactively helpful — instead of passively answering questions, it anticipates what the user might want to know next, and surfaces documentation gaps to admins.
 
 ### Why this matters (requirement alignment)
 

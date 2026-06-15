@@ -1,4 +1,4 @@
-# Zalopay Knowledge Agent — pinned runtime dependencies (Python 3.13+)
+# Zalopay Wiki Agent Agent — pinned runtime dependencies (Python 3.13+)
 # Upper-bound on major versions to prevent breaking changes during automated installs.
 #
 # IMPORTANT: The following packages are added automatically at deploy time by

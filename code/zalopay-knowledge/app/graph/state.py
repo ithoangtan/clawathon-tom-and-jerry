@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""LangGraph graph state for the Zalopay Knowledge Agent.
+"""LangGraph graph state for the Zalopay Wiki Agent Agent.
 
 This module defines the canonical ``GraphState`` TypedDict plus all supporting
 TypedDicts and reducer helpers.  Every graph node receives and returns a

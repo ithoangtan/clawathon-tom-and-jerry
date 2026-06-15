@@ -1,4 +1,4 @@
-# Evidence — Zalopay Knowledge Agent QC Report
+# Evidence — Zalopay Wiki Agent Agent QC Report
 
 **Date:** 2026-06-15
 **Tester:** QC (automated via Claude Code)

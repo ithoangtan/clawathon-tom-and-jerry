@@ -24,7 +24,7 @@ import { classNames } from "@/lib/format";
 import { useHealth } from "@/hooks/useHealth";
 import { useUserStore } from "@/store/userStore";
 import { useSessionStore } from "@/store/sessionStore";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 const NAV_ICONS = {
   "/": MessageSquare,
@@ -72,7 +72,7 @@ export function Header() {
   return (
     <header className="relative z-20 glass-panel-strong border-b border-border">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+        <Link to="/" className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-opacity">
           <BrandMark />
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold tracking-tight text-content-primary sm:text-lg">
@@ -86,7 +86,7 @@ export function Header() {
               <span className="text-gradient-brand font-medium">{t("knowledgeAgent", locale)}</span>
             </p>
           </div>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitcher className="hidden sm:inline-flex" />
@@ -199,7 +199,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-surface">
         <div className="flex items-center gap-3">
           <Brain size="lg" strokeWidth={2.25} className="text-brand" />
-          <span className="text-xl font-bold text-content-primary">Zalopay Knowledge</span>
+          <span className="text-xl font-bold text-content-primary">Zalopay Wiki Agent</span>
         </div>
         <Loader2 size="lg" className="text-brand" />
         <p className="text-sm text-content-secondary">

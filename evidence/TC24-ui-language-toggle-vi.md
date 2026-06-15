@@ -25,7 +25,7 @@
 
 | UI Text | EN |
 |---------|----|
-| App title | "Zalopay Knowledge" |
+| App title | "Zalopay Wiki Agent" |
 | Nav: Chat | "Chat" |
 | Nav: Dashboard | "Dashboard" |
 | Nav: Settings | "Settings" |
@@ -41,7 +41,7 @@
 
 | UI Text | VI |
 |---------|----|
-| App title | "Tri thức Zalopay" |
+| App title | "Zalopay Wiki" |
 | Nav: Chat | "Hỏi đáp" |
 | Nav: Dashboard | "Bảng điều khiển" |
 | Nav: Settings | "Cài đặt" |

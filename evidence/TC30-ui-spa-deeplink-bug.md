@@ -30,7 +30,7 @@
 - Entire page is **solid black** (`#000` background)
 - No content rendered
 - No React app mounted
-- Browser tab title: "Zalopay Knowledge" (JS loaded but React failed to render)
+- Browser tab title: "Zalopay Wiki Agent" (JS loaded but React failed to render)
 - No console errors visible in preview (React crash silenced)
 
 **When navigating from root (`/`) then clicking Chat in nav:**

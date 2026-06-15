@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Canonical department registry for the Zalopay Knowledge Agent.
+"""Canonical department registry for the Zalopay Wiki Agent Agent.
 
 All other modules that need department metadata import from here — never
 hard-code department keys or display names elsewhere.

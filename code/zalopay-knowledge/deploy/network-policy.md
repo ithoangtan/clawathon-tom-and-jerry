@@ -1,4 +1,4 @@
-# Network policy — Zalopay Knowledge Agent (AgentBase VPC)
+# Network policy — Zalopay Wiki Agent Agent (AgentBase VPC)
 
 MVP security checklist requires **egress deny-all + allowlist** at the network
 layer so the runtime cannot reach the public internet by construction.

@@ -4,7 +4,7 @@ import { departmentLabel } from "./departments";
 type Strings = Record<string, { en: string; vi: string }>;
 
 const strings: Strings = {
-  appTitle: { en: "Zalopay Knowledge", vi: "Tri thức Zalopay" },
+  appTitle: { en: "Zalopay Wiki Agent", vi: "Zalopay Wiki" },
   appSubtitle: {
     en: "Citation-grounded answers from internal docs",
     vi: "Câu trả lời có trích dẫn từ tài liệu nội bộ",
@@ -169,14 +169,14 @@ const strings: Strings = {
     vi: "Đặt câu hỏi để bắt đầu. Mỗi câu trả lời đều có trích dẫn từ Confluence hoặc Drive.",
   },
   you: { en: "You", vi: "Bạn" },
-  assistantName: { en: "Zalopay Knowledge", vi: "Tri thức Zalopay" },
+  assistantName: { en: "Zalopay Wiki Agent", vi: "Zalopay Wiki" },
   inputHint: {
     en: "Enter to send · Shift+Enter for new line",
     vi: "Enter để gửi · Shift+Enter xuống dòng",
   },
   inputHintSend: { en: "Send", vi: "Gửi" },
   inputHintNewline: { en: "New line", vi: "Xuống dòng" },
-  exampleQuestions: { en: "Try asking:", vi: "Thử hỏi:" },
+  exampleQuestions: { en: "Recent questions:", vi: "Câu hỏi gần đây:" },
   errorGeneric: { en: "Something went wrong. Please try again.", vi: "Đã xảy ra lỗi. Vui lòng thử lại." },
   errorTimeout: { en: "Request timed out. Try a narrower question.", vi: "Hết thời gian chờ. Thử câu hỏi cụ thể hơn." },
   errorKbNotReady: {
@@ -239,7 +239,7 @@ const strings: Strings = {
   copied: { en: "Copied!", vi: "Đã sao chép!" },
   copyCode: { en: "Copy code", vi: "Sao chép mã" },
   copyMessage: { en: "Copy response", vi: "Sao chép câu trả lời" },
-  knowledgeAgent: { en: "Knowledge Agent", vi: "Trợ lý Tri thức" },
+  knowledgeAgent: { en: "Internal Wiki Agent", vi: "Trợ lý wiki nội bộ" },
   settingsSubtitle: {
     en: "Configure your identity, sync preferences, and runtime environment for grounded answers.",
     vi: "Cấu hình danh tính, tùy chọn đồng bộ và môi trường runtime để nhận câu trả lời có căn cứ.",
@@ -371,8 +371,8 @@ const strings: Strings = {
     vi: "Xử lý trong {seconds}s · {count} phòng ban",
   },
   "tutorial.welcome.title": {
-    en: "Welcome to Zalopay Knowledge",
-    vi: "Chào mừng đến Tri thức Zalopay",
+    en: "Welcome to Zalopay Wiki Agent",
+    vi: "Chào mừng đến Zalopay Wiki",
   },
   "tutorial.welcome.description": {
     en: "This agent answers questions from internal Confluence and Drive docs only — every answer includes traceable sources. This quick tour shows the main workflows.",

@@ -1,4 +1,4 @@
-# API Contract — Zalopay Knowledge Agent
+# API Contract — Zalopay Wiki Agent Agent
 
 **Version:** 0.1.0  
 **Single source of truth for the FE↔BE handshake.**  

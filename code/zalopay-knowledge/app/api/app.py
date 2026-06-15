@@ -104,7 +104,7 @@ def register_health_routes(app: FastAPI) -> None:
 def create_app() -> FastAPI:
     cfg = get_settings()
     app = FastAPI(
-        title="Zalopay Knowledge Agent",
+        title="Zalopay Wiki Agent Agent",
         version=cfg.app_version,
         description="Citation-grounded internal knowledge assistant",
         lifespan=lifespan,

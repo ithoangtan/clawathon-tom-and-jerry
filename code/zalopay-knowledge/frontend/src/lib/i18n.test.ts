@@ -3,13 +3,13 @@ import { t } from "./i18n";
 
 describe("i18n", () => {
   it("returns English strings for en locale", () => {
-    expect(t("appTitle", "en")).toBe("Zalopay Knowledge");
+    expect(t("appTitle", "en")).toBe("Zalopay Wiki Agent");
     expect(t("send", "en")).toBe("Send");
     expect(t("citations", "en")).toBe("Sources");
   });
 
   it("returns Vietnamese strings for vi locale", () => {
-    expect(t("appTitle", "vi")).toBe("Tri thức Zalopay");
+    expect(t("appTitle", "vi")).toBe("Zalopay Wiki");
     expect(t("send", "vi")).toBe("Gửi");
     expect(t("citations", "vi")).toBe("Nguồn tham khảo");
   });
@@ -34,7 +34,7 @@ describe("i18n", () => {
   });
 
   it("covers dashboard and layout chrome strings", () => {
-    expect(t("knowledgeAgent", "vi")).toBe("Trợ lý Tri thức");
+    expect(t("knowledgeAgent", "vi")).toBe("Trợ lý nội bộ");
     expect(t("dashboardSubtitle", "en")).toMatch(/usage metrics/i);
     expect(t("historyQuestion", "vi")).toBe("Câu hỏi");
     expect(t("lastSync", "en", { date: "Jan 1" })).toBe("Last sync: Jan 1");

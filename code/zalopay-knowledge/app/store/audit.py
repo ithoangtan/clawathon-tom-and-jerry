@@ -201,17 +201,23 @@ class AuditStore:
 
 
     def popular_questions(self, *, limit: int = 3) -> list[str]:
-        """Return the top N most frequently asked questions across all time."""
+        """Return the N most recent answered questions with medium+ confidence (>= 0.5).
+
+        Deduplicates by question text, keeping the most recent occurrence.
+        """
         conn = get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT question, COUNT(*) AS cnt
+                    SELECT question, MAX(ts) AS last_ts
                     FROM queries
-                    WHERE question IS NOT NULL AND question != ''
+                    WHERE question IS NOT NULL
+                      AND question != ''
+                      AND status = 'answered'
+                      AND confidence >= 0.5
                     GROUP BY question
-                    ORDER BY cnt DESC, MAX(ts) DESC
+                    ORDER BY last_ts DESC
                     LIMIT %s
                     """,
                     (limit,),
