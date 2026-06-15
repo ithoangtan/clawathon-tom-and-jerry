@@ -68,7 +68,7 @@ Supervisor → routes question to relevant departments
 ```
 
 - **Ports** (`app/ports/`): protocol interfaces — `LLMPort`, `RetrieverPort`, `CheckpointerPort`
-- **Adapters** (`app/adapters/`): concrete implementations (FAISS, MaaS LLM, SQLite, AgentBase Memory)
+- **Adapters** (`app/adapters/`): concrete implementations (OpenSearch, FAISS fallback, MaaS LLM, SQLite, AgentBase Memory)
 - **Ingestion** (`app/ingestion/`): Confluence Cloud v2 API + Google Drive PDF sync
 - **Config** (`app/config.py`): all settings via Pydantic + `.env`
 - **Prompts** (`app/prompts/`): versioned YAML templates — edit here, not inline in code
@@ -92,15 +92,19 @@ Supervisor → routes question to relevant departments
 | Concern | Local Dev | Production (AgentBase) |
 |---|---|---|
 | State/checkpointing | SQLite (`index/`) | AgentBase Memory service |
-| Vector index | FAISS (`index/`) | FAISS (mounted volume) |
-| LLM | VNG MaaS (Qwen/MiniMax) | Same |
+| Vector index | OpenSearch (GreenNode VDB) | OpenSearch (GreenNode VDB) |
+| Audit / Feedback DB | MySQL `49.213.71.45` | MySQL `49.213.71.45` (same) |
+| LLM | VNG MaaS (Qwen) | Same |
 | Port | 8080 | 8080 |
 | Health | `GET /health/ready`, `GET /health/live` | Same |
+
+Set `VECTOR_STORE=faiss` in `.env` to fall back to local FAISS for offline dev.
+Runtime env for AgentBase deploy lives in `deploy/.runtime.env` (gitignored — copy from `.env`).
 
 ### LLM
 
 OpenAI-compatible endpoint: `https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1`
-Embeddings: `multilingual-e5-small` (384-dim, CPU FAISS).
+Embeddings: `baai/bge-m3` (multilingual, OpenSearch k-NN index).
 
 ## Testing Layout
 
