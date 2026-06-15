@@ -59,6 +59,71 @@ _API_INTENT_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Domain term mappings for bilingual query expansion.
+# VI→EN: appended when query is in Vietnamese so BM25 can match English documents.
+# EN→VI: appended when query is in English so BM25 can match Vietnamese documents.
+_VI_TO_EN: list[tuple[str, str]] = [
+    ("quy trình", "process workflow"),
+    ("lưu ý", "note important guideline"),
+    ("rủi ro", "risk"),
+    ("đối tác", "partner"),
+    ("ngân hàng", "bank"),
+    ("thanh toán", "payment"),
+    ("tích hợp", "integration"),
+    ("hợp đồng", "contract"),
+    ("khách hàng", "customer client"),
+    ("phát triển kinh doanh", "business development"),
+    ("tuân thủ", "compliance"),
+    ("gian lận", "fraud"),
+    ("giới hạn", "limit threshold"),
+    ("chính sách", "policy"),
+    ("quy định", "regulation rule"),
+    ("phê duyệt", "approval"),
+    ("báo cáo", "report"),
+    ("kiểm tra", "audit check"),
+    ("onboard", "onboarding"),
+    ("đối soát", "reconciliation"),
+    ("hạn mức", "quota limit"),
+    ("kết nối", "connection integration"),
+]
+_EN_TO_VI: list[tuple[str, str]] = [
+    ("risk", "rủi ro"),
+    ("process", "quy trình"),
+    ("workflow", "quy trình"),
+    ("policy", "chính sách quy định"),
+    ("compliance", "tuân thủ"),
+    ("partner", "đối tác"),
+    ("bank", "ngân hàng"),
+    ("payment", "thanh toán"),
+    ("integration", "tích hợp"),
+    ("contract", "hợp đồng"),
+    ("fraud", "gian lận"),
+    ("limit", "giới hạn hạn mức"),
+    ("approval", "phê duyệt"),
+    ("reconciliation", "đối soát"),
+    ("onboarding", "onboard"),
+]
+
+
+def _expand_bilingual_query(query: str, lang: str) -> str | None:
+    """Append cross-language domain term equivalents to improve BM25 recall.
+
+    When the query is in Vietnamese, matching English documents via BM25 is hard
+    because there is zero token overlap.  bge-m3 handles cross-lingual similarity
+    for the dense path, but BM25 in hybrid fusion is purely lexical.  Appending
+    known EN equivalents of domain terms found in the VI query (and vice versa)
+    gives BM25 the tokens it needs without an LLM call.
+    """
+    query_lower = query.lower()
+    mapping = _VI_TO_EN if lang == "vi" else _EN_TO_VI
+    extra: list[str] = []
+    for src, tgt in mapping:
+        if src in query_lower:
+            extra.append(tgt)
+    if not extra:
+        return None
+    return f"{query} {' '.join(extra)}"
+
 
 def _expand_technical_query(query: str) -> str | None:
     """Return an enriched alternative query for technical API/DB/stack questions.
@@ -123,27 +188,37 @@ def make_retrieve_node(
             logger.warning("retrieve[%s]: index unavailable: %s", department, exc)
             return {"chunks": []}
 
-        # Query expansion: for technical queries run a second search and merge
+        def _merge_with_alt(base: list, alt_query: str, label: str) -> list:
+            try:
+                alt = retriever.search(
+                    department=department,
+                    query=alt_query,
+                    k=pool_k,
+                    language=lang,
+                )
+                merged: dict[str, object] = {r.chunk_id: r for r in base}
+                for r in alt:
+                    existing = merged.get(r.chunk_id)
+                    if existing is None or r.score > existing.score:  # type: ignore[union-attr]
+                        merged[r.chunk_id] = r
+                combined = sorted(merged.values(), key=lambda r: r.score, reverse=True)  # type: ignore[arg-type,return-value]
+                logger.info("retrieve[%s]: %s query=%r, merged pool=%d", department, label, alt_query, len(combined))
+                return combined  # type: ignore[return-value]
+            except RetrieverUnavailable:
+                return base
+
+        # Technical query expansion (HTTP verbs, SQL dialects, API paths)
         if cfg.query_expansion_enabled:
             alt_query = _expand_technical_query(query)
             if alt_query:
-                try:
-                    alt_results = retriever.search(
-                        department=department,
-                        query=alt_query,
-                        k=pool_k,
-                        language=lang,
-                    )
-                    # Merge by chunk_id, keeping max score per chunk
-                    merged: dict[str, object] = {r.chunk_id: r for r in results}
-                    for r in alt_results:
-                        existing = merged.get(r.chunk_id)
-                        if existing is None or r.score > existing.score:  # type: ignore[union-attr]
-                            merged[r.chunk_id] = r
-                    results = sorted(merged.values(), key=lambda r: r.score, reverse=True)  # type: ignore[arg-type,return-value]
-                    logger.info("retrieve[%s]: expanded query=%r, merged pool=%d", department, alt_query, len(results))
-                except RetrieverUnavailable:
-                    pass
+                results = _merge_with_alt(results, alt_query, "tech-expanded")
+
+        # Bilingual expansion: append cross-language domain term equivalents so
+        # BM25 can match documents written in the other language.
+        if cfg.bilingual_expansion_enabled:
+            bilingual_query = _expand_bilingual_query(query, lang)
+            if bilingual_query:
+                results = _merge_with_alt(results, bilingual_query, "bilingual-expanded")
 
         if cfg.hybrid_search_enabled or cfg.reranker_enabled:
             results = refine_candidates(query, results, settings=cfg)

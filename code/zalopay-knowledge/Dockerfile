@@ -31,23 +31,22 @@ FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
-# Build headers for lxml; runtime libs for XML parsing.
+# Install build tools, compile Python deps, then purge compilers — all in one
+# layer so the final image does not carry gcc/g++/binutils (~400 MB).
+# libxml2 and libxslt runtime libs are kept (lxml needs them at runtime).
+COPY requirements.txt .
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
         libxml2-dev \
         libxslt1-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir \
         "greennode-agentbase>=1.0,<2" \
         "greennode-agent-bridge[langgraph]>=1.0,<2" \
-    # Re-pin langgraph after bridge install: the bridge's [langgraph] extra may
-    # silently upgrade langgraph to 0.3+ which drops JsonPlusSerializer.dumps().
-    # AgentBaseMemoryEvents was written against 0.2.x and needs that method.
-    && pip install --no-cache-dir "langgraph==0.2.76" "langgraph-checkpoint-sqlite==2.0.11"
+    && pip install --no-cache-dir "langgraph==0.2.76" "langgraph-checkpoint-sqlite==2.0.11" \
+    && apt-get purge -y --auto-remove build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist

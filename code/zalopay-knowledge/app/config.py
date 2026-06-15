@@ -221,6 +221,10 @@ class Settings(BaseSettings):
         default=True,
         description="Rule-based query expansion for technical patterns (HTTP, /api/, SQL dialect names)",
     )
+    bilingual_expansion_enabled: bool = Field(
+        default=True,
+        description="Dual-language query expansion: appends cross-language domain term equivalents to improve BM25 recall across VI/EN documents",
+    )
     reranker_enabled: bool = Field(
         default=True,
         description="Apply cross-encoder reranker after hybrid fusion",

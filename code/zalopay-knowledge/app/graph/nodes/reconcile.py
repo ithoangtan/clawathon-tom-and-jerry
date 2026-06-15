@@ -64,9 +64,10 @@ def make_reconcile_node(
         refusals = [r["department"] for r in results if r.get("status") != "answered"]
 
         # ── Fast path: nobody answered ────────────────────────────────────────
+        question = state.get("question") or ""
         if not answered:
             return {
-                "answer": refusal_body(lang, refusals or [r["department"] for r in results]),
+                "answer": refusal_body(lang, refusals or [r["department"] for r in results], question=question),
                 "citations": [],
                 "conflicts": [],
                 "confidence": 0.0,

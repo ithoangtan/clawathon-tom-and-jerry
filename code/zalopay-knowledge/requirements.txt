@@ -38,8 +38,10 @@ faiss-cpu>=1.8,<2
 # --- Vector OpenSearch (GreenNode AgentBase managed, VECTOR_STORE=opensearch) ---
 opensearch-py>=2.7,<3
 
-# --- Embeddings (local, multilingual VI+EN) ---
-sentence-transformers>=3,<4
+# --- Embeddings (API-based, no local model needed) ---
+# sentence-transformers is NOT installed by default — it pulls in PyTorch (~2.5 GB).
+# Install manually only if RERANKER_ENABLED=true:
+#   pip install "sentence-transformers>=3,<4"
 numpy>=2.0,<3
 
 # --- HTTP client (Confluence, internal calls) ---

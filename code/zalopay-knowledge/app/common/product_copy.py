@@ -68,20 +68,40 @@ def escalation_hint(lang: str = "en", departments: list[str] | None = None) -> s
     return f"{header}\n" + "\n".join(lines)
 
 
-def refusal_body(lang: str = "en", departments: list[str] | None = None) -> str:
+def refusal_body(
+    lang: str = "en",
+    departments: list[str] | None = None,
+    question: str | None = None,
+) -> str:
     """Full refusal message with escalation pointer and scope notice."""
-    if lang == "vi":
-        lead = (
-            "Không có thông tin trong tài liệu.\n\n"
-            "Tôi không tìm thấy nội dung liên quan trong tài liệu nội bộ được phép. "
-            "Hãy thử hỏi cụ thể hơn hoặc liên hệ bộ phận sở hữu tài liệu."
-        )
+    if question:
+        q_excerpt = question.strip()[:120]
+        if lang == "vi":
+            context_line = (
+                f"Tôi đã tìm kiếm thông tin về _\"{q_excerpt}\"_ trong tài liệu nội bộ "
+                "nhưng không tìm thấy nội dung liên quan.\n\n"
+                "Tài liệu có thể chưa được đồng bộ, hoặc thử đặt câu hỏi theo cách khác."
+            )
+        else:
+            context_line = (
+                f"I searched for _\"{q_excerpt}\"_ in the internal docs "
+                "but couldn't find relevant content.\n\n"
+                "The document may not be indexed yet, or try rephrasing your question."
+            )
     else:
-        lead = (
-            "Not covered in the docs.\n\n"
-            "I couldn't find relevant content in the permitted internal documentation. "
-            "Try rephrasing your question or contact the document owner."
-        )
+        if lang == "vi":
+            context_line = (
+                "Tôi không tìm thấy nội dung liên quan trong tài liệu nội bộ được phép. "
+                "Hãy thử hỏi cụ thể hơn hoặc liên hệ bộ phận sở hữu tài liệu."
+            )
+        else:
+            context_line = (
+                "I couldn't find relevant content in the permitted internal documentation. "
+                "Try rephrasing your question or contact the document owner."
+            )
+
+    header = "Không có thông tin trong tài liệu." if lang == "vi" else "Not covered in the docs."
+    lead = f"{header}\n\n{context_line}"
     return f"{lead}\n\n{escalation_hint(lang, departments)}\n\n{out_of_scope_notice(lang)}"
 
 
