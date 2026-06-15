@@ -42,6 +42,7 @@ _BASE_MAPPINGS_PROPERTIES = {
     "lifecycle_state": {"type": "keyword"},
     "source_type":     {"type": "keyword"},
     "page":            {"type": "integer"},
+    "seq":             {"type": "integer"},
     "text":            {"type": "text"},
 }
 
@@ -180,9 +181,13 @@ class OpenSearchIndexBuilder:
         )
 
         actions = []
-        for chunk, vec in zip(chunks, vectors):
+        for seq, (chunk, vec) in enumerate(zip(chunks, vectors)):
             doc = {k: v for k, v in chunk.items() if k != "vec_pos"}
             doc["embedding"] = vec.tolist()
+            # Per-department insertion order. A document's chunks are appended
+            # consecutively, so sorting by ``seq`` reconstructs page order in
+            # get_page_chunks() (OpenSearch otherwise has no ordering key).
+            doc["seq"] = seq
             actions.append({
                 "_index": index,
                 "_id": chunk["chunk_id"],

@@ -22,10 +22,12 @@ from app.common.departments import (
     iter_keys,
     merge_legacy_confluence_env,
     parse_confluence_spaces,
+    routable_departments,
+    routable_keys,
     space_env_var,
     validate_confluence_space_keys,
 )
-from tests.department_fixtures import ALL_KEYS, BANK, GROW, RISK
+from tests.department_fixtures import ALL_KEYS, BANK, GROW, REGISTERED_KEYS, RISK, WORKFLOW
 
 
 class TestDepartmentRegistry:
@@ -33,16 +35,17 @@ class TestDepartmentRegistry:
         DepartmentKey.RISK,
         DepartmentKey.GROW_ENABLEMENT,
         DepartmentKey.BANK_PARTNERSHIPS,
+        DepartmentKey.WORKFLOW,
     }
 
-    def test_all_departments_returns_three_entries(self) -> None:
+    def test_all_departments_returns_every_registered_entry(self) -> None:
         depts = all_departments()
         assert len(depts) == len(DepartmentKey)
 
     def test_all_departments_stable_order(self) -> None:
         keys = [d.key for d in all_departments()]
         assert keys == list(iter_keys())
-        assert keys == ALL_KEYS
+        assert keys == REGISTERED_KEYS
 
     def test_iter_keys_matches_all_departments(self) -> None:
         assert list(iter_keys()) == [d.key for d in all_departments()]
@@ -84,13 +87,19 @@ class TestDepartmentRegistry:
         with pytest.raises(KeyError, match="Unknown department key"):
             get_department("finance")
 
-    def test_department_catalog_text_includes_all_keys(self) -> None:
+    def test_department_catalog_text_includes_routable_keys_only(self) -> None:
         catalog = department_catalog_text("en")
-        for key in iter_keys():
+        for key in routable_keys():
             assert key in catalog
+        # The non-routable workflow registry must never appear in the router catalog.
+        assert WORKFLOW not in catalog
 
-    def test_format_department_keys_for_prompt(self) -> None:
-        assert format_department_keys_for_prompt() == format_valid_department_keys()
+    def test_format_department_keys_for_prompt_is_routable_only(self) -> None:
+        prompt_keys = format_department_keys_for_prompt()
+        assert prompt_keys == ", ".join(routable_keys())
+        assert WORKFLOW not in prompt_keys
+        # Error-message helper still lists the full registry, so the two now differ.
+        assert format_valid_department_keys() != prompt_keys
 
     def test_roles_list_complete(self) -> None:
         assert ROLES == ["engineer", "pm", "ops", "risk", "business"]
@@ -154,4 +163,13 @@ class TestConfluenceSpaceHelpers:
             confluence_space_key(_Cfg(), "finance")
 
     def test_format_valid_department_keys(self) -> None:
-        assert format_valid_department_keys() == ", ".join(ALL_KEYS)
+        assert format_valid_department_keys() == ", ".join(REGISTERED_KEYS)
+
+    def test_workflow_is_registered_but_not_routable(self) -> None:
+        # Registered → synced + indexed by ingestion / retriever (uses iter_keys).
+        assert WORKFLOW in set(iter_keys())
+        assert get_department(WORKFLOW).routable is False
+        # But excluded from the user-facing Q&A surface.
+        routable = {d.key for d in routable_departments()}
+        assert WORKFLOW not in routable
+        assert routable == {RISK, GROW, BANK}

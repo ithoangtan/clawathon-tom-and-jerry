@@ -273,6 +273,35 @@ class MetaStore:
         finally:
             conn.close()
 
+    def fetch_chunks_by_source(
+        self, department: str, source: str, *, active_only: bool = False
+    ) -> list[dict]:
+        """Return chunk rows for a single upstream document id (``source``).
+
+        Ordered by ``vec_pos`` so concatenating ``text`` reconstructs the page.
+        """
+        if not source or not self._path.exists():
+            return []
+        sql = (
+            f"SELECT {', '.join(CHUNK_COLUMNS)} FROM chunks "
+            "WHERE department = ? AND source = ?"
+        )
+        params: list[object] = [department, source]
+        if active_only:
+            sql += " AND lifecycle_state = 'active'"
+        sql += " ORDER BY vec_pos"
+        conn = self._connect()
+        try:
+            rows = conn.execute(sql, params).fetchall()
+            return [dict(r) for r in rows]
+        except sqlite3.Error as exc:
+            logger.warning(
+                "MetaStore.fetch_chunks_by_source(%s) failed: %s", department, exc
+            )
+            return []
+        finally:
+            conn.close()
+
     def get_source_hash(self, department: str, url: str) -> str | None:
         """Return the last indexed content hash for *url*, or None when unknown."""
         if not url or not self._path.exists():

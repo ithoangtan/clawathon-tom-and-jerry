@@ -42,6 +42,30 @@ logger = logging.getLogger(__name__)
 _SUNSET_OVERFETCH = 10
 
 
+def _row_matches_filters(row: dict, filters: dict[str, list[str]] | None) -> bool:
+    """Python-side equivalent of the OpenSearch filter clauses (see RetrieverPort).
+
+    ``labels`` → all requested labels must be present (AND); other fields → the
+    row's value must be one of the requested values (OR).
+    """
+    if not filters:
+        return True
+    from app.ingestion.metadata import parse_labels
+
+    for field, values in filters.items():
+        vals = [v for v in (values or []) if v]
+        if not vals:
+            continue
+        if field == "labels":
+            present = set(parse_labels(row.get("labels")))
+            if not set(vals).issubset(present):
+                return False
+        else:
+            if str(row.get(field) or "") not in set(vals):
+                return False
+    return True
+
+
 class FaissRetriever:
     """Department-partitioned FAISS retriever backed by a local SQLite meta DB."""
 
@@ -111,6 +135,7 @@ class FaissRetriever:
         query: str,
         k: int = 8,
         language: str = "en",
+        filters: dict[str, list[str]] | None = None,
     ) -> list[RetrievedChunk]:
         """Retrieve the top-*k* non-sunset chunks for *query* from *department*."""
         index = self._indexes.get(department)
@@ -120,9 +145,11 @@ class FaissRetriever:
         if not query.strip():
             return []
 
-        # 1–2. encode + search (over-fetch to survive sunset filtering).
+        # 1–2. encode + search. Over-fetch to survive sunset + metadata filtering;
+        # when filters are present the survivor rate is lower, so fetch all.
         qvec = self._embedder.encode_query(query).reshape(1, -1)
-        fetch = min(k + _SUNSET_OVERFETCH, index.ntotal)
+        overfetch = index.ntotal if filters else (k + _SUNSET_OVERFETCH)
+        fetch = min(overfetch, index.ntotal)
         scores, positions = index.search(qvec, fetch)
         scores, positions = scores[0], positions[0]
 
@@ -130,7 +157,7 @@ class FaissRetriever:
         valid_positions = [int(p) for p in positions if p >= 0]
         meta = self._meta.fetch_by_positions(department, valid_positions)
 
-        # 4. assemble, skip sunset, keep order by score (FAISS already sorted).
+        # 4. assemble, skip sunset + non-matching, keep order by score (FAISS sorted).
         results: list[RetrievedChunk] = []
         for pos, score in zip(positions, scores):
             pos = int(pos)
@@ -140,6 +167,8 @@ class FaissRetriever:
             if row is None:
                 continue  # stale index entry referencing a deleted chunk
             if row.get("lifecycle_state") == "sunset":
+                continue
+            if not _row_matches_filters(row, filters):
                 continue
             results.append(self._to_chunk(row, department, float(score)))
             if len(results) >= k:
@@ -152,6 +181,24 @@ class FaissRetriever:
             fetch,
             language,
         )
+        return results
+
+    def get_page_chunks(
+        self,
+        *,
+        department: str,
+        page_id: str,
+    ) -> list[RetrievedChunk]:
+        """Return all non-sunset chunks of one page (source==page_id), in page order."""
+        if not page_id:
+            return []
+        rows = self._meta.fetch_chunks_by_source(department, page_id)
+        results: list[RetrievedChunk] = []
+        for row in rows:
+            if row.get("lifecycle_state") == "sunset":
+                continue
+            results.append(self._to_chunk(row, department, 1.0))
+        logger.info("FAISS get_page_chunks[%s/%s]: %d chunks", department, page_id, len(results))
         return results
 
     def is_ready(self) -> bool:

@@ -18,7 +18,7 @@ import logging
 import time
 from typing import Callable, Optional
 
-from app.common.departments import iter_keys
+from app.common.departments import routable_keys
 from app.config import Settings, get_settings
 from app.graph.nodes._helpers import build_retrieval_query, detect_language, format_conversation_history
 from app.graph.state import GraphState, _RESET_SENTINEL
@@ -123,7 +123,7 @@ def _resolve_allowed_departments(role: str, role_dept_access_json: str) -> list[
     When ``role_dept_access_json`` is empty or the role is not listed, all
     departments are allowed (open-access default).
     """
-    all_keys = list(iter_keys())
+    all_keys = list(routable_keys())
     if not role_dept_access_json:
         return all_keys
     try:

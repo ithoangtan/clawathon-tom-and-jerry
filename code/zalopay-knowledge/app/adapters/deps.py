@@ -57,6 +57,29 @@ def build_deps(settings: Settings | None = None) -> GraphDeps:
         retriever = FaissRetriever(cfg)
         logger.info("Using FaissRetriever (VECTOR_STORE=faiss)")
 
+    # Jira action client — reuses Confluence Atlassian creds (same instance/account).
+    # NullJiraClient when unconfigured so workflow nodes degrade gracefully.
+    from app.adapters.jira_client import JiraClient, NullJiraClient
+
+    jira_client = JiraClient(cfg, dry_run=cfg.jira_dry_run)
+    if jira_client.configured():
+        jira = jira_client
+        logger.info("Wired JiraClient (base derived from Confluence: %s)", jira_client._base)
+    else:
+        jira = NullJiraClient()
+        logger.info("Jira not configured — using NullJiraClient (workflow actions disabled)")
+
+    # Confluence writer — reuses Confluence creds; used by workflow trigger actions.
+    from app.adapters.confluence_writer import ConfluenceWriter, NullConfluenceWriter
+
+    cw = ConfluenceWriter(cfg)
+    if cw.is_ready():
+        confluence_writer = cw
+        logger.info("Wired ConfluenceWriter")
+    else:
+        confluence_writer = NullConfluenceWriter()
+        logger.info("Confluence write not configured — using NullConfluenceWriter")
+
     # --- AgentBase checkpointer/memory (commented out — using MySQL + OpenAI) ---
     # if cfg.is_agentbase:
     #     checkpointer = AgentBaseCheckpointer(cfg)
@@ -80,6 +103,8 @@ def build_deps(settings: Settings | None = None) -> GraphDeps:
         checkpointer=checkpointer,
         recall=recall,
         settings=cfg,
+        jira=jira,
+        confluence_writer=confluence_writer,
     )
 
 

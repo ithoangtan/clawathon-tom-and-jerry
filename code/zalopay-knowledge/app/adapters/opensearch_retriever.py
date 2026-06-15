@@ -26,6 +26,30 @@ logger = logging.getLogger(__name__)
 _SUNSET_OVERFETCH = 15
 
 
+def _build_filter_clauses(filters: dict[str, list[str]] | None) -> list[dict]:
+    """Translate a ``RetrieverPort`` filter dict into OpenSearch query clauses.
+
+    See ``RetrieverPort.search`` for the semantics. ``labels`` is stored as a
+    single JSON string per chunk (e.g. ``["domain:risk","status:active"]``), so
+    each requested label is matched with a wildcard against that encoding and all
+    requested labels must be present (AND). Other fields use ``terms`` (OR).
+    """
+    if not filters:
+        return []
+    clauses: list[dict] = []
+    for field, values in filters.items():
+        vals = [v for v in (values or []) if v]
+        if not vals:
+            continue
+        if field == "labels":
+            # AND: the chunk must carry every requested label.
+            for label in vals:
+                clauses.append({"wildcard": {"labels": f'*"{label}"*'}})
+        else:
+            clauses.append({"terms": {field: vals}})
+    return clauses
+
+
 class OpenSearchRetriever:
     """Department-partitioned retriever backed by GreenNode managed vector OpenSearch."""
 
@@ -65,6 +89,7 @@ class OpenSearchRetriever:
         query: str,
         k: int = 8,
         language: str = "en",
+        filters: dict[str, list[str]] | None = None,
     ) -> list[RetrievedChunk]:
         """Retrieve the top-k non-sunset chunks for *query* from *department*."""
         if not query.strip():
@@ -77,16 +102,16 @@ class OpenSearchRetriever:
         fetch = k + _SUNSET_OVERFETCH
         qvec = self._embedder.encode_query(query).tolist()
 
+        knn = {"knn": {"embedding": {"vector": qvec, "k": fetch}}}
+        filter_clauses = _build_filter_clauses(filters)
+        if filter_clauses:
+            query_block = {"bool": {"must": [knn], "filter": filter_clauses}}
+        else:
+            query_block = knn
+
         body = {
             "size": fetch,
-            "query": {
-                "knn": {
-                    "embedding": {
-                        "vector": qvec,
-                        "k": fetch,
-                    }
-                }
-            },
+            "query": query_block,
             "_source": {"excludes": ["embedding"]},
         }
 
@@ -114,6 +139,46 @@ class OpenSearchRetriever:
             len(hits),
             language,
         )
+        return results
+
+    def get_page_chunks(
+        self,
+        *,
+        department: str,
+        page_id: str,
+    ) -> list[RetrievedChunk]:
+        """Return all non-sunset chunks of one page (source==page_id), in page order."""
+        if not page_id:
+            return []
+
+        index = self._index_name(department)
+        if not self._index_has_docs(index):
+            raise RetrieverUnavailable(department)
+
+        body = {
+            "size": 1000,
+            "query": {"term": {"source": page_id}},
+            # ``seq`` is stamped by the indexer in document order; "unmapped_type"
+            # keeps this resilient for indices built before the field existed.
+            "sort": [{"seq": {"order": "asc", "unmapped_type": "integer"}}],
+            "_source": {"excludes": ["embedding"]},
+        }
+
+        try:
+            resp = self._client.search(index=index, body=body)
+        except Exception as exc:
+            logger.error("OpenSearch get_page_chunks failed for %s/%s: %s", department, page_id, exc)
+            raise RetrieverUnavailable(department) from exc
+
+        hits = resp.get("hits", {}).get("hits", [])
+        results: list[RetrievedChunk] = []
+        for hit in hits:
+            src = hit.get("_source", {})
+            if src.get("lifecycle_state") == "sunset":
+                continue
+            results.append(self._to_chunk(src, department, 1.0))
+
+        logger.info("OpenSearch get_page_chunks[%s/%s]: %d chunks", department, page_id, len(results))
         return results
 
     def is_ready(self) -> bool:

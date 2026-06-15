@@ -98,6 +98,114 @@ def test_search_empty_index_raises(
         retriever.search(department=RISK_DEPT, query="hello", k=3)
 
 
+def test_search_label_filter_keeps_only_matching(
+    adapter_settings: Settings,
+    populated_index: MetaStore,
+    mock_embedder: MagicMock,
+) -> None:
+    retriever = _make_retriever(adapter_settings, mock_embedder)
+
+    results = retriever.search(
+        department=RISK_DEPT,
+        query="policy question",
+        k=5,
+        filters={"labels": ["runbook"]},
+    )
+
+    assert [r.chunk_id for r in results] == ["chunk-active-2"]
+
+
+def test_search_label_filter_is_and_across_labels(
+    adapter_settings: Settings,
+    populated_index: MetaStore,
+    mock_embedder: MagicMock,
+) -> None:
+    """No chunk carries both labels, so the AND filter returns nothing."""
+    retriever = _make_retriever(adapter_settings, mock_embedder)
+
+    results = retriever.search(
+        department=RISK_DEPT,
+        query="policy question",
+        k=5,
+        filters={"labels": ["policy", "runbook"]},
+    )
+
+    assert results == []
+
+
+def test_search_non_label_field_filter_is_or(
+    adapter_settings: Settings,
+    populated_index: MetaStore,
+    mock_embedder: MagicMock,
+) -> None:
+    retriever = _make_retriever(adapter_settings, mock_embedder)
+
+    results = retriever.search(
+        department=RISK_DEPT,
+        query="policy question",
+        k=5,
+        filters={"doc_type": ["Operation", "Security"]},
+    )
+
+    assert [r.chunk_id for r in results] == ["chunk-active-2"]
+
+
+def test_get_page_chunks_returns_only_that_page(
+    adapter_settings: Settings,
+    populated_index: MetaStore,
+    mock_embedder: MagicMock,
+) -> None:
+    retriever = _make_retriever(adapter_settings, mock_embedder)
+
+    results = retriever.get_page_chunks(department=RISK_DEPT, page_id="page-a")
+
+    assert [r.chunk_id for r in results] == ["chunk-active-0"]
+    assert all(r.score == 1.0 for r in results)
+
+
+def test_get_page_chunks_excludes_sunset(
+    adapter_settings: Settings,
+    populated_index: MetaStore,
+    mock_embedder: MagicMock,
+) -> None:
+    retriever = _make_retriever(adapter_settings, mock_embedder)
+
+    assert retriever.get_page_chunks(department=RISK_DEPT, page_id="page-sunset") == []
+
+
+def test_get_page_chunks_orders_by_position(
+    adapter_settings: Settings,
+    meta_store: MetaStore,
+    mock_embedder: MagicMock,
+) -> None:
+    """Chunks of one page are returned in document (vec_pos) order, not insert order."""
+    rows = [
+        {
+            "chunk_id": "m-2", "department": "grow_enablement", "vec_pos": 2,
+            "doc_type": "Operation", "title": "WF", "source": "page-multi",
+            "url": "https://x/wf", "anchor": None, "section": "Step 2", "space": "WF",
+            "labels": "[]", "last_modified": None, "author": None,
+            "acl": '["all-employees"]', "lifecycle_state": "active",
+            "source_type": "confluence", "page": None, "text": "second",
+        },
+        {
+            "chunk_id": "m-0", "department": "grow_enablement", "vec_pos": 0,
+            "doc_type": "Operation", "title": "WF", "source": "page-multi",
+            "url": "https://x/wf", "anchor": None, "section": "Step 1", "space": "WF",
+            "labels": "[]", "last_modified": None, "author": None,
+            "acl": '["all-employees"]', "lifecycle_state": "active",
+            "source_type": "confluence", "page": None, "text": "first",
+        },
+    ]
+    meta_store.replace_department_chunks("grow_enablement", rows)
+    retriever = _make_retriever(adapter_settings, mock_embedder)
+
+    results = retriever.get_page_chunks(department="grow_enablement", page_id="page-multi")
+
+    assert [r.chunk_id for r in results] == ["m-0", "m-2"]
+    assert " ".join(r.text for r in results) == "first second"
+
+
 def test_is_ready_false_without_partitions(adapter_settings: Settings) -> None:
     retriever = _make_retriever(adapter_settings)
 

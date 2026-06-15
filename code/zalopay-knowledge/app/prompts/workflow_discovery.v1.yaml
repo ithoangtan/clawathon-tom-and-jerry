@@ -1,0 +1,37 @@
+description: >
+  Workflow discovery prompt — extracts, from a user request, the explicitly named
+  workflow (if any), a Jira ticket key (if any), and a cleaned semantic search
+  query. Used by the SMALL model tier with JSON output.
+
+required_inputs:
+  - question
+
+system: |
+  You help an agent find the right workflow to run. From the user's request,
+  extract three things as a single strict JSON object. You are an extractor:
+  do not answer, run, or describe the workflow.
+
+  Fields:
+  - "explicit_name": the workflow's name if the user named one (e.g. after
+    "chạy workflow", "run workflow", "workflow", "quy trình"), else null.
+    Return just the workflow name, not the surrounding sentence.
+  - "jira_key": a Jira/issue ticket key if present, matching the pattern
+    LETTERS-NUMBER (e.g. "ZP-12345", "KAN-1"). Uppercase it. else null.
+  - "search_query": a short cleaned query for semantic matching — keep the
+    domain/object/scope words (campaign name, product, action), drop filler like
+    "chạy giúp mình", "run the", and any ticket key. Always provide a non-empty
+    string (fall back to the core of the request).
+
+  ## Output format
+
+  Respond with ONLY one valid JSON object, no markdown fences, no commentary:
+  {
+    "explicit_name": "<string|null>",
+    "jira_key": "<string|null>",
+    "search_query": "<string>"
+  }
+
+user: |
+  User request: {question}
+
+  Extract explicit_name, jira_key and search_query. Output ONLY the JSON object.

@@ -137,6 +137,26 @@ class ConfluenceClient:
             )
             raise
 
+    def _fetch_labels(self, client: httpx.Client, page_id: str) -> list[str]:
+        """Fetch a page's label names via the dedicated v2 labels endpoint.
+
+        Returns an empty list on any error (labels are best-effort metadata —
+        never fail a page sync over them).
+        """
+        try:
+            resp = client.get(
+                f"{self._base}/api/v2/pages/{page_id}/labels",
+                params={"limit": 50},
+                auth=self._auth(),
+            )
+            if resp.status_code != 200:
+                return []
+            results = resp.json().get("results", [])
+            return [str(r["name"]) for r in results if isinstance(r, dict) and r.get("name")]
+        except Exception as exc:  # noqa: BLE001 — labels are non-critical
+            logger.warning("Confluence _fetch_labels page_id=%s failed: %s", page_id, exc)
+            return []
+
     def fetch_page_body(self, page_id: str) -> tuple[str, dict[str, Any]]:
         """Return (plain_text, metadata) for a page."""
         logger.info("Confluence fetch_page page_id=%s", page_id)
@@ -154,6 +174,10 @@ class ConfluenceClient:
                     data.get("body", {}).get("storage", {}).get("value", "")
                 )
                 text = _storage_to_text(storage)
+                # The v2 page payload does not embed labels — fetch them from the
+                # dedicated endpoint so label-based filtering (e.g. the workflow
+                # registry's ``zalopay-workflow`` / ``status:active``) works.
+                labels = _extract_labels(data) or self._fetch_labels(client, page_id)
                 meta = {
                     "title": data.get("title", ""),
                     "url": _page_url(self._base, data),
@@ -161,7 +185,7 @@ class ConfluenceClient:
                     "version": (data.get("version") or {}).get("number"),
                     "source": page_id,
                     "author": _extract_author(data),
-                    "labels": _extract_labels(data),
+                    "labels": labels,
                 }
                 logger.info(
                     "Confluence fetch_page page_id=%s title=%r chars=%d (%.0fms)",

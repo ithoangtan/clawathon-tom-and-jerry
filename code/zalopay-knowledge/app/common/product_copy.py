@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.common.departments import all_departments, get_department, iter_keys
+from app.common.departments import get_department, routable_departments, routable_keys
 
 HIGH_STAKES_DOC_TYPES = frozenset({"Risk", "Security", "RCA"})
 _HIGH_STAKES_TITLE_KEYWORDS = (
@@ -21,7 +21,7 @@ _HIGH_STAKES_TITLE_KEYWORDS = (
 
 def mvp_department_names(lang: str = "en") -> str:
     """Comma-separated display names for the three MVP departments."""
-    return ", ".join(d.display_name(lang) for d in all_departments())
+    return ", ".join(d.display_name(lang) for d in routable_departments())
 
 
 def out_of_scope_notice(lang: str = "en") -> str:
@@ -42,9 +42,9 @@ def out_of_scope_notice(lang: str = "en") -> str:
 
 def escalation_hint(lang: str = "en", departments: list[str] | None = None) -> str:
     """Useful escalation path on refusal — static Teams channel + owner pointer."""
-    keys = [d for d in (departments or []) if d in set(iter_keys())]
+    keys = [d for d in (departments or []) if d in set(routable_keys())]
     if not keys:
-        keys = list(iter_keys())
+        keys = list(routable_keys())
 
     lines: list[str] = []
     for key in keys:
@@ -153,9 +153,9 @@ def maybe_append_high_stakes_disclaimer(
     if not is_high_stakes_content(citations=citations, departments=departments, answer=answer):
         return answer
 
-    owner_keys = [d for d in (departments or []) if d in set(iter_keys())]
+    owner_keys = [d for d in (departments or []) if d in set(routable_keys())]
     if not owner_keys:
-        owner_keys = [next(iter_keys())]
+        owner_keys = [next(routable_keys())]
     owner = get_department(owner_keys[0]).display_name(lang)
 
     dates = [c.get("last_modified") for c in (citations or []) if c.get("last_modified")]

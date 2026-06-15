@@ -24,7 +24,7 @@ from typing import Callable
 
 from langchain_core.messages import AIMessage
 
-from app.common.departments import all_departments
+from app.common.departments import routable_departments
 from app.common.product_copy import escalation_hint, maybe_append_high_stakes_disclaimer, out_of_scope_notice
 from app.config import Settings, get_settings
 from app.graph.nodes.router import OUT_OF_SCOPE_INTENTS, SHORT_CIRCUIT_INTENTS
@@ -108,6 +108,10 @@ def make_respond_node(
         source_departments = [
             r["department"] for r in results if r.get("status") == "answered" and r.get("answer")
         ]
+        # Workflow-execution path produces no dept_results — honour the source
+        # departments the executor set directly on the state.
+        if not source_departments and state.get("source_departments"):
+            source_departments = list(state["source_departments"])
         # Collect distinct model IDs that produced answers (typically one)
         models_used = list(dict.fromkeys(
             r["model_used"] for r in results if r.get("model_used")
@@ -164,7 +168,7 @@ def _canned_reply(intent: str, lang: str) -> str:
         )
     if intent == "capability_query":
         scope = out_of_scope_notice("vi" if vi else "en")
-        depts = all_departments()
+        depts = routable_departments()
         if vi:
             dept_lines = "\n".join(
                 f"- **{d.name_vi}** (`{d.key}`): {d.description_vi}" for d in depts

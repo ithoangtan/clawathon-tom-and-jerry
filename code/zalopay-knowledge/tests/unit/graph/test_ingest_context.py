@@ -19,9 +19,10 @@ def test_ingest_context_sets_allowed_departments_to_all():
             "request_language": "en",
         }
     )
-    # Knowledge is open — all departments always allowed regardless of role
-    from app.common.departments import iter_keys
-    assert set(out["allowed_departments"]) == set(iter_keys())
+    # Knowledge is open — all routable Q&A departments always allowed regardless of
+    # role (the non-routable ``workflow`` registry is never a Q&A target).
+    from app.common.departments import routable_keys
+    assert set(out["allowed_departments"]) == set(routable_keys())
 
 
 def test_ingest_detects_vietnamese_question():

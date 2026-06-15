@@ -43,3 +43,40 @@ class RetrieverUnavailable(KnowledgeAgentError):
         default_msg = f"Retrieval index is not available{dept_clause}"
         super().__init__(message or default_msg)
         self.department = department
+
+
+class JiraUnavailable(KnowledgeAgentError):
+    """Raised by :class:`~app.ports.jira.JiraPort` when Jira is unreachable, the
+    credentials are missing/invalid, or the API returns an error.
+
+    Workflow-execution nodes catch this and degrade gracefully: the action step
+    is reported as not-performed in the answer rather than failing the whole run.
+    """
+
+    def __init__(self, message: str = "Jira service is unavailable") -> None:
+        super().__init__(message)
+
+
+class ConfluenceUnavailable(KnowledgeAgentError):
+    """Raised by the Confluence writer when a create/update/label call fails
+    (transport, auth, or API error).
+
+    Workflow trigger actions catch this and report the Confluence update as
+    not-performed rather than failing the whole event handler.
+    """
+
+    def __init__(self, message: str = "Confluence write failed") -> None:
+        super().__init__(message)
+
+
+class WorkflowParseError(KnowledgeAgentError):
+    """Raised by the workflow parser when an LLM response cannot be turned into a
+    valid :class:`~app.workflow.models.WorkflowDefinition`.
+
+    Causes: the model returned non-JSON, the JSON failed schema validation, or a
+    required field (e.g. ``name``/``steps``) was missing.  The executor catches
+    this and turns it into a graceful, cited refusal instead of crashing the run.
+    """
+
+    def __init__(self, message: str = "Could not parse the workflow definition") -> None:
+        super().__init__(message)

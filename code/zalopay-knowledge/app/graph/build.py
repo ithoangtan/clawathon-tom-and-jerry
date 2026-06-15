@@ -48,8 +48,13 @@ from app.graph.nodes import (
 )
 from app.graph.nodes.suggest import make_suggest_node
 from app.graph.nodes.ingest_context import RecallFn
+from app.graph.nodes.router import WORKFLOW_INTENT
+from app.graph.nodes.workflow_discovery import make_discover_workflow_node
+from app.graph.nodes.workflow_executor import make_execute_workflow_node
 from app.graph.state import DeptResult, DeptState, GraphState
 from app.ports.checkpointer import CheckpointerPort
+from app.ports.confluence_writer import ConfluenceWriterPort
+from app.ports.jira import JiraPort
 from app.ports.llm import LLMPort
 from app.ports.retriever import RetrieverPort
 
@@ -81,6 +86,8 @@ class GraphDeps:
     checkpointer: Optional[CheckpointerPort] = None
     recall: Optional[RecallFn] = None
     settings: Optional[Settings] = None
+    jira: Optional[JiraPort] = None
+    confluence_writer: Optional["ConfluenceWriterPort"] = None
 
 
 # ── Department subgraph ───────────────────────────────────────────────────────
@@ -192,6 +199,13 @@ def build_graph(deps: GraphDeps):
     g.add_node("respond", make_respond_node(settings=cfg))
     g.add_node("suggest", make_suggest_node(deps.llm, settings=cfg))
 
+    # Workflow-execution path (intent == workflow_execution): bypasses the dept
+    # fan-out and reconcile — discover the workflow, then run it in one pass.
+    from app.adapters.jira_client import NullJiraClient
+    jira = deps.jira or NullJiraClient()
+    g.add_node("discover_workflow", make_discover_workflow_node(deps.retriever, deps.llm, settings=cfg))
+    g.add_node("execute_workflow", make_execute_workflow_node(deps.llm, deps.retriever, jira, settings=cfg))
+
     g.add_edge(START, "ingest_context")
 
     # ingest_context refuses early (index not ready) → skip straight to respond.
@@ -201,12 +215,17 @@ def build_graph(deps: GraphDeps):
         {"router": "router", "respond": "respond"},
     )
 
-    # router either fans out to department branches or short-circuits to respond.
+    # router fans out to department branches, enters the workflow path, or
+    # short-circuits straight to respond.
     g.add_conditional_edges(
         "router",
         _make_route_after_router(cfg),
-        [DEPT_SUBGRAPH, "respond"],
+        [DEPT_SUBGRAPH, "discover_workflow", "respond"],
     )
+
+    # workflow path: discover → execute → respond (bypasses dept subgraphs + reconcile).
+    g.add_edge("discover_workflow", "execute_workflow")
+    g.add_edge("execute_workflow", "respond")
 
     # every department branch converges on reconcile, then respond, then suggest.
     g.add_edge(DEPT_SUBGRAPH, "reconcile")
@@ -233,6 +252,10 @@ def _make_route_after_router(cfg: Settings) -> Callable[[GraphState], object]:
     """Build the post-router branch selector (closes over settings for timeouts)."""
 
     def _route_after_router(state: GraphState):
+        # Workflow-execution intent enters the discover → execute path.
+        if state.get("intent") == WORKFLOW_INTENT and not state.get("clarify_question"):
+            return "discover_workflow"
+
         targets = state.get("target_departments") or []
         # Clarify, short-circuit intents, and "no usable department" all land here.
         if not targets or state.get("clarify_question"):

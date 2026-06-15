@@ -162,6 +162,11 @@ def create_app() -> FastAPI:
 
     app.include_router(admin_router)
 
+    # Inbound webhooks (Jira Automation) — secret-authenticated, no identity headers.
+    from app.api.webhooks import webhook_router
+
+    app.include_router(webhook_router)
+
     dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if dist.is_dir():
         app.mount("/", SPAStaticFiles(directory=str(dist), html=True), name="frontend")

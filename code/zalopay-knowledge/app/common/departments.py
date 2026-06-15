@@ -26,6 +26,7 @@ class DepartmentKey(str, Enum):
     RISK = "risk"
     GROW_ENABLEMENT = "grow_enablement"
     BANK_PARTNERSHIPS = "bank_partnerships"
+    WORKFLOW = "workflow"
 
 
 DEFAULT_HOME_DEPARTMENT = DepartmentKey.RISK
@@ -72,6 +73,12 @@ class Department:
 
     gdrive_pdf_source: bool = False
     """When true, GDrive PDF sync indexes into this department's partition."""
+
+    routable: bool = True
+    """When false, this is a backing corpus (e.g. workflow definitions), not a
+    user-facing Q&A domain. It is still synced and indexed (so ingestion and the
+    retriever see it), but it is excluded from the router's department catalog,
+    role-access defaults, escalation copy, and the frontend department list."""
 
     def display_name(self, lang: str = "en") -> str:
         """Return the display name for the given language code."""
@@ -123,6 +130,20 @@ _REGISTRY: dict[str, Department] = {
         default_doc_type="Technical",
         gdrive_pdf_source=True,
     ),
+    DepartmentKey.WORKFLOW.value: Department(
+        key=DepartmentKey.WORKFLOW.value,
+        name_en="Workflow Registry",
+        name_vi="Kho Quy trình",
+        space_env_var="CONFLUENCE_SPACE_WORKFLOW",
+        accent_color="#8E7CC3",
+        channel_hint="teams-workflow-platform",
+        head_manager_en="Workflow Platform",
+        head_manager_vi="Nền tảng Quy trình",
+        description_en="Executable workflow/SOP definitions the agent discovers and runs — not a Q&A domain.",
+        description_vi="Định nghĩa quy trình/SOP để agent tìm và thực thi — không phải domain hỏi đáp.",
+        default_doc_type="Operation",
+        routable=False,
+    ),
 }
 
 
@@ -135,8 +156,24 @@ ROLES: list[str] = ["engineer", "pm", "ops", "risk", "business"]
 # ── Public helpers ─────────────────────────────────────────────────────────────
 
 def all_departments() -> list[Department]:
-    """Return all departments in enum declaration order."""
+    """Return all departments in enum declaration order (includes non-routable
+    backing corpora like ``workflow`` — use this for ingestion / retrieval / sync)."""
     return [_REGISTRY[member.value] for member in DepartmentKey]
+
+
+def routable_departments() -> list[Department]:
+    """Return only user-facing Q&A departments (``routable=True``).
+
+    Use this anywhere the result is shown to users or used for question routing:
+    router catalog, role-access defaults, escalation copy, frontend catalog.
+    """
+    return [dept for dept in all_departments() if dept.routable]
+
+
+def routable_keys() -> Iterator[str]:
+    """Iterate over routable (Q&A) department key strings only."""
+    for dept in routable_departments():
+        yield dept.key
 
 
 def get_department(key: str) -> Department:
@@ -177,8 +214,12 @@ def format_valid_department_keys() -> str:
 
 
 def format_department_keys_for_prompt() -> str:
-    """Comma-separated department keys for LLM prompt injection."""
-    return format_valid_department_keys()
+    """Comma-separated routable department keys for LLM prompt injection.
+
+    Excludes non-routable backing corpora (e.g. ``workflow``) so the router and
+    reconcile prompts never try to classify a question into them.
+    """
+    return ", ".join(routable_keys())
 
 
 def validate_confluence_space_keys(
@@ -276,9 +317,9 @@ def confluence_space_config_hint(department_key: str | None = None) -> str:
 
 
 def department_catalog_text(lang: str = "en") -> str:
-    """Render a human-readable catalog for use in prompt templates."""
+    """Render a human-readable catalog for use in prompt templates (routable only)."""
     lines: list[str] = []
-    for dept in all_departments():
+    for dept in routable_departments():
         lines.append(
             f"- {dept.key}: {dept.display_name(lang)} (contact: {dept.channel_hint})"
         )
@@ -292,9 +333,13 @@ def iter_keys() -> Iterator[str]:
 
 
 def export_frontend_catalog() -> dict[str, Any]:
-    """Serialize the registry for the frontend ``departments.data.json`` mirror."""
+    """Serialize the registry for the frontend ``departments.data.json`` mirror.
+
+    Only routable Q&A departments are exported — the frontend should not show
+    backing corpora (e.g. ``workflow``) as selectable department chips.
+    """
     departments = []
-    for dept in all_departments():
+    for dept in routable_departments():
         departments.append(
             {
                 "key": dept.key,

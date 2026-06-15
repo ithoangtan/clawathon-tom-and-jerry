@@ -329,6 +329,36 @@ class Settings(BaseSettings):
         ),
     )
 
+    # ── Workflow platform (Jira actions) ──────────────────────────────────────
+
+    jira_dry_run: bool = Field(
+        default=False,
+        description=(
+            "When true, workflow ``action`` steps log the intended Jira write but "
+            "make no network call (returns a synthetic dry-run result). Use for "
+            "safe demos/tests. Jira credentials are reused from Confluence."
+        ),
+    )
+
+    jira_webhook_secret: str = Field(
+        default="",
+        description=(
+            "Shared secret the Jira Automation rule must send in the "
+            "``X-Webhook-Secret`` header. POST /webhooks/jira rejects requests "
+            "whose header does not match. Empty ⇒ the webhook endpoint is disabled."
+        ),
+    )
+
+    jira_agent_account_id: str = Field(
+        default="",
+        description=(
+            "Atlassian accountId of the account the agent posts as (reused "
+            "Confluence/Jira identity). Webhook events whose actor is this account "
+            "are ignored to break feedback loops. Empty ⇒ resolved lazily from "
+            "Jira ``/myself`` (best-effort)."
+        ),
+    )
+
     # ── Computed properties ───────────────────────────────────────────────────
 
     @computed_field  # type: ignore[misc]

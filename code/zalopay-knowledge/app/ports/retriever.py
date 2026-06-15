@@ -34,6 +34,7 @@ class RetrieverPort(Protocol):
         query: str,
         k: int = 8,
         language: str = "en",
+        filters: dict[str, list[str]] | None = None,
     ) -> list[RetrievedChunk]:
         """Retrieve the top-*k* chunks for *query* from *department*'s partition.
 
@@ -46,11 +47,50 @@ class RetrieverPort(Protocol):
             language: ISO-639-1 language hint (``"en"`` or ``"vi"``).  Passed
                       to the adapter for future language-specific re-ranking;
                       currently informational.
+            filters: Optional metadata constraints applied *before* ranking.
+                     Maps a field name to a list of accepted values. Constraints
+                     across fields are AND-ed.  Semantics per field:
+
+                     - ``"labels"``: the chunk must carry **all** listed labels
+                       (AND) — e.g. ``{"labels": ["zalopay-workflow", "status:active"]}``
+                       only matches chunks tagged with both. Labels are stored as
+                       a JSON string, so adapters match against that encoding.
+                     - any other field (``"space"``, ``"lifecycle_state"``,
+                       ``"source"``, ...): the chunk's value must be **one of**
+                       the listed values (OR within the field).
+
+                     ``None`` (the default) means no filtering — identical to the
+                     pre-existing behaviour.
 
         Returns:
             List of :class:`~app.ports.types.RetrievedChunk` sorted by
             ``score`` descending; ``sunset`` chunks excluded; ``deprecated``
             chunks included with ``lifecycle_state="deprecated"``.
+        """
+        ...
+
+    def get_page_chunks(
+        self,
+        *,
+        department: str,
+        page_id: str,
+    ) -> list[RetrievedChunk]:
+        """Return **all** chunks of a single source document, in page order.
+
+        Exact-match lookup by upstream document id (``source`` field) — not a
+        semantic search.  Used to reconstruct a full Confluence page (e.g. a
+        workflow definition) for downstream parsing.
+
+        Args:
+            department: Canonical department key the page lives in.
+            page_id: Upstream document id (Confluence page id) — matched against
+                     each chunk's ``source`` field.
+
+        Returns:
+            All non-``sunset`` chunks whose ``source == page_id``, ordered by
+            their position in the original document (so concatenating ``text``
+            reconstructs the page).  Empty list when the page is not indexed.
+            ``score`` is not meaningful here and is set to ``1.0``.
         """
         ...
 

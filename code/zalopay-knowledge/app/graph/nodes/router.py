@@ -23,7 +23,7 @@ from typing import Callable
 from app.common.departments import (
     department_catalog_text,
     format_department_keys_for_prompt,
-    iter_keys,
+    routable_keys,
 )
 from app.config import Settings, get_settings
 from app.graph.nodes._helpers import budget_exceeded, parse_json_response
@@ -40,10 +40,14 @@ SHORT_CIRCUIT_INTENTS = frozenset(
     {"greeting", "capability_query", "action_request"}
 )
 
+# Intent that routes to the workflow-execution path (discover → execute) instead
+# of the department fan-out.  Handled specially in ``build._make_route_after_router``.
+WORKFLOW_INTENT = "workflow_execution"
+
 # Out-of-scope intents — refusal with escalation pointer (no retrieval).
 OUT_OF_SCOPE_INTENTS = frozenset({"status_or_data", "customer_facing_info", "external_system_info"})
 
-_VALID_DEPARTMENTS = frozenset(iter_keys())
+_VALID_DEPARTMENTS = frozenset(routable_keys())
 
 
 def make_router_node(
@@ -64,7 +68,7 @@ def make_router_node(
     prompt = load_prompt("router")
 
     def router(state: GraphState) -> dict:
-        allowed = set(state.get("allowed_departments") or iter_keys())
+        allowed = set(state.get("allowed_departments") or routable_keys())
         lang = state.get("request_language", "en")
 
         # ── Path 0: user-pinned departments bypass the LLM ────────────────────
@@ -133,6 +137,18 @@ def make_router_node(
         if intent in SHORT_CIRCUIT_INTENTS:
             return {
                 "intent": intent,
+                "target_departments": [],
+                "routing_confidence": confidence,
+                "clarify_question": None,
+            }
+
+        # ── Path 2a': workflow execution (run a named/known workflow) ─────────
+        # No department fan-out and no clarify gate — the workflow path resolves
+        # the target itself in ``discover_workflow`` (see build wiring).
+        if intent == WORKFLOW_INTENT:
+            logger.info("Router: workflow_execution (conf=%.2f)", confidence)
+            return {
+                "intent": WORKFLOW_INTENT,
                 "target_departments": [],
                 "routing_confidence": confidence,
                 "clarify_question": None,
@@ -234,7 +250,7 @@ def _clamp(value, lo: float = 0.0, hi: float = 1.0) -> float:
 
 def _clarify_prompt(lang: str, allowed: set[str] | None = None) -> dict:
     """Build the ``ClarifyingQuestion`` payload (matches the API schema shape)."""
-    options = sorted(allowed) if allowed else list(iter_keys())
+    options = sorted(allowed) if allowed else list(routable_keys())
     if lang == "vi":
         prompt = (
             "Câu hỏi của bạn có thể liên quan đến nhiều bộ phận. "

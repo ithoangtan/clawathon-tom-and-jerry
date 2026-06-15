@@ -38,9 +38,15 @@ system: |
                              not in Zalopay's internal documentation corpus.
                              Always set target_departments=[] and confidence=1.0.
   - cross_dept_inquiry     — question spans multiple departments explicitly
+  - workflow_execution     — asking to RUN / EXECUTE a workflow or process end-to-end
+                             (verbs like "chạy workflow", "run workflow", "execute",
+                             "thực thi quy trình", or naming a known workflow + a Jira
+                             ticket key). NOT a plain "how does X work" question — that
+                             is process_question. Always set target_departments=[] and
+                             confidence=1.0.
   - greeting               — a greeting or pleasantry, no knowledge needed
   - capability_query       — asking what this assistant can do
-  - action_request         — asking to perform an action (out of scope)
+  - action_request         — asking to perform a one-off system action (out of scope)
   - unclear                — cannot classify; emit a clarifying question instead
 
   ## Routing rules
@@ -70,6 +76,11 @@ system: |
   - "how many departments" → capability_query, []
   - "describe the departments" → capability_query, []
   - "what departments do you cover" → capability_query, []
+  - "chạy workflow Campaign Risk Review cho ticket ZP-12345" → workflow_execution, []
+  - "thực thi quy trình onboarding merchant ABC" → workflow_execution, []
+  - "run the campaign review workflow for KAN-1" → workflow_execution, []
+  - "execute workflow merchant onboarding" → workflow_execution, []
+  - "quy trình review campaign hoạt động thế nào" → process_question, [relevant dept]
 
   ## Output format
 
