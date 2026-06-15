@@ -389,3 +389,46 @@ class TestDashboardRoute:
         assert body["feedback_up"] == 2
         assert body["feedback_down"] == 1
         assert body["answered_wrong_rate"] == pytest.approx(1 / 3)
+
+
+class TestSuggestedQuestionsRoute:
+    def _log(self, question: str, fid: str) -> None:
+        from app.api.service import get_audit_store
+        get_audit_store().log_query(
+            user_id="u1",
+            session_id="s1",
+            role="engineer",
+            question=question,
+            departments=[RISK],
+            status="answered",
+            confidence=0.9,
+            latency_ms=100,
+            feedback_id=fid,
+        )
+
+    def test_empty_db_returns_empty_list(self, client: TestClient) -> None:
+        resp = client.get("/api/suggested-questions")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["questions"] == []
+
+    def test_returns_top_3_by_frequency(self, client: TestClient) -> None:
+        for i in range(5):
+            self._log("Most popular question", f"fb-pop-{i}")
+        for i in range(3):
+            self._log("Second question", f"fb-sec-{i}")
+        self._log("Third question", "fb-third")
+        self._log("Rare question", "fb-rare")
+
+        resp = client.get("/api/suggested-questions")
+        assert resp.status_code == 200
+        questions = resp.json()["questions"]
+        assert len(questions) == 3
+        assert questions[0] == "Most popular question"
+        assert questions[1] == "Second question"
+
+    def test_returns_all_when_fewer_than_3(self, client: TestClient) -> None:
+        self._log("Only question here", "fb-only")
+        resp = client.get("/api/suggested-questions")
+        assert resp.status_code == 200
+        assert resp.json()["questions"] == ["Only question here"]

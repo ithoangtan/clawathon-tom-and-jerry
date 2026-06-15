@@ -249,4 +249,8 @@ export const api = {
       method: "GET",
     });
   },
+
+  suggestedQuestions(): Promise<{ questions: string[] }> {
+    return request<{ questions: string[] }>("/api/suggested-questions", { method: "GET" });
+  },
 };

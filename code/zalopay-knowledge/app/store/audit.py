@@ -200,6 +200,27 @@ class AuditStore:
             conn.close()
 
 
+    def popular_questions(self, *, limit: int = 3) -> list[str]:
+        """Return the top N most frequently asked questions across all time."""
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT question, COUNT(*) AS cnt
+                    FROM queries
+                    WHERE question IS NOT NULL AND question != ''
+                    GROUP BY question
+                    ORDER BY cnt DESC, MAX(ts) DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+                rows = cur.fetchall()
+            return [r["question"] for r in rows]
+        finally:
+            conn.close()
+
     def refused_questions(self, *, limit: int = 20, days: int = 30) -> list[dict]:
         """Return recent refused questions — potential documentation gaps."""
         conn = get_connection()

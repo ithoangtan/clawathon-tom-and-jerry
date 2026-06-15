@@ -139,7 +139,7 @@ class TestChunkText:
             url="https://example.com/overlap",
         )
         assert len(chunks) >= 2
-        for prev, nxt in zip(chunks, chunks[1:], strict=False):
+        for prev, nxt in zip(chunks, chunks[1:]):
             prev_tail = prev["text"][-_OVERLAP_CHARS:]
             nxt_head = nxt["text"][: _OVERLAP_CHARS + 20]
             assert prev_tail.strip() and prev_tail in nxt["text"]
@@ -160,7 +160,7 @@ class TestChunkText:
             title="T",
             url=url,
         )
-        for a, b in zip(chunks_a, chunks_b, strict=True):
+        for a, b in zip(chunks_a, chunks_b):
             expected = _hash_prefix(RISK, url, a["text"])
             assert a["chunk_id"].startswith(expected)
             assert b["chunk_id"].startswith(expected)

@@ -189,6 +189,64 @@ class TestAuditStoreRetrieval:
         assert json.loads(row["citations_json"]) == []
 
 
+class TestPopularQuestions:
+    def _log(self, store: AuditStore, question: str, fid: str) -> None:
+        store.log_query(
+            user_id="u1",
+            session_id="s1",
+            role="engineer",
+            question=question,
+            departments=[RISK],
+            status="answered",
+            confidence=0.9,
+            latency_ms=100,
+            feedback_id=fid,
+        )
+
+    def test_empty_db_returns_empty(self, audit_store: AuditStore) -> None:
+        assert audit_store.popular_questions() == []
+
+    def test_returns_most_frequent_first(self, audit_store: AuditStore) -> None:
+        self._log(audit_store, "Q-rare", "fb-r1")
+        for i in range(3):
+            self._log(audit_store, "Q-popular", f"fb-p{i}")
+        for i in range(2):
+            self._log(audit_store, "Q-medium", f"fb-m{i}")
+
+        result = audit_store.popular_questions(limit=3)
+        assert result[0] == "Q-popular"
+        assert result[1] == "Q-medium"
+        assert result[2] == "Q-rare"
+
+    def test_respects_limit(self, audit_store: AuditStore) -> None:
+        for i in range(5):
+            self._log(audit_store, f"Unique question {i}", f"fb-u{i}")
+        result = audit_store.popular_questions(limit=3)
+        assert len(result) == 3
+
+    def test_fewer_than_limit_returns_all(self, audit_store: AuditStore) -> None:
+        self._log(audit_store, "Only question", "fb-only")
+        result = audit_store.popular_questions(limit=3)
+        assert result == ["Only question"]
+
+    def test_excludes_null_question(self, audit_store: AuditStore) -> None:
+        # log_query masks PII but always stores something; we test via direct insert
+        from app.store.db import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO queries (id, ts, user_id, session_id, role, question, departments, status, confidence, latency_ms, feedback_id) "
+                    "VALUES (%s, %s, %s, %s, %s, NULL, '[]', 'answered', 0.5, 100, %s)",
+                    ("null-q-id", 1.0, "u1", "s1", "engineer", "fb-null-q"),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        result = audit_store.popular_questions(limit=10)
+        assert all(q is not None and q != "" for q in result)
+
+
 class TestPercentile:
     def test_percentile_single_value(self) -> None:
         assert _percentile([42], 50) == 42.0

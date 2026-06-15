@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from app.common.departments import iter_keys
-from app.store.meta import MetaStore
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +75,7 @@ def _source_is_running(running: set[str], source: str) -> bool:
 class SyncOrchestrator:
     """Tracks background sync jobs and exposes status for the API."""
 
-    def __init__(self, meta: MetaStore) -> None:
+    def __init__(self, meta) -> None:
         self._meta = meta
         self._lock = threading.Lock()
         # Keys: "confluence" (sync-all), "confluence:<dept>" (per-dept), "gdrive"

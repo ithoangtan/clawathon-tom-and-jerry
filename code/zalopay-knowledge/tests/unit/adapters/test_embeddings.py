@@ -5,65 +5,56 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from app.adapters.embeddings import Embedder
+from app.adapters.embeddings import Embedder, _BGE_M3_DIM
 
 
 @pytest.fixture
 def embedder() -> Embedder:
-    return Embedder("test-model", cache_dir="/tmp/hf-cache")
+    return Embedder("baai/bge-m3", base_url="http://maas/v1", api_key="test-key")
 
 
-def test_dimension_loads_model_and_returns_size(embedder: Embedder) -> None:
-    mock_model = MagicMock()
-    mock_model.get_sentence_embedding_dimension.return_value = 384
+def _mock_response(vecs: list[list[float]]) -> MagicMock:
+    resp = MagicMock()
+    resp.raise_for_status = MagicMock()
+    resp.json.return_value = {
+        "data": [{"index": i, "embedding": v} for i, v in enumerate(vecs)]
+    }
+    return resp
 
-    with patch.object(embedder, "_get_model", return_value=mock_model):
-        assert embedder.dimension == 384
-    mock_model.get_sentence_embedding_dimension.assert_called_once()
+
+def test_dimension_is_bge_m3(embedder: Embedder) -> None:
+    assert embedder.dimension == _BGE_M3_DIM
 
 
-def test_encode_query_shape_and_prefix(embedder: Embedder) -> None:
-    mock_model = MagicMock()
-    mock_model.get_sentence_embedding_dimension.return_value = 4
-    mock_model.encode.return_value = np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32)
-
-    with patch.object(embedder, "_get_model", return_value=mock_model):
+def test_encode_query_shape_and_normalized(embedder: Embedder) -> None:
+    raw = [1.0, 0.0] + [0.0] * (_BGE_M3_DIM - 2)
+    with patch("httpx.post", return_value=_mock_response([raw])) as mock_post:
         vec = embedder.encode_query("hello world")
 
-    assert vec.shape == (4,)
+    assert vec.shape == (_BGE_M3_DIM,)
     assert vec.dtype == np.float32
-    mock_model.encode.assert_called_once()
-    prefixed = mock_model.encode.call_args[0][0]
-    assert prefixed == ["query: hello world"]
+    assert abs(float(np.linalg.norm(vec)) - 1.0) < 1e-5
+    payload = mock_post.call_args.kwargs["json"]
+    assert payload["input"] == ["hello world"]
+    assert payload["encoding_format"] == "dense"
+    assert payload["model"] == "baai/bge-m3"
 
 
-def test_encode_passages_shape(embedder: Embedder) -> None:
-    mock_model = MagicMock()
-    mock_model.get_sentence_embedding_dimension.return_value = 4
-    mock_model.encode.return_value = np.array(
-        [
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-        ],
-        dtype=np.float32,
-    )
-
-    with patch.object(embedder, "_get_model", return_value=mock_model):
+def test_encode_passages_shape_and_no_prefix(embedder: Embedder) -> None:
+    vecs = [[1.0] + [0.0] * (_BGE_M3_DIM - 1), [0.0, 1.0] + [0.0] * (_BGE_M3_DIM - 2)]
+    with patch("httpx.post", return_value=_mock_response(vecs)) as mock_post:
         matrix = embedder.encode_passages(["doc a", "doc b"])
 
-    assert matrix.shape == (2, 4)
+    assert matrix.shape == (2, _BGE_M3_DIM)
     assert matrix.dtype == np.float32
-    prefixed = mock_model.encode.call_args[0][0]
-    assert prefixed == ["passage: doc a", "passage: doc b"]
+    payload = mock_post.call_args.kwargs["json"]
+    assert payload["input"] == ["doc a", "doc b"]
 
 
 def test_encode_passages_empty_returns_zero_rows(embedder: Embedder) -> None:
-    mock_model = MagicMock()
-    mock_model.get_sentence_embedding_dimension.return_value = 384
-
-    with patch.object(embedder, "_get_model", return_value=mock_model):
+    with patch("httpx.post") as mock_post:
         matrix = embedder.encode_passages([])
 
-    assert matrix.shape == (0, 384)
+    assert matrix.shape == (0, _BGE_M3_DIM)
     assert matrix.dtype == np.float32
-    mock_model.encode.assert_not_called()
+    mock_post.assert_not_called()

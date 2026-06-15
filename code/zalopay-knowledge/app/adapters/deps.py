@@ -27,6 +27,7 @@ from app.adapters.agentbase_checkpointer import AgentBaseCheckpointer
 from app.adapters.agentbase_memory import make_agentbase_recall
 from app.adapters.faiss_retriever import FaissRetriever
 from app.adapters.maas_llm import VngMaasLLM
+from app.adapters.mysql_checkpointer import MySQLCheckpointer
 from app.adapters.sqlite_checkpointer import SqliteCheckpointer
 from app.config import Settings, get_settings
 from app.graph.build import GraphDeps
@@ -60,6 +61,10 @@ def build_deps(settings: Settings | None = None) -> GraphDeps:
         checkpointer = AgentBaseCheckpointer(cfg)
         recall = make_agentbase_recall(cfg)
         logger.info("Wired AgentBase deps (platform Memory checkpointer + recall)")
+    elif cfg.db_host and cfg.db_user:
+        checkpointer = MySQLCheckpointer(cfg)
+        recall = None
+        logger.info("Wired local deps (MySQLCheckpointer, stateless recall)")
     else:
         checkpoints_db = Path(cfg.index_dir) / "checkpoints.db"
         checkpointer = SqliteCheckpointer(checkpoints_db)

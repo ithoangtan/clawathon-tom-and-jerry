@@ -7,9 +7,7 @@ partition is still rebuilt atomically so serving never reads a half-written inde
 """
 
 import hashlib
-from typing import Callable
-
-from app.store.meta import MetaStore
+from typing import Any, Callable
 
 
 def page_content_hash(text: str) -> str:
@@ -23,7 +21,7 @@ def resolve_document_chunks(
     department: str,
     url: str,
     text: str,
-    meta: MetaStore,
+    meta: Any,
     chunk_builder: Callable[[], list[dict]],
 ) -> tuple[list[dict], bool]:
     """Return chunks for one document, reusing indexed rows when the hash matches.

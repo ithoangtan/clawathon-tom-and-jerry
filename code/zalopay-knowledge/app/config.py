@@ -155,7 +155,7 @@ class Settings(BaseSettings):
     # ── Vector store backend ─────────────────────────────────────────────────
 
     vector_store: str = Field(
-        default="faiss",
+        default="opensearch",
         description="Vector store backend: 'faiss' (local) or 'opensearch' (AgentBase)",
     )
 

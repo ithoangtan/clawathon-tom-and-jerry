@@ -25,6 +25,7 @@ def test_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("INDEX_DIR", str(index_dir))
     monkeypatch.setenv("APP_ENV", "local")
     monkeypatch.setenv("LOG_LEVEL", "error")
+    monkeypatch.setenv("VECTOR_STORE", "opensearch")
 
     from app.config import get_settings
 

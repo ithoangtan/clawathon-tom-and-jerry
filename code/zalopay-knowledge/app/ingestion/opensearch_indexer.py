@@ -17,6 +17,7 @@ pages (content-hash dedup).  The ``chunks`` table is not used.
 
 import logging
 from pathlib import Path
+from typing import Union
 
 from app.adapters.embeddings import Embedder
 from app.config import Settings, get_settings
@@ -67,14 +68,27 @@ _BULK_CHUNK_SIZE = 200
 class OpenSearchIndexBuilder:
     """Embed and index chunks into GreenNode managed vector OpenSearch."""
 
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        meta_store=None,
+    ) -> None:
         self._cfg = settings or get_settings()
-        index_dir = Path(self._cfg.index_dir)
-        # MetaStore used only for sync_sources table (content-hash dedup).
-        self._meta = MetaStore(index_dir / "meta.db")
+        if meta_store is not None:
+            # Injected store (MySQLSyncStore when online mode is active).
+            self._meta = meta_store
+        elif self._cfg.db_host and self._cfg.db_user:
+            # Online MySQL available — use it so sync state persists across restarts.
+            from app.store.mysql_sync_store import MySQLSyncStore
+            self._meta = MySQLSyncStore(self._cfg)
+        else:
+            # Fallback: local SQLite (only used when MySQL not configured).
+            index_dir = Path(self._cfg.index_dir)
+            self._meta = MetaStore(index_dir / "meta.db")
         self._embedder = Embedder(
             self._cfg.embedding_model,
-            cache_dir=index_dir / "hf-cache",
+            base_url=self._cfg.llm_base_url,
+            api_key=self._cfg.llm_api_key,
         )
         self._prefix = self._cfg.opensearch_index_prefix
         self._client = self._build_client()

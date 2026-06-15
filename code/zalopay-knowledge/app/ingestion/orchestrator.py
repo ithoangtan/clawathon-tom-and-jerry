@@ -42,14 +42,26 @@ class SyncService:
 
     def __init__(self, settings: Settings | None = None) -> None:
         self._cfg = settings or get_settings()
-        meta = MetaStore(Path(self._cfg.index_dir) / "meta.db")
-        self._orchestrator = SyncOrchestrator(meta)
 
-        if self._cfg.vector_store == "opensearch":
+        if self._cfg.vector_store == "opensearch" and self._cfg.db_host and self._cfg.db_user:
+            # Online mode: share one MySQLSyncStore between the orchestrator and indexer.
             from app.ingestion.opensearch_indexer import OpenSearchIndexBuilder
+            from app.store.mysql_sync_store import MySQLSyncStore
+            shared_meta = MySQLSyncStore(self._cfg)
+            self._orchestrator = SyncOrchestrator(shared_meta)
+            self._indexer = OpenSearchIndexBuilder(self._cfg, meta_store=shared_meta)
+            logger.info(
+                "SyncService using OpenSearchIndexBuilder + MySQLSyncStore (VECTOR_STORE=opensearch, online MySQL)"
+            )
+        elif self._cfg.vector_store == "opensearch":
+            from app.ingestion.opensearch_indexer import OpenSearchIndexBuilder
+            meta = MetaStore(Path(self._cfg.index_dir) / "meta.db")
+            self._orchestrator = SyncOrchestrator(meta)
             self._indexer = OpenSearchIndexBuilder(self._cfg)
-            logger.info("SyncService using OpenSearchIndexBuilder (VECTOR_STORE=opensearch)")
+            logger.info("SyncService using OpenSearchIndexBuilder (VECTOR_STORE=opensearch, local SQLite fallback)")
         else:
+            meta = MetaStore(Path(self._cfg.index_dir) / "meta.db")
+            self._orchestrator = SyncOrchestrator(meta)
             self._indexer = IndexBuilder(self._cfg)
             logger.info("SyncService using IndexBuilder (VECTOR_STORE=faiss)")
 

@@ -35,7 +35,8 @@ class OpenSearchRetriever:
         self._cfg = settings or get_settings()
         self._embedder = Embedder(
             self._cfg.embedding_model,
-            cache_dir=Path(self._cfg.index_dir) / "hf-cache",
+            base_url=self._cfg.llm_base_url,
+            api_key=self._cfg.llm_api_key,
         )
         self._client = self._build_client()
         self._prefix = self._cfg.opensearch_index_prefix

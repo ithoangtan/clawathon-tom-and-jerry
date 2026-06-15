@@ -20,6 +20,7 @@ import { useMockStore } from "@/store/mockStore";
 import type { Citation, Department } from "@/lib/types";
 import { useTutorialContext } from "@/hooks/useTutorial";
 import { useTutorialStore } from "@/store/tutorialStore";
+import { api } from "@/lib/apiClient";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const IS_DEV = import.meta.env.DEV || window.location.hostname === "localhost";
@@ -84,6 +85,16 @@ export function ChatInterface() {
 
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [inspector, setInspector] = useState<CitationInspectorState | null>(null);
+  const fallbackExamples = locale === "vi" ? EXAMPLE_QUESTIONS.vi : EXAMPLE_QUESTIONS.en;
+  const [examples, setExamples] = useState<string[]>(fallbackExamples);
+
+  useEffect(() => {
+    api.suggestedQuestions().then((data) => {
+      if (data.questions.length > 0) {
+        setExamples(data.questions);
+      }
+    }).catch(() => { /* keep fallback */ });
+  }, []);
 
   const closeInspector = useCallback(() => setInspector(null), []);
 
@@ -136,7 +147,6 @@ export function ChatInterface() {
 
   const chatScenario = useMockStore((s) => s.chatScenario);
   const indexReady = (IS_DEV && chatScenario !== null) || (health?.index_ready ?? false);
-  const examples = locale === "vi" ? EXAMPLE_QUESTIONS.vi : EXAMPLE_QUESTIONS.en;
   const isEmpty = messages.length === 0 && !loading;
 
   const departmentBar = (

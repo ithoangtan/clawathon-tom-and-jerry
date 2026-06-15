@@ -147,6 +147,13 @@ def dashboard() -> DashboardData:
     return DashboardData(**metrics)
 
 
+@router.get("/api/suggested-questions")
+def suggested_questions() -> JSONResponse:
+    """Return top 3 most frequently asked questions for the chat empty state."""
+    questions = get_audit_store().popular_questions(limit=3)
+    return JSONResponse(content={"questions": questions})
+
+
 @router.get("/api/knowledge-gaps")
 def knowledge_gaps() -> JSONResponse:
     """Return refused questions and low-rated documents for the Admin gap tracker."""
