@@ -8,7 +8,7 @@
     color-scheme: dark;
 
     /* Typography */
-    --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
     --font-display: var(--font-sans);
 
@@ -1293,4 +1293,24 @@ body.dept-picker-open .driver-overlay,
 body.dept-picker-open .driver-popover {
   visibility: hidden !important;
   pointer-events: none !important;
+}
+
+/* Pitch page — each section is at least one full viewport tall */
+[data-pitch-section] {
+  min-height: 100vh;
+}
+
+/* Pitch page — floor all text at 13 px (overrides text-xs = 12 px) */
+.pitch-root .text-xs {
+  font-size: 0.8125rem; /* 13px */
+}
+
+/* Pitch page — card body paragraphs at 14px */
+.pitch-root p.text-sm {
+  font-size: 0.875rem; /* 14px */
+}
+
+/* Pitch page — card h3 titles at 16px */
+.pitch-root h3.text-sm {
+  font-size: 1rem; /* 16px */
 }

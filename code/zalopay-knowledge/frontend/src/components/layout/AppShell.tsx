@@ -69,7 +69,7 @@ export function Header() {
   return (
     <header className="relative z-20 glass-panel-strong border-b border-border">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <Link to="/" className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-opacity">
+        <Link to="/pitch" className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-opacity">
           <BrandMark />
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold tracking-tight text-content-primary sm:text-lg">
