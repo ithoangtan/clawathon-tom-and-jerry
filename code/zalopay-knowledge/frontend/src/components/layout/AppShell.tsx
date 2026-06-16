@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
-import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { LocaleEffect } from "@/components/layout/LocaleEffect";
@@ -13,7 +12,6 @@ import {
   Loader2,
   MessageSquare,
   Moon,
-  Plus,
   Settings,
   Sparkles,
   Sun,
