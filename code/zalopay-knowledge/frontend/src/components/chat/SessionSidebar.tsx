@@ -86,7 +86,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
       onCloseMobile?.();
       return;
     }
-    navigate(`/chat/${sessionId}`);
+    navigate(`/chat/${sessionId}`, { preventScrollReset: true });
     onCloseMobile?.();
   }
 

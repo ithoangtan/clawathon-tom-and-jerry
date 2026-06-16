@@ -56,7 +56,20 @@ export function ChatInterface() {
     retryLast,
   } = useChat();
 
+  const sessionId = useUserStore((s) => s.sessionId);
   const scrollRef = useSmoothScroll([messages, loading]);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom on session switch and when webhook messages arrive.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages.length]);
 
   const { startTutorial, isRunning } = useTutorialContext();
   const responseDismissed = useTutorialStore((s) => s.dismissed["response"] ?? false);
@@ -292,7 +305,7 @@ export function ChatInterface() {
                 )}
               </div>
 
-              <div className="h-4" aria-hidden />
+              <div ref={bottomRef} className="h-4" aria-hidden />
             </div>
           </div>
 

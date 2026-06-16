@@ -8,6 +8,8 @@ the handler uses it directly, bypassing Confluence page loading and LLM parsing.
 Jira label that activates this workflow: ``wf-campaign-risk-review``
 """
 
+_RISK_PIC_FIELD = "customfield_10068"  # Jira custom field "Risk PIC" (confirmed via /field API)
+
 from app.workflow.models import (
     WorkflowDefinition,
     WorkflowReaction,
@@ -66,11 +68,16 @@ CAMPAIGN_RISK_REVIEW = WorkflowDefinition(
     reactions=[
         WorkflowReaction(
             decision="PASS",
-            verbs=["comment", "update_status:RISK DONE"],
+            verbs=[
+                "comment",
+                f"assign_from_field:{_RISK_PIC_FIELD}",
+                f"mention_pic_confirm:{_RISK_PIC_FIELD}",
+                "update_status:Done",
+            ],
         ),
         WorkflowReaction(
             decision="PARTIAL_FAIL",
-            verbs=["comment", "update_status:RISK DONE"],
+            verbs=["comment", "update_status:REJECT"],
         ),
         WorkflowReaction(
             decision="FAIL",

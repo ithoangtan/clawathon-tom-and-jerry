@@ -23,4 +23,5 @@ from app.workflow.models import WorkflowDefinition
 
 WORKFLOW_REGISTRY: dict[str, WorkflowDefinition] = {
     "campaign-risk-review": CAMPAIGN_RISK_REVIEW,
+    "risk-campaign-review-lucky-wheel": CAMPAIGN_RISK_REVIEW,  # alias for existing demo tickets
 }

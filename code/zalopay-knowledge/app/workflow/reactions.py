@@ -41,6 +41,15 @@ def parse_decision(text: str) -> str | None:
     return _norm(m.group(1)) if m else None
 
 
+def _pic_account_id(field_value) -> str | None:
+    """Extract accountId from a user-picker field (single dict or multi-value list)."""
+    if isinstance(field_value, list):
+        return (field_value[0] or {}).get("accountId") if field_value else None
+    if isinstance(field_value, dict):
+        return field_value.get("accountId")
+    return None
+
+
 def apply_reactions(
     decision: str | None,
     defn,
@@ -99,6 +108,39 @@ def apply_reactions(
                 res = jira.update_issue_status(key=issue_key, transition_name=arg)
                 applied["verbs"].append(
                     f"update_status:{arg}" + (" (dry-run)" if res.get("dry_run") else "")
+                )
+            elif name == "assign_from_field":
+                # arg = Jira custom field ID; supports single-user dict or multi-user array
+                if not arg:
+                    applied["verbs"].append("assign_from_field:skipped-no-field")
+                    continue
+                pic_raw = (issue.get("fields") or {}).get(arg)
+                account_id = _pic_account_id(pic_raw)
+                if not account_id:
+                    applied["verbs"].append(f"assign_from_field:{arg}:skipped-empty")
+                    continue
+                res = jira.assign_issue(key=issue_key, account_id=account_id)
+                applied["verbs"].append(
+                    f"assign_from_field:{arg}" + (" (dry-run)" if res.get("dry_run") else "")
+                )
+            elif name == "mention_pic_confirm":
+                # arg = same custom field ID; posts "@PIC xác nhận" mention comment
+                if not arg:
+                    applied["verbs"].append("mention_pic_confirm:skipped-no-field")
+                    continue
+                pic_raw = (issue.get("fields") or {}).get(arg)
+                account_id = _pic_account_id(pic_raw)
+                if not account_id:
+                    applied["verbs"].append(f"mention_pic_confirm:{arg}:skipped-empty")
+                    continue
+                res = jira.add_mention_comment(
+                    key=issue_key,
+                    text_before="Zalopay Wiki đã review xong, nhờ ",
+                    account_id=account_id,
+                    text_after=" xác nhận.",
+                )
+                applied["verbs"].append(
+                    f"mention_pic_confirm:{arg}" + (" (dry-run)" if res.get("dry_run") else "")
                 )
             elif name == "append_confluence":
                 ts = datetime.now(timezone.utc).isoformat(timespec="seconds")

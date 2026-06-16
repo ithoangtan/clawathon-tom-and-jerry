@@ -58,6 +58,21 @@ class JiraPort(Protocol):
         code_block: str | None = None,
         code_language: str = "json",
     ) -> dict:
+        ...
+
+    def add_mention_comment(
+        self,
+        *,
+        key: str,
+        text_before: str,
+        account_id: str,
+        text_after: str = "",
+    ) -> dict:
+        """Post a comment that inline-mentions *account_id* on issue *key*.
+
+        Builds an ADF paragraph: <text_before> @mention <text_after>.
+        Returns the created comment payload or a synthetic dry-run dict.
+        """
         """Post a comment (wrapped into ADF) on issue *key*.
 
         Args:

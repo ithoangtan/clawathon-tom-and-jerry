@@ -150,7 +150,9 @@ export function useChat() {
     if (!liveThread) return;
     const isWebhook = liveThread.processingStatus != null;
     const isActive = !loading;  // don't clobber mid-stream user sessions
-    if (isWebhook && isActive && liveThread.messages.length > messages.length) {
+    // Use >= so when processingStatus flips to "done" we still sync even if
+    // message count didn't change between the last two polls (final state capture).
+    if (isWebhook && isActive && liveThread.messages.length > 0 && liveThread.messages.length >= messages.length) {
       setMessages(liveThread.messages as ChatMessage[]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -357,12 +359,33 @@ export function useChat() {
                   content: streamedText,
                   timestamp,
                   streaming: true,
+                  response: {
+                    answer: streamedText,
+                    citations: [],
+                    source_departments: [],
+                    confidence: 1,
+                    feedback_id: "",
+                    status: "answered" as const,
+                    conflicts: [],
+                    clarifying_question: null,
+                    refusal_reason: null,
+                    refusals: [],
+                    model_used: null,
+                  },
                 },
               ]);
             } else {
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantId ? { ...m, content: streamedText } : m,
+                  m.id === assistantId
+                    ? {
+                        ...m,
+                        content: streamedText,
+                        response: m.response
+                          ? { ...m.response, answer: streamedText }
+                          : undefined,
+                      }
+                    : m,
                 ),
               );
             }

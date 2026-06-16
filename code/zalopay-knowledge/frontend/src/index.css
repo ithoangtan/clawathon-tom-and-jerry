@@ -789,27 +789,38 @@
     animation: cursor-blink 0.9s step-end infinite;
   }
 
+  /* Streaming container fades in on mount */
   .streaming-shimmer {
-    background: linear-gradient(
-      90deg,
-      var(--color-text-primary) 0%,
-      var(--color-brand) 50%,
-      var(--color-text-primary) 100%
-    );
-    background-size: 200% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: text-shimmer 2.5s ease-in-out infinite;
+    animation: stream-container-in 0.2s ease-out both;
   }
 
-  @keyframes cursor-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+  /* Each new block element fades in as it appears during streaming */
+  .streaming-shimmer > p,
+  .streaming-shimmer > ul,
+  .streaming-shimmer > ol,
+  .streaming-shimmer > h1,
+  .streaming-shimmer > h2,
+  .streaming-shimmer > h3,
+  .streaming-shimmer > h4,
+  .streaming-shimmer > blockquote,
+  .streaming-shimmer li {
+    animation: token-appear 0.2s ease-out both;
   }
 
-  @keyframes text-shimmer {
-    0% { background-position: 100% 0; }
-    100% { background-position: -100% 0; }
+  @keyframes stream-container-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes token-appear {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   /* ─── Streaming cursor ─── */
@@ -818,12 +829,12 @@
     margin-left: 1px;
     font-weight: 300;
     color: var(--color-brand, #0068ff);
-    animation: streaming-blink 0.7s step-end infinite;
+    animation: streaming-blink 0.6s ease-in-out infinite;
   }
 
   @keyframes streaming-blink {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+    50% { opacity: 0.2; }
   }
 
   /* ─── Prose chat ─── */
@@ -1174,6 +1185,15 @@
     .typing-shimmer::after,
     .streaming-text.is-streaming::after,
     .streaming-shimmer,
+    .streaming-shimmer > p,
+    .streaming-shimmer > ul,
+    .streaming-shimmer > ol,
+    .streaming-shimmer > h1,
+    .streaming-shimmer > h2,
+    .streaming-shimmer > h3,
+    .streaming-shimmer > h4,
+    .streaming-shimmer > blockquote,
+    .streaming-shimmer li,
     .streaming-cursor,
     .typing-dot,
     .pipeline-dept-chip--active {

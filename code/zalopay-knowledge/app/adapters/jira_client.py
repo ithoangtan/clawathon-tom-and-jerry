@@ -196,6 +196,20 @@ def _to_adf(text: str, *, code_block: str | None = None, code_language: str = "j
     return {"type": "doc", "version": 1, "content": content}
 
 
+def _adf_mention_doc(text_before: str, account_id: str, text_after: str) -> dict:
+    """Build a one-paragraph ADF doc with an inline @mention."""
+    inline: list[dict] = []
+    if text_before:
+        inline.append({"type": "text", "text": text_before})
+    inline.append({
+        "type": "mention",
+        "attrs": {"id": account_id, "text": f"@{account_id}", "accessLevel": "APPLICATION"},
+    })
+    if text_after:
+        inline.append({"type": "text", "text": text_after})
+    return {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": inline}]}
+
+
 class JiraClient:
     """Minimal Jira Cloud v3 client (read issue, create issue/sub-task, comment)."""
 
@@ -323,6 +337,21 @@ class JiraClient:
             "dry_run": False,
         }
 
+    def add_mention_comment(
+        self,
+        *,
+        key: str,
+        text_before: str,
+        account_id: str,
+        text_after: str = "",
+    ) -> dict:
+        if self._dry_run:
+            logger.info("Jira dry-run add_mention_comment on %s: mention=%s", key, account_id)
+            return {"key": key, "url": self._browse_url(key), "dry_run": True}
+        adf = _adf_mention_doc(text_before, account_id, text_after)
+        data = self._request("POST", f"issue/{key}/comment", json={"body": adf})
+        return {"key": key, "url": self._browse_url(key), "comment_id": data.get("id"), "dry_run": False}
+
     def add_labels(self, *, key: str, labels: list[str]) -> dict:
         clean = [str(x).strip() for x in labels if str(x).strip() and ":" not in str(x) and " " not in str(x)]
         if not clean:
@@ -392,6 +421,9 @@ class NullJiraClient:
         raise JiraUnavailable("Jira is not configured")
 
     def add_comment(self, **_kwargs) -> dict:
+        raise JiraUnavailable("Jira is not configured")
+
+    def add_mention_comment(self, **_kwargs) -> dict:
         raise JiraUnavailable("Jira is not configured")
 
     def add_labels(self, **_kwargs) -> dict:
