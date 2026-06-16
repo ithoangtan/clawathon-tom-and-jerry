@@ -49,8 +49,8 @@ const strings: Strings = {
     vi: "Vào Quản trị để đồng bộ từ Confluence.",
   },
   askPlaceholder: {
-    en: "Ask about Zalopay policies, runbooks, or procedures…",
-    vi: "Hỏi về chính sách, quy trình hoặc runbook của Zalopay…",
+    en: "e.g. Lucky Wheel campaign rules, Risk Review process, Bank Partnership onboarding…",
+    vi: "VD: Quy tắc Lucky Wheel, quy trình Risk Review, onboarding Bank Partnership…",
   },
   send: { en: "Send", vi: "Gửi" },
   sending: { en: "Thinking…", vi: "Đang xử lý…" },

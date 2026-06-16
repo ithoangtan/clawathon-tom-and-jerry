@@ -93,7 +93,8 @@ function useRevealOnEnter() {
 
     // Hide all reveal elements upfront
     sections.forEach((s) => {
-      gsap.set(s.querySelectorAll("[data-reveal]"), { opacity: 0, y: 28 });
+      const els = s.querySelectorAll("[data-reveal]");
+      if (els.length) gsap.set(els, { opacity: 0, y: 28 });
     });
 
     const revealed = new Set<Element>();
@@ -103,7 +104,7 @@ function useRevealOnEnter() {
           if (entry.isIntersecting && !revealed.has(entry.target)) {
             revealed.add(entry.target);
             const els = (entry.target as HTMLElement).querySelectorAll("[data-reveal]");
-            gsap.to(els, {
+            if (els.length) gsap.to(els, {
               opacity: 1,
               y: 0,
               duration: 0.7,
