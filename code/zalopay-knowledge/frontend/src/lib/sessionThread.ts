@@ -90,6 +90,11 @@ export function buildThread(
     existing?.title ??
     (firstPrompt ? deriveSessionTitle(firstPrompt) : undefined);
 
+  // Only advance updatedAt when messages actually grew (new exchange or webhook step).
+  // Preserving it when count is unchanged prevents merely viewing a session from
+  // bumping it to the top of the list.
+  const messagesGrew = !existing || messages.length > existing.messages.length;
+
   return {
     sessionId,
     title,
@@ -97,7 +102,7 @@ export function buildThread(
     targetDepartments,
     targetAutoRoute,
     createdAt: existing?.createdAt ?? now,
-    updatedAt: now,
+    updatedAt: messagesGrew ? now : (existing?.updatedAt ?? now),
   };
 }
 

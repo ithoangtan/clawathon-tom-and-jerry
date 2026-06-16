@@ -69,16 +69,36 @@ def _resolve_access_token(settings: Settings) -> str | None:
         try:
             from app.adapters.identity_client import get_identity_client, identity_runtime_ready
             if identity_runtime_ready(settings):
+                import time
                 from greennode_agentbase.identity import Get3loTokenRequest
+                provider = (settings.gdrive_oauth_provider or "identity-google-space").strip()
+                identity = (settings.greennode_agent_identity or "").strip()
+                t0 = time.monotonic()
+                logger.info("Gmail: get_3lo_token provider=%s identity=%s", provider, identity)
                 client = get_identity_client()
                 result = client.get_3lo_token(
-                    provider_name=settings.gdrive_oauth_provider or "identity-google-space",
-                    agent_identity_name=(settings.greennode_agent_identity or "").strip(),
-                    request=Get3loTokenRequest(scopes=[GMAIL_SEND_SCOPE]),
+                    provider_name=provider,
+                    agent_identity_name=identity,
+                    request=Get3loTokenRequest(
+                        agent_user_id=settings.gdrive_oauth_agent_user_id,
+                        scopes=[GMAIL_SEND_SCOPE],
+                    ),
                 )
                 token = (getattr(result, "access_token", None) or "").strip()
                 if token:
+                    logger.info("Gmail: 3LO token OK (%.0fms)", (time.monotonic() - t0) * 1000)
                     return token
+                auth_url = getattr(result, "authorization_url", None)
+                if auth_url:
+                    logger.warning(
+                        "Gmail: OAuth not yet authorized (%.0fms) — admin must visit: %s",
+                        (time.monotonic() - t0) * 1000, auth_url,
+                    )
+                else:
+                    logger.warning(
+                        "Gmail: get_3lo_token returned no token and no auth URL (%.0fms)",
+                        (time.monotonic() - t0) * 1000,
+                    )
         except Exception as exc:
             logger.warning("Gmail: AgentBase identity token failed: %s", exc)
 

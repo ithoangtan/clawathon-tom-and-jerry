@@ -222,19 +222,25 @@ def _process_event(event: JiraEvent) -> None:
                 },
             )
 
-        # ── Send email notification to assignee ───────────────────────────────
+        # ── Send email notification to assignee (optional — never blocks workflow) ─
         if assignee_email and result.get("status") not in ("error", "ignored", "invalid"):
-            _send_assignee_notification(
-                event=event,
-                session_id=session_id,
-                result=result,
-                assignee_email=assignee_email,
-                assignee_name=assignee_name,
-                assignee_avatar=assignee_avatar,
-                issue_url=_issue_url,
-                settings=deps.settings,
-                push=_push,
-            )
+            try:
+                _send_assignee_notification(
+                    event=event,
+                    session_id=session_id,
+                    result=result,
+                    assignee_email=assignee_email,
+                    assignee_name=assignee_name,
+                    assignee_avatar=assignee_avatar,
+                    issue_url=_issue_url,
+                    settings=deps.settings,
+                    push=_push,
+                )
+            except Exception:
+                logger.warning(
+                    "Email notification failed for %s → %s (non-fatal, workflow continues)",
+                    event.issue_key, assignee_email, exc_info=True,
+                )
 
     except Exception:  # noqa: BLE001
         logger.exception("Jira webhook background processing failed for %s", event.issue_key)
@@ -363,28 +369,31 @@ def _send_assignee_notification(
 
     sent = send_email(to=assignee_email, subject=subject, body_html=body_html, settings=settings)
 
+    avatar_md = f"![avatar]({assignee_avatar}){{width=24}}" if assignee_avatar else ""
+    recipient = f"{avatar_md} **{assignee_name}** ({assignee_email})" if assignee_name else f"**{assignee_email}**"
+
     if sent:
-        avatar_md = f"![avatar]({assignee_avatar}){{width=24}}" if assignee_avatar else ""
         notify_text = (
-            f"📧 **Đã gửi thông báo** tới {avatar_md} **{assignee_name}** "
-            f"({assignee_email})"
+            f"📧 **Đã gửi email thông báo** tới {recipient}"
             + (f" — [Xem conversation]({chat_url})" if chat_url else "")
         )
-        push(
-            "assistant",
-            notify_text,
-            f"wh-notify-{session_id[:6]}",
-            response={
-                "status": "agent_action",
-                "answer": notify_text,
-                "citations": [],
-                "source_departments": [],
-                "confidence": 0,
-                "feedback_id": "",
-            },
-        )
     else:
+        notify_text = f"⚠️ **Gửi email thất bại** cho {recipient} — workflow vẫn hoàn tất, kiểm tra log Gmail để biết thêm."
         logger.warning("Gmail notification skipped or failed for %s → %s", event.issue_key, assignee_email)
+
+    push(
+        "assistant",
+        notify_text,
+        f"wh-notify-{session_id[:6]}",
+        response={
+            "status": "agent_action",
+            "answer": notify_text,
+            "citations": [],
+            "source_departments": [],
+            "confidence": 0,
+            "feedback_id": "",
+        },
+    )
 
 
 def _json(code: int, body: dict) -> Response:
