@@ -56,7 +56,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
   const threadsRecord = useSessionStore((s) => s.threads);
   const threadsLoaded = useSessionStore((s) => s.loaded);
   const deleteThread = useSessionStore((s) => s.deleteThread);
-  const setSessionId = useUserStore((s) => s.setSessionId);
+  const requestSwitchSession = useSessionStore((s) => s.requestSwitchSession);
   const startPolling = useSessionStore((s) => s.startPolling);
   const stopPolling = useSessionStore((s) => s.stopPolling);
   const navigate = useNavigate();
@@ -94,10 +94,10 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
     deleteThread(sessionId);
     setPendingDeleteId(null);
     if (sessionId === activeSessionId) {
-      // Bypass Effect 3 (skip save — we just deleted this session).
-      const newId = generateSessionId();
-      setSessionId(newId);
-      navigate(`/chat/${newId}`);
+      // skipSave=true: Effect 3 in useChat handles setSessionId + navigate atomically,
+      // preventing the race where ChatPage re-fires requestSwitchSession and re-saves
+      // the just-deleted session under the new ID.
+      requestSwitchSession(generateSessionId(), true);
     }
   }
 
@@ -132,7 +132,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
           variant="secondary"
           className="w-full justify-start"
           onClick={() => {
-            navigate(`/chat/${generateSessionId()}`);
+            requestSwitchSession(generateSessionId());
             onCloseMobile?.();
           }}
         >
