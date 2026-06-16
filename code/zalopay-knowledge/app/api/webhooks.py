@@ -37,11 +37,43 @@ def _process_event(event: JiraEvent) -> None:
     Runs after the 200 ack so Jira does not time out / retry. Builds deps lazily
     and never raises (handler degrades to a structured result). Indirected here
     so tests can monkeypatch it to avoid heavy deps / network.
-    """
-    try:
-        from app.adapters.deps import get_deps
-        from app.integrations.jira_handler import handle_jira_event
 
+    Creates a session in the DB before processing so the chat UI sidebar
+    shows a "Đang xử lý..." entry immediately. Updates status to "done" or
+    "error" after the handler completes.
+    """
+    import uuid
+    from app.adapters.deps import get_deps
+    from app.api.routes import get_session_store
+    from app.integrations.jira_handler import handle_jira_event
+    from app.workflow.labels import WORKFLOW_LABEL_PREFIX
+    from app.workflow.registry import WORKFLOW_REGISTRY
+
+    # Determine workflow slug from event labels eagerly (before full jira fetch).
+    # We'll update the session title once we have the real issue summary.
+    session_id = str(uuid.uuid4())
+    session_store = get_session_store()
+
+    # Detect in-code workflow slug from event raw payload labels if available.
+    raw_labels: list[str] = []
+    if event.raw:
+        issue_fields = (event.raw.get("issue") or {}).get("fields") or {}
+        raw_labels = issue_fields.get("labels") or []
+    wf_label = next((lbl for lbl in raw_labels if lbl.startswith(WORKFLOW_LABEL_PREFIX)), None)
+    slug = wf_label[len(WORKFLOW_LABEL_PREFIX):] if wf_label else ""
+    workflow_id = slug if slug in WORKFLOW_REGISTRY else (slug or "unknown")
+
+    try:
+        session_store.create_processing_session(
+            session_id=session_id,
+            title=f"[{event.issue_key}] Campaign Risk Review",
+            workflow_id=workflow_id,
+            jira_key=event.issue_key,
+        )
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not create processing session for %s", event.issue_key)
+
+    try:
         deps = get_deps()
         result = handle_jira_event(
             event,
@@ -52,8 +84,15 @@ def _process_event(event: JiraEvent) -> None:
             settings=deps.settings,
         )
         logger.info("Jira webhook processed %s → %s", event.issue_key, result.get("status"))
+        final_status = "done" if result.get("status") not in ("error",) else "error"
     except Exception:  # noqa: BLE001 — background work must never crash the worker
         logger.exception("Jira webhook background processing failed for %s", event.issue_key)
+        final_status = "error"
+
+    try:
+        session_store.update_processing_status(session_id, final_status)
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not update processing status for session %s", session_id)
 
 
 @webhook_router.post("/webhooks/jira")

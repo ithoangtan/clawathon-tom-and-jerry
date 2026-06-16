@@ -33,6 +33,7 @@ from app.ports.types import ModelTier
 from app.workflow.labels import WORKFLOW_LABEL_PREFIX
 from app.workflow.parser import parse_workflow
 from app.workflow.reactions import apply_reactions, parse_decision
+from app.workflow.registry import WORKFLOW_REGISTRY
 from app.workflow.triggers import match_trigger
 
 logger = logging.getLogger(__name__)
@@ -69,26 +70,31 @@ def handle_jira_event(
     if not wf_label:
         return _result("ignored", reason="no_workflow_label", issue=event.issue_key)
 
-    # 2. Resolve the workflow page from its identity label, then load it.
-    try:
-        page_id = _resolve_page_id(retriever, wf_label)
-        if not page_id:
-            return _result("ignored", reason="workflow_not_found", issue=event.issue_key, wf_label=wf_label)
-        chunks = retriever.get_page_chunks(department="workflow", page_id=page_id)
-    except RetrieverUnavailable as exc:
-        return _result("error", reason=f"retriever_unavailable: {exc}", issue=event.issue_key)
-    page_text = "\n\n".join((c.text or "") for c in chunks).strip()
-    if not page_text:
-        return _result("ignored", reason="workflow_page_empty", issue=event.issue_key, page_id=page_id)
-    # The page title (= workflow name) lives in chunk metadata, not the body —
-    # prepend it as the H1 so the parser names the workflow correctly.
-    title = chunks[0].title if chunks else None
-    if title and title.lower() not in page_text[:200].lower():
-        page_text = f"# {title}\n\n{page_text}"
-    try:
-        defn = parse_workflow(page_text, llm=llm, settings=cfg)
-    except WorkflowParseError as exc:
-        return _result("error", reason=f"parse_failed: {exc}", issue=event.issue_key, page_id=page_id)
+    # 2a. Check the in-code workflow registry first (no Confluence/OpenSearch needed).
+    slug = wf_label[len(WORKFLOW_LABEL_PREFIX):]
+    if slug in WORKFLOW_REGISTRY:
+        defn = WORKFLOW_REGISTRY[slug]
+        page_id = slug  # synthetic page_id for logging / append_confluence (no-op)
+        logger.info("Using in-code workflow definition %r for %s", slug, event.issue_key)
+    else:
+        # 2b. Fall back to Confluence-based workflow page resolution.
+        try:
+            page_id = _resolve_page_id(retriever, wf_label)
+            if not page_id:
+                return _result("ignored", reason="workflow_not_found", issue=event.issue_key, wf_label=wf_label)
+            chunks = retriever.get_page_chunks(department="workflow", page_id=page_id)
+        except RetrieverUnavailable as exc:
+            return _result("error", reason=f"retriever_unavailable: {exc}", issue=event.issue_key)
+        page_text = "\n\n".join((c.text or "") for c in chunks).strip()
+        if not page_text:
+            return _result("ignored", reason="workflow_page_empty", issue=event.issue_key, page_id=page_id)
+        title = chunks[0].title if chunks else None
+        if title and title.lower() not in page_text[:200].lower():
+            page_text = f"# {title}\n\n{page_text}"
+        try:
+            defn = parse_workflow(page_text, llm=llm, settings=cfg)
+        except WorkflowParseError as exc:
+            return _result("error", reason=f"parse_failed: {exc}", issue=event.issue_key, page_id=page_id)
 
     # 3. Match a trigger.
     trig = match_trigger(event, defn)

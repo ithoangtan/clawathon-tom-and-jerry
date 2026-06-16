@@ -256,6 +256,31 @@ class JiraClient:
         self._request("PUT", f"issue/{key}/assignee", json={"accountId": account_id})
         return {"key": key, "account_id": account_id, "dry_run": False}
 
+    def update_issue_status(self, *, key: str, transition_name: str) -> dict:
+        """Transition issue *key* to the status named *transition_name*.
+
+        Looks up available transitions first, then fires the matched one.
+        Case-insensitive match. Returns ``{"key", "transition_name", "dry_run"}``.
+        """
+        if self._dry_run:
+            logger.info("Jira dry-run update_issue_status %s → %r", key, transition_name)
+            return {"key": key, "transition_name": transition_name, "dry_run": True}
+        transitions = self._request("GET", f"issue/{key}/transitions").get("transitions") or []
+        target = next(
+            (t for t in transitions if t.get("name", "").lower() == transition_name.lower()),
+            None,
+        )
+        if target is None:
+            available = [t.get("name") for t in transitions]
+            logger.warning(
+                "Jira transition %r not found on %s — available: %s", transition_name, key, available
+            )
+            raise JiraUnavailable(
+                f"Transition {transition_name!r} not found on {key}; available: {available}"
+            )
+        self._request("POST", f"issue/{key}/transitions", json={"transition": {"id": target["id"]}})
+        return {"key": key, "transition_name": transition_name, "dry_run": False}
+
     def is_ready(self) -> bool:
         """Cheap reachability + credential check. Never raises."""
         if not self.configured():
@@ -287,6 +312,9 @@ class NullJiraClient:
         raise JiraUnavailable("Jira is not configured")
 
     def assign_issue(self, **_kwargs) -> dict:
+        raise JiraUnavailable("Jira is not configured")
+
+    def update_issue_status(self, **_kwargs) -> dict:
         raise JiraUnavailable("Jira is not configured")
 
     def is_ready(self) -> bool:

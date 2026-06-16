@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DepartmentChip } from "@/components/chat/Badges";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -57,7 +57,21 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
   const threadsLoaded = useSessionStore((s) => s.loaded);
   const deleteThread = useSessionStore((s) => s.deleteThread);
   const requestNewSession = useSessionStore((s) => s.requestNewSession);
+  const startPolling = useSessionStore((s) => s.startPolling);
+  const stopPolling = useSessionStore((s) => s.stopPolling);
   const navigate = useNavigate();
+
+  // Start polling whenever a processing session is present; stop when all done.
+  useEffect(() => {
+    const hasProcessing = Object.values(threadsRecord).some(
+      (t) => t.processingStatus === "processing",
+    );
+    if (hasProcessing) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+  }, [threadsRecord, startPolling, stopPolling]);
 
   const [query, setQuery] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -162,6 +176,8 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
               const departments = threadDepartments(thread);
               const isActive = thread.sessionId === activeSessionId;
               const isConfirmingDelete = pendingDeleteId === thread.sessionId;
+              const isProcessing = thread.processingStatus === "processing";
+              const isError = thread.processingStatus === "error";
 
               return (
                 <li key={thread.sessionId} role="listitem">
@@ -193,7 +209,9 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
                         "group relative rounded-lg border transition-colors",
                         isActive
                           ? "border-brand/40 bg-brand-light shadow-sm"
-                          : "border-transparent hover:border-border hover:bg-surface-glass",
+                          : isProcessing
+                            ? "border-warning/40 bg-warning/5 animate-pulse"
+                            : "border-transparent hover:border-border hover:bg-surface-glass",
                       )}
                     >
                       <button
@@ -205,13 +223,28 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
                         <p className="line-clamp-2 text-sm font-medium text-content-primary">
                           {title ?? t("noHistory", locale)}
                         </p>
+                        {thread.workflowId && (
+                          <p className="mt-0.5 text-[10px] text-content-muted font-mono truncate">
+                            {thread.jiraKey ?? thread.workflowId}
+                          </p>
+                        )}
                         <p className="mt-1 text-[11px] text-content-muted">
                           {formatDate(thread.updatedAt, locale)}
                         </p>
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                          <Badge tone={statusTone(status)} className="!text-[10px]">
-                            {statusLabel(status, locale)}
-                          </Badge>
+                          {isProcessing ? (
+                            <Badge tone="warning" className="!text-[10px]">
+                              {locale === "vi" ? "Đang xử lý…" : "Processing…"}
+                            </Badge>
+                          ) : isError ? (
+                            <Badge tone="danger" className="!text-[10px]">
+                              {locale === "vi" ? "Lỗi" : "Error"}
+                            </Badge>
+                          ) : (
+                            <Badge tone={statusTone(status)} className="!text-[10px]">
+                              {statusLabel(status, locale)}
+                            </Badge>
+                          )}
                           {departments.slice(0, 3).map((dept) => (
                             <DepartmentChip key={dept} deptKey={dept} />
                           ))}

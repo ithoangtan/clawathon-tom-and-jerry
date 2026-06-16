@@ -92,6 +92,14 @@ def apply_reactions(
                 applied["verbs"].append(
                     f"label:{arg}" + (" (dry-run)" if res.get("dry_run") else "")
                 )
+            elif name == "update_status":
+                if not arg:
+                    applied["verbs"].append("update_status:skipped-no-target")
+                    continue
+                res = jira.update_issue_status(key=issue_key, transition_name=arg)
+                applied["verbs"].append(
+                    f"update_status:{arg}" + (" (dry-run)" if res.get("dry_run") else "")
+                )
             elif name == "append_confluence":
                 ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
                 frag = (

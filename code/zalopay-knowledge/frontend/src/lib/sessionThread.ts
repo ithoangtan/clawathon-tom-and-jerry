@@ -11,6 +11,12 @@ export interface SessionThread {
   targetAutoRoute?: boolean;
   createdAt: string;
   updatedAt: string;
+  /** Workflow ID when this session was created by a webhook-triggered workflow run. */
+  workflowId?: string | null;
+  /** Jira issue key associated with this session (webhook-triggered runs). */
+  jiraKey?: string | null;
+  /** Processing state for webhook-triggered sessions: "processing" | "done" | "error" | null. */
+  processingStatus?: string | null;
 }
 
 export type ThreadStatus = "answered" | "refused" | "conflict" | "pending";

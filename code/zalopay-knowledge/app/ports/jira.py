@@ -87,6 +87,23 @@ class JiraPort(Protocol):
         """
         ...
 
+    def update_issue_status(self, *, key: str, transition_name: str) -> dict:
+        """Transition issue *key* to the Jira status named *transition_name*.
+
+        Args:
+            key: The Jira issue key (e.g. ``KAN-42``).
+            transition_name: The exact display name of the target status as it
+                appears in the Jira project workflow (case-insensitive match).
+
+        Returns:
+            ``{"key", "transition_name", "dry_run"}``.
+
+        Raises:
+            JiraUnavailable: when Jira is unreachable, the transition is not
+                found, or the ticket is in a state that forbids the transition.
+        """
+        ...
+
     def is_ready(self) -> bool:
         """True when Jira is configured and reachable. Never raises."""
         ...
