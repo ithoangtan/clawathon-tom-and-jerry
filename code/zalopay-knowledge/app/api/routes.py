@@ -205,7 +205,6 @@ class _TestEmailBody(BaseModel):
 def admin_gmail_status() -> JSONResponse:
     """Check Gmail auth status. Returns ok / need_auth (with auth_url) / not_configured."""
     from app.config import get_settings
-    from app.adapters.identity_client import identity_runtime_ready
     cfg = get_settings()
 
     # Local refresh_token path
@@ -213,7 +212,7 @@ def admin_gmail_status() -> JSONResponse:
         return JSONResponse({"status": "ok", "method": "refresh_token"})
 
     # AgentBase 3LO path
-    if identity_runtime_ready(cfg):
+    if cfg.is_agentbase:
         try:
             from greennode_agentbase.identity import Get3loTokenRequest
             from app.adapters.identity_client import get_identity_client

@@ -67,10 +67,9 @@ def _resolve_access_token(settings: Settings) -> str | None:
     """AgentBase identity first, then local refresh_token fallback."""
     if settings.is_agentbase:
         try:
-            from app.adapters.identity_client import get_identity_client, identity_runtime_ready
-            if identity_runtime_ready(settings):
-                import time
-                from greennode_agentbase.identity import Get3loTokenRequest
+            import time
+            from app.adapters.identity_client import get_identity_client
+            from greennode_agentbase.identity import Get3loTokenRequest
                 provider = "identity-google-space"
                 identity = "identity-google-space"
                 t0 = time.monotonic()
