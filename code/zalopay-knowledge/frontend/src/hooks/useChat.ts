@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { api, ApiError, chatStream } from "@/lib/apiClient";
 import {
@@ -25,61 +25,10 @@ export interface ChatMessage {
   streaming?: boolean;
 }
 
-const REVEAL_CHUNK_CHARS = 24;
-
-/** Refusals and clarifications should render instantly — not typewriter-animated. */
-function shouldRevealAnswerProgressively(response: ChatResponse): boolean {
-  return response.status === "answered" || response.status === "partial";
-}
-
 function isTransportError(err: unknown): boolean {
   if (err instanceof ApiError) return false;
   if (err instanceof DOMException && err.name === "AbortError") return false;
   return true;
-}
-
-async function revealAnswerProgressively(
-  assistantId: string,
-  response: ChatResponse,
-  setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
-): Promise<void> {
-  const { answer } = response;
-  if (!answer) {
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === assistantId
-          ? { ...m, content: "", response, streaming: false }
-          : m,
-      ),
-    );
-    return;
-  }
-
-  let revealed = 0;
-  await new Promise<void>((resolve) => {
-    const tick = () => {
-      revealed = Math.min(revealed + REVEAL_CHUNK_CHARS, answer.length);
-      const slice = answer.slice(0, revealed);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId
-            ? {
-                ...m,
-                content: slice,
-                response: { ...response, answer: slice },
-                streaming: revealed < answer.length,
-              }
-            : m,
-        ),
-      );
-      if (revealed < answer.length) {
-        requestAnimationFrame(tick);
-      } else {
-        resolve();
-      }
-    };
-    requestAnimationFrame(tick);
-  });
 }
 
 
@@ -193,22 +142,19 @@ export function useChat() {
   }, [messages, targetDepartments, targetAutoRoute, sessionId, saveThread]);
 
   const appendAssistant = useCallback(
-    async (response: ChatResponse, assistantId: string, progressive: boolean) => {
+    (response: ChatResponse, assistantId: string) => {
       const timestamp = new Date().toISOString();
-      const base: ChatMessage = {
-        id: assistantId,
-        role: "assistant",
-        content: progressive ? "" : response.answer,
-        timestamp,
-        response: progressive ? { ...response, answer: "" } : response,
-        streaming: progressive,
-      };
-
-      setMessages((prev) => [...prev, base]);
-
-      if (progressive) {
-        await revealAnswerProgressively(assistantId, response, setMessages);
-      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: assistantId,
+          role: "assistant" as const,
+          content: response.answer ?? "",
+          timestamp,
+          response,
+          streaming: false,
+        },
+      ]);
     },
     [],
   );
@@ -264,11 +210,7 @@ export function useChat() {
           return;
         }
         const assistantId = `assistant-${Date.now()}`;
-        await appendAssistant(
-          mockScenario.response,
-          assistantId,
-          shouldRevealAnswerProgressively(mockScenario.response),
-        );
+        appendAssistant(mockScenario.response, assistantId);
         return;
       }
       // ─────────────────────────────────────────────────────────────────────
@@ -286,59 +228,15 @@ export function useChat() {
       try {
         let finalResponse: ChatResponse | null = null;
         let streamError: string | null = null;
-        let streamingStarted = false;
         let streamedText = "";
 
         for await (const event of chatStream(body, ctx, {
           signal: controller.signal,
         })) {
           if (event.event === "text") {
+            // Accumulate silently — show full answer at once when done.
             const chunk = typeof event.data.chunk === "string" ? event.data.chunk : "";
-            if (!chunk) continue;
-            streamedText += chunk;
-
-            if (!streamingStarted) {
-              streamingStarted = true;
-              setLoading(false);
-              const timestamp = new Date().toISOString();
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: assistantId,
-                  role: "assistant" as const,
-                  content: streamedText,
-                  timestamp,
-                  streaming: true,
-                  response: {
-                    answer: streamedText,
-                    citations: [],
-                    source_departments: [],
-                    confidence: 1,
-                    feedback_id: "",
-                    status: "answered" as const,
-                    conflicts: [],
-                    clarifying_question: null,
-                    refusal_reason: null,
-                    refusals: [],
-                    model_used: null,
-                  },
-                },
-              ]);
-            } else {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? {
-                        ...m,
-                        content: streamedText,
-                        response: m.response
-                          ? { ...m.response, answer: streamedText }
-                          : undefined,
-                      }
-                    : m,
-                ),
-              );
-            }
+            if (chunk) streamedText += chunk;
           } else if (event.event === "error") {
             streamError =
               typeof event.data.detail === "string"
@@ -352,36 +250,15 @@ export function useChat() {
 
         if (streamError) {
           setError(streamError);
-          if (streamingStarted) {
-            setMessages((prev) => prev.filter((m) => m.id !== assistantId));
-          }
           return;
         }
 
         if (finalResponse) {
-          if (streamingStarted) {
-            // Enrich existing streaming message with full metadata
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId
-                  ? {
-                      ...m,
-                      content: finalResponse!.answer || streamedText,
-                      response: finalResponse!,
-                      streaming: false,
-                    }
-                  : m,
-              ),
-            );
-          } else {
-            // No text was streamed (refusal / clarify) — use normal append
-            setLoading(false);
-            await appendAssistant(
-              finalResponse,
-              assistantId,
-              shouldRevealAnswerProgressively(finalResponse),
-            );
-          }
+          setLoading(false);
+          appendAssistant(
+            { ...finalResponse, answer: finalResponse.answer || streamedText },
+            assistantId,
+          );
           return;
         }
 
@@ -402,7 +279,7 @@ export function useChat() {
           const response = await api.chat(body, ctx);
           setLoading(false);
           setStreamingStatus(null);
-          await appendAssistant(response, assistantId, false);
+          appendAssistant(response, assistantId);
         } catch (e) {
           const message =
             e instanceof ApiError ? e.detail ?? e.message : "Request failed";
