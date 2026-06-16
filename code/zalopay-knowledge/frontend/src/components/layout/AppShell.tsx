@@ -61,7 +61,6 @@ export function Header() {
   const locale = useUserStore((s) => s.locale);
   const theme = useUserStore((s) => s.theme);
   const setTheme = useUserStore((s) => s.setTheme);
-  const navigate = useNavigate();
   const { health } = useHealth();
 
   const indexReady = health?.index_ready ?? false;
