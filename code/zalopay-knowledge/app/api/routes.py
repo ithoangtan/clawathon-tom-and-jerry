@@ -226,6 +226,7 @@ def admin_gmail_status() -> JSONResponse:
                     request=ThreeLoTokenRequest(
                         agent_user_id="itk160454@gmail.com",
                         scopes=[GMAIL_SEND_SCOPE],
+                        return_url="https://agentbase.api.vngcloud.vn/identity/oauth2/callback/6a2d02f163c82faa1f1bc4b9",
                     ),
                 )
             )
