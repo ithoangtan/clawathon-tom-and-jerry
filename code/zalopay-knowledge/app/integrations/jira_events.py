@@ -134,8 +134,11 @@ def normalize_jira_event(payload: dict[str, Any]) -> JiraEvent:
     elif changed_field is not None:
         et = "field_changed"
     else:
-        et = "issue_updated"
+        # No changelog → fall back to current status from issue fields.
+        # Still treat as status_changed if we can read the current status,
+        # so trigger matching works for Jira setups that omit changelog.
         status_to = _s((fields.get("status") or {}).get("name"))
+        et = "status_changed" if status_to else "issue_updated"
 
     return JiraEvent(
         event_type=et,
