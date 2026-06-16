@@ -126,6 +126,10 @@ export function useChat() {
   const abortRef = useRef<AbortController | null>(null);
   const hydratedSessionRef = useRef<string | null>(null);
   const suppressThreadSaveRef = useRef(false);
+  // Set when switching sessions so the first save-effect fire (which sees the
+  // loaded messages) is skipped — prevents bumping updatedAt of the incoming
+  // session and causing it to jump to position 1 in the sorted sidebar list.
+  const justSwitchedRef = useRef(false);
   const messagesRef = useRef(messages);
   const targetDepartmentsRef = useRef(targetDepartments);
   const targetAutoRouteRef = useRef(targetAutoRoute);
@@ -218,13 +222,23 @@ export function useChat() {
       setInput("");
       setPipelineProgress(null);
       hydratedSessionRef.current = sessionAction.sessionId;
-      suppressThreadSaveRef.current = false;
+      // Mark that the next save-effect fire is just the loaded messages — skip it
+      // so we don't bump updatedAt and cause the session to jump to position 1.
+      justSwitchedRef.current = true;
     }
 
     clearSessionAction();
   }, [sessionAction, saveThread, getThread, clearSessionAction]);
 
   useEffect(() => {
+    // Skip the first fire after a session switch — messages were just loaded,
+    // not changed by the user. Saving here would bump updatedAt and push the
+    // session to position 1 in the sorted sidebar list.
+    if (justSwitchedRef.current) {
+      justSwitchedRef.current = false;
+      suppressThreadSaveRef.current = false;
+      return;
+    }
     if (messages.length === 0) {
       if (suppressThreadSaveRef.current) {
         suppressThreadSaveRef.current = false;

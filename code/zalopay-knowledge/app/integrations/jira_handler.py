@@ -267,8 +267,10 @@ def _run_action(
     for src in resolution.sources:
         context.append(f"[tài liệu · {src.kind} · {src.title}]\n{src.text}")
     if resolution.sources:
-        titles = ", ".join(f"*{s.title}*" for s in resolution.sources[:3])
-        _prog(f"📋 **Đã tải {len(resolution.sources)} tài liệu**: {titles}", 5)
+        def _src_link(s) -> str:
+            return f"[{s.title}]({s.url})" if getattr(s, "url", None) else f"*{s.title}*"
+        titles_linked = ", ".join(_src_link(s) for s in resolution.sources[:3])
+        _prog(f"📋 **Đã tải {len(resolution.sources)} tài liệu**: {titles_linked}", 5)
     if resolution.skipped_external or resolution.unreadable:
         notes = []
         if resolution.skipped_external:

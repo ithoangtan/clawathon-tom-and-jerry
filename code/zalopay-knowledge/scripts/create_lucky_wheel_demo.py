@@ -1080,22 +1080,58 @@ def main():
         logger.error("Jira not configured — skipping ticket creation")
         result = {"pages": page_ids, "jira_key": None}
     else:
-        description = f"""Dear chị Quỳnh. Nguyễn Duy Phương,
+        description = f"""# Campaign Setup Request — DGS_260520_585
 
-cc chị Ly. Lương Thảo Thủy. Võ Thị Thanh. Thư. Tạ Lê Anh
+**Tên chương trình:** Săn vé du lịch hè 0đ cùng Zalopay
+**MKT Code:** DGS_260520_585
+**Ngân sách tổng:** 619.300.000 đ (FA approved — Nguyễn Minh Tuấn, 15/05/2026)
+**Testing:** 05/06/2026
+**Live time:** 10:00 05/06 – 23:59 26/07/2026
 
-Em gửi plan set-up CT [20/05/2026][DGS_260520_585][LOT_RD_MPU_NW][OTA - Lucky Wheel Vé hè 0đ] theo các thông tin như sau:
+## Links
 
-MKT code:      DGS_260520_585
-Ví ID:         Non Wallet
-Confluence:    {confluence_url}
+- **Confluence Campaign Doc:** {confluence_url}
+- **Thể lệ (TnC):** Ads_id 6828
 
-Nhờ chị Quỳnh xem và setup CT giúp em ạ
+## Cấu hình cơ bản
 
-Cảm ơn chị nhiều.
-PhuTT2
+- **Budget alert:** 50% / 75% / 95%
+- **Email alert:** phutt2, thuyvtt4, thutla, lylt
+- **Segment:** Mass (ID: 13155)
+- **Welcome turn:** 2 lượt khi lần đầu visit Gami
+- **Visit landing:** Bắt buộc
 
-Approve từ FA cho số lượng xu sử dụng: Đã được FA Nguyễn Minh Tuấn duyệt ngày 15/05/2026"""
+## RISK CONFIRM (bắt buộc)
+
+- Chặn VietQR / Apple Pay / Thanh toán trực tiếp không cần liên kết
+- Loại malicious/casual abuser theo list update của Risk team
+
+## UserID Testing
+
+- HoaVMQ: 181211000004278
+- TaiCT: 200124000486951
+- ThuTLA: 181002000000026
+- LyLT: 180219000003633
+- TrangPY: 200807000019734
+- Thuyvtt4: 190411000016472
+- TrucBTT: 190514000003974
+- Phutt2: 201114000014743
+
+## Game UI
+
+- **Game type:** Lucky Wheel (8 ô)
+- **Slots:** Nha Trang 0Đ, Dấu ?, Đà Nẵng 0Đ, VinWonders, Đà Lạt 0Đ, Vietjet Air, Hải Phòng 0Đ, FUTA
+- **Ads Banner:** ID 6845 (dưới game), ID 6846 (dưới task list)
+
+## Task List (18 tasks)
+
+- Task 1–2: Đặt vé + Xu/BNPL SOF → 4 lượt/tuần
+- Task 3–5: Search vé (FE Event) → 1 lượt/tuần
+- Task 6–8: Đặt vé máy bay / tàu-xe / VinWonders → 2 lượt/tuần
+- Task 9–11: FUTA/VEXERE/Vietjet website → 2 lượt, 1 lần/CT (từ 11/6)
+- Task 12–15: Game H5, Bill, TikTok, Nạp điện thoại → 1 lượt/tháng
+- Task 16–17: GreenSM, Vé phim → 2 lượt/tuần
+- Task 18: Follow Fanpage → 1 lượt/campaign"""
 
         ticket = jira.create_issue(
             summary="[20/05/2026][DGS_260520_585][LOT_RD_MPU_NW][OTA - Lucky Wheel Vé hè 0đ]",

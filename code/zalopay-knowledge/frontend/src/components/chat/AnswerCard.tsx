@@ -107,40 +107,42 @@ export function AnswerCard({
         </>
       )}
 
-      {status !== "agent_action" && isClarifying ? (
-        <div className="mt-4">
-          <ClarifyingQuestionCard
-            question={clarifying_question!}
-            onSelect={onClarifySelect!}
-          />
-          {!streaming && feedback_id && <FeedbackBar feedbackId={feedback_id} modelUsed={model_used ?? undefined} />}
-        </div>
-      ) : status === "refused" ? (
-        <>
-          <RefusalPanel message={answer} reason={refusal_reason} />
-          {feedback_id && <FeedbackBar feedbackId={feedback_id} />}
-        </>
-      ) : (
-        <>
-          {status === "partial" && <PartialGapBanner refusals={refusals} />}
-          <div className="mt-4" data-tour="response-answer">
-            <AnswerMarkdown
-              answer={answer}
-              citations={citations}
-              onCitationClick={onCitationClick}
-              streaming={streaming}
+      {status !== "agent_action" && (
+        isClarifying ? (
+          <div className="mt-4">
+            <ClarifyingQuestionCard
+              question={clarifying_question!}
+              onSelect={onClarifySelect!}
             />
+            {!streaming && feedback_id && <FeedbackBar feedbackId={feedback_id} modelUsed={model_used ?? undefined} />}
           </div>
-          {!streaming && citations.length > 0 && (
-            <div className="mt-5 border-t border-border pt-4" data-tour="response-citations">
-              <CitationList citations={citations} onCitationClick={onCitationClick} />
+        ) : status === "refused" ? (
+          <>
+            <RefusalPanel message={answer} reason={refusal_reason} />
+            {feedback_id && <FeedbackBar feedbackId={feedback_id} />}
+          </>
+        ) : (
+          <>
+            {status === "partial" && <PartialGapBanner refusals={refusals} />}
+            <div className="mt-4" data-tour="response-answer">
+              <AnswerMarkdown
+                answer={answer}
+                citations={citations}
+                onCitationClick={onCitationClick}
+                streaming={streaming}
+              />
             </div>
-          )}
-          {!streaming && conflicts && conflicts.length > 0 && (
-            <ConflictPanel conflicts={conflicts} />
-          )}
-          {!streaming && feedback_id && <FeedbackBar feedbackId={feedback_id} modelUsed={model_used ?? undefined} />}
-        </>
+            {!streaming && citations.length > 0 && (
+              <div className="mt-5 border-t border-border pt-4" data-tour="response-citations">
+                <CitationList citations={citations} onCitationClick={onCitationClick} />
+              </div>
+            )}
+            {!streaming && conflicts && conflicts.length > 0 && (
+              <ConflictPanel conflicts={conflicts} />
+            )}
+            {!streaming && feedback_id && <FeedbackBar feedbackId={feedback_id} modelUsed={model_used ?? undefined} />}
+          </>
+        )
       )}
     </Card>
   );

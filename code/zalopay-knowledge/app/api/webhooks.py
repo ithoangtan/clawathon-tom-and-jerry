@@ -31,6 +31,44 @@ webhook_router = APIRouter(tags=["webhooks"])
 _deduper = EventDeduper()
 
 
+import re as _re
+
+_CHECKLIST_RE = _re.compile(
+    r'^- (.+?):\s+\*\*(Comply|Violate|Chưa rõ)\*\*\s*(?:—|–|-)\s*(.*)$',
+    _re.MULTILINE,
+)
+_DECISION_RAW_RE = _re.compile(r'\n*DECISION\s*:\s*\S+\s*$', _re.IGNORECASE)
+_DECISION_READABLE = {
+    "PASS": "✅ Passed",
+    "PARTIAL_FAIL": "⚠️ Partial Fail — Needs Clarification",
+    "FAIL": "❌ Failed",
+}
+
+
+def _checklist_to_table(text: str) -> str:
+    """Convert bullet checklist items to a GFM markdown table for chat display."""
+    matches = list(_CHECKLIST_RE.finditer(text))
+    if not matches:
+        return text
+    header = "| Tiêu chí | Kết quả | Dẫn chứng |\n|---|---|---|"
+    rows = [
+        f"| {m.group(1).strip()} | **{m.group(2).strip()}** | {m.group(3).strip()} |"
+        for m in matches
+    ]
+    table = header + "\n" + "\n".join(rows)
+    return text[: matches[0].start()] + table + text[matches[-1].end() :]
+
+
+def _kan_link(text: str, jira_base: str) -> str:
+    if not jira_base:
+        return text
+    return _re.sub(
+        r'\bKAN-(\d+)\b',
+        lambda m: f"[{m.group(0)}]({jira_base}/browse/{m.group(0)})",
+        text,
+    )
+
+
 def _process_event(event: JiraEvent) -> None:
     """Background worker: resolve workflow → match trigger → run action.
 
@@ -46,6 +84,13 @@ def _process_event(event: JiraEvent) -> None:
     from app.integrations.jira_handler import handle_jira_event
     from app.workflow.labels import WORKFLOW_LABEL_PREFIX
     from app.workflow.registry import WORKFLOW_REGISTRY
+
+    # Compute jira base URL early so progress() closure and user message can use it.
+    _cfg_early = get_settings()
+    _jira_base = (_cfg_early.confluence_base_url or "").rstrip("/")
+    if _jira_base.endswith("/wiki"):
+        _jira_base = _jira_base[:-5]
+    _issue_url = f"{_jira_base}/browse/{event.issue_key}" if _jira_base else "#"
 
     session_id = str(uuid.uuid4())
     session_store = get_session_store()
@@ -75,7 +120,8 @@ def _process_event(event: JiraEvent) -> None:
             pass
 
     def progress(text: str, step: int) -> None:
-        """Emit a progress step as an assistant message with agent_action status."""
+        """Emit a progress step with agent_action status. Auto-links KAN-XX keys."""
+        text = _kan_link(text, _jira_base)
         _push(
             "assistant",
             text,
@@ -101,10 +147,11 @@ def _process_event(event: JiraEvent) -> None:
     except Exception:  # noqa: BLE001
         logger.warning("Could not create processing session for %s", event.issue_key)
 
-    # First progress message immediately visible.
+    # First progress message immediately visible — issue key is a clickable link.
     _push(
         "user",
-        f"[Jira · {event.issue_key}] Ticket vừa chuyển sang **{event.status_to or 'RISK REVIEW'}**. "
+        f"[Jira · [{event.issue_key}]({_issue_url})] Ticket vừa chuyển sang "
+        f"**{event.status_to or 'RISK REVIEW'}**. "
         f"Kích hoạt workflow **Campaign Risk Review**.",
         f"wh-user-{session_id[:6]}",
     )
@@ -129,30 +176,19 @@ def _process_event(event: JiraEvent) -> None:
         logger.info("Jira webhook processed %s → %s", event.issue_key, result.get("status"))
         final_status = "done" if result.get("status") not in ("error",) else "error"
 
-        # Final message: the full risk report from the LLM.
+        # Final message: format for chat display.
         result_text = result.get("result_text") or ""
         decision = result.get("decision") or ""
         verbs = (result.get("reactions") or {}).get("verbs") or []
 
-        # Auto-link KAN-\d+ ticket references in the result text.
-        import re as _re
-        cfg_inner = deps.settings
-        _jira_base = (cfg_inner.confluence_base_url or "").rstrip("/")
-        if _jira_base.endswith("/wiki"):
-            _jira_base = _jira_base[:-5]
-        if _jira_base:
-            result_text = _re.sub(
-                r'\bKAN-(\d+)\b',
-                lambda m: f"[{m.group(0)}]({_jira_base}/browse/{m.group(0)})",
-                result_text,
-            )
-
         if result_text:
-            _DECISION_READABLE = {
-                "PASS": "✅ Passed",
-                "PARTIAL_FAIL": "⚠️ Partial Fail — Needs Clarification",
-                "FAIL": "❌ Failed",
-            }
+            # Strip raw "DECISION: X" line LLM appends (replaced by styled footer below).
+            result_text = _DECISION_RAW_RE.sub("", result_text).strip()
+            # Convert checklist bullet items → GFM table (consistent with Jira comment).
+            result_text = _checklist_to_table(result_text)
+            # Auto-link any KAN-XX references left in the text.
+            result_text = _kan_link(result_text, _jira_base)
+
             footer = ""
             if decision:
                 readable = _DECISION_READABLE.get(decision.upper().replace("-", "_"), decision)

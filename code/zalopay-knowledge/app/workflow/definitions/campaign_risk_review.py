@@ -66,11 +66,11 @@ CAMPAIGN_RISK_REVIEW = WorkflowDefinition(
     reactions=[
         WorkflowReaction(
             decision="PASS",
-            verbs=["comment", "update_status:Review done"],
+            verbs=["comment", "update_status:Done"],
         ),
         WorkflowReaction(
             decision="PARTIAL_FAIL",
-            verbs=["comment", "update_status:Review done"],
+            verbs=["comment", "update_status:Done"],
         ),
         WorkflowReaction(
             decision="FAIL",
