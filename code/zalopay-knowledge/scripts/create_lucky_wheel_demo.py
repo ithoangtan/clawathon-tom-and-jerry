@@ -954,7 +954,9 @@ def _get_space_id(base_url: str, space_key: str, headers: dict) -> str | None:
 
 
 def _find_page_by_title(base_url: str, space_id: str, title: str, headers: dict) -> str | None:
-    url = f"{base_url}/api/v2/pages?spaceId={space_id}&title={title}&limit=1"
+    from urllib.parse import urlencode
+    params = urlencode({"spaceId": space_id, "title": title, "limit": 1})
+    url = f"{base_url}/api/v2/pages?{params}"
     r = httpx.get(url, headers=headers, timeout=30)
     r.raise_for_status()
     results = r.json().get("results") or []

@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
     session_id        VARCHAR(36)   NOT NULL,
     title             VARCHAR(500),
     messages_json     MEDIUMTEXT    NOT NULL,
-    target_departments_json TEXT    NOT NULL DEFAULT '[]',
+    target_departments_json TEXT    NOT NULL,
     target_auto_route TINYINT(1)    NOT NULL DEFAULT 1,
     created_at        VARCHAR(50)   NOT NULL,
     updated_at        VARCHAR(50)   NOT NULL,
@@ -131,6 +131,20 @@ class SessionStore:
                         session_id, title, "[]", "[]", 1, now, now,
                         workflow_id, jira_key, "processing",
                     ),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def update_messages(self, session_id: str, messages: list) -> None:
+        """Replace messages_json for a session (used for incremental progress updates)."""
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE chat_sessions SET messages_json=%s, updated_at=%s WHERE session_id=%s",
+                    (json.dumps(messages, ensure_ascii=False), now, session_id),
                 )
             conn.commit()
         finally:

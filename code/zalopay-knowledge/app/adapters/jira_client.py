@@ -34,7 +34,69 @@ _BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 _BULLET_RE = re.compile(r"^\s*[-*]\s+(.*)$")
 _HEADING_RE = re.compile(r"^\s*(#{1,6})\s+(.*)$")
 _DECISION_RE = re.compile(r"^\s*DECISION\s*[:=]\s*(.+)$", re.IGNORECASE)
-_DECISION_EMOJI = {"PASS": "✅", "PARTIAL_FAIL": "⚠️", "FAIL": "❌"}
+_CHECKLIST_RESULT_RE = re.compile(
+    r'^(.+?):\s*\*\*(Comply|Violate|Chưa rõ)\*\*\s*(?:—|–|-)\s*(.*)$',
+    re.IGNORECASE,
+)
+
+_DECISION_LABEL = {
+    "PASS": "✅ Passed",
+    "PARTIAL_FAIL": "⚠️ Partial Fail — Needs Clarification",
+    "FAIL": "❌ Failed",
+}
+
+_STATUS_STYLE: dict[str, dict] = {
+    "comply":   {"bg": "#E3FCEF", "color": "#006644", "label": "✅ Comply"},
+    "violate":  {"bg": "#FFEBE6", "color": "#BF2600", "label": "❌ Violate"},
+    "chưa rõ": {"bg": "#FFF4E6", "color": "#974F0C", "label": "⚠️ Chưa rõ"},
+}
+
+
+def _adf_header_cell(text: str) -> dict:
+    return {
+        "type": "tableHeader",
+        "attrs": {},
+        "content": [{"type": "paragraph", "content": [{"type": "text", "text": text, "marks": [{"type": "strong"}]}]}],
+    }
+
+
+def _adf_status_cell(status_raw: str) -> dict:
+    style = _STATUS_STYLE.get(status_raw.lower(), {"bg": "#FAFAFA", "color": "#333333", "label": status_raw})
+    return {
+        "type": "tableCell",
+        "attrs": {"background": style["bg"]},
+        "content": [{
+            "type": "paragraph",
+            "content": [{
+                "type": "text",
+                "text": style["label"],
+                "marks": [{"type": "strong"}, {"type": "textColor", "attrs": {"color": style["color"]}}],
+            }],
+        }],
+    }
+
+
+def _adf_checklist_table(items: list[tuple[str, str, str]]) -> dict:
+    """Build an ADF table from [(criterion, status, evidence)] tuples."""
+    header_row = {
+        "type": "tableRow",
+        "content": [
+            _adf_header_cell("Tiêu chí"),
+            _adf_header_cell("Kết quả"),
+            _adf_header_cell("Dẫn chứng"),
+        ],
+    }
+    rows: list[dict] = [header_row]
+    for criterion, status, evidence in items:
+        rows.append({
+            "type": "tableRow",
+            "content": [
+                {"type": "tableCell", "attrs": {}, "content": [{"type": "paragraph", "content": _adf_inline(criterion)}]},
+                _adf_status_cell(status),
+                {"type": "tableCell", "attrs": {}, "content": [{"type": "paragraph", "content": _adf_inline(evidence or "")}]},
+            ],
+        })
+    return {"type": "table", "attrs": {"isNumberColumnEnabled": False, "layout": "default"}, "content": rows}
 
 
 def _adf_inline(text: str) -> list[dict]:
@@ -74,10 +136,20 @@ def _to_adf(text: str, *, code_block: str | None = None, code_language: str = "j
         dm = _DECISION_RE.match(stripped)
         if dm:
             token = dm.group(1).strip().upper().replace(" ", "_").replace("-", "_")
-            emoji = _DECISION_EMOJI.get(token, "📋")
-            content.append({"type": "paragraph", "content": [
-                {"type": "text", "text": f"{emoji} DECISION: {dm.group(1).strip()}",
-                 "marks": [{"type": "strong"}]}]})
+            readable = _DECISION_LABEL.get(token, dm.group(1).strip())
+            style = (
+                _STATUS_STYLE["comply"] if token == "PASS"
+                else _STATUS_STYLE["violate"] if token == "FAIL"
+                else _STATUS_STYLE["chưa rõ"]
+            )
+            content.append({"type": "paragraph", "content": [{
+                "type": "text",
+                "text": readable,
+                "marks": [
+                    {"type": "strong"},
+                    {"type": "textColor", "attrs": {"color": style["color"]}},
+                ],
+            }]})
             i += 1
             continue
 
@@ -90,13 +162,24 @@ def _to_adf(text: str, *, code_block: str | None = None, code_language: str = "j
             continue
 
         if _BULLET_RE.match(lines[i]):
-            items: list[dict] = []
+            raw_items: list[str] = []
             while i < n and _BULLET_RE.match(lines[i]):
-                item_text = _BULLET_RE.match(lines[i]).group(1).strip()
-                items.append({"type": "listItem", "content": [
-                    {"type": "paragraph", "content": _adf_inline(item_text)}]})
+                raw_items.append(_BULLET_RE.match(lines[i]).group(1).strip())
                 i += 1
-            content.append({"type": "bulletList", "content": items})
+            # Detect checklist result lines → render as colored table.
+            checklist_rows: list[tuple[str, str, str]] = []
+            for raw in raw_items:
+                m = _CHECKLIST_RESULT_RE.match(raw)
+                if m:
+                    checklist_rows.append((m.group(1).strip(), m.group(2).strip(), (m.group(3) or "").strip()))
+            if checklist_rows and len(checklist_rows) == len(raw_items):
+                content.append(_adf_checklist_table(checklist_rows))
+            else:
+                items: list[dict] = [
+                    {"type": "listItem", "content": [{"type": "paragraph", "content": _adf_inline(raw)}]}
+                    for raw in raw_items
+                ]
+                content.append({"type": "bulletList", "content": items})
             continue
 
         content.append({"type": "paragraph", "content": _adf_inline(stripped)})
@@ -149,6 +232,9 @@ class JiraClient:
 
     def _browse_url(self, key: str) -> str:
         return f"{self._base}/browse/{key}" if self._base else ""
+
+    def browse_url(self, key: str) -> str:
+        return self._browse_url(key)
 
     def _request(self, method: str, path: str, *, json: dict | None = None) -> dict:
         if not self.configured():

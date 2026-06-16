@@ -65,38 +65,49 @@ export function AnswerCard({
         isMessage ? "assistant-card-future" : "max-w-3xl",
       )}
     >
-      {departmentChips.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {departmentChips.map((dept) => (
-            <DepartmentChip key={dept} deptKey={dept} interactive />
-          ))}
-        </div>
+      {/* Agent action: compact progress/status render — no dept chips, no feedback */}
+      {status === "agent_action" ? (
+        <>
+          <div className="mb-2">
+            <ConfidenceBadge confidence={confidence} status={status} />
+          </div>
+          <AnswerMarkdown answer={answer} citations={[]} />
+        </>
+      ) : (
+        <>
+          {departmentChips.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {departmentChips.map((dept) => (
+                <DepartmentChip key={dept} deptKey={dept} interactive />
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <ConfidenceBadge
+                confidence={confidence}
+                status={status}
+                refusalReason={refusal_reason}
+                clarifying={isClarifying}
+              />
+              {model_used && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500"
+                  title={`${t("modelUsedLabel", locale)}: ${model_used}`}
+                >
+                  <span className="opacity-60">⚙</span>
+                  {model_used}
+                </span>
+              )}
+            </div>
+            {status !== "refused" && !isClarifying && answer.trim() && !streaming && (
+              <MessageCopyButton text={answer} />
+            )}
+          </div>
+        </>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <ConfidenceBadge
-            confidence={confidence}
-            status={status}
-            refusalReason={refusal_reason}
-            clarifying={isClarifying}
-          />
-          {model_used && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500"
-              title={`${t("modelUsedLabel", locale)}: ${model_used}`}
-            >
-              <span className="opacity-60">⚙</span>
-              {model_used}
-            </span>
-          )}
-        </div>
-        {status !== "refused" && !isClarifying && answer.trim() && !streaming && (
-          <MessageCopyButton text={answer} />
-        )}
-      </div>
-
-      {isClarifying ? (
+      {status !== "agent_action" && isClarifying ? (
         <div className="mt-4">
           <ClarifyingQuestionCard
             question={clarifying_question!}

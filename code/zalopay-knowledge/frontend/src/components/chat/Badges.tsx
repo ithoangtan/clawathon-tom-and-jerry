@@ -23,6 +23,15 @@ export function ConfidenceBadge({
 }: ConfidenceBadgeProps) {
   const locale = useUserStore((s) => s.locale);
 
+  // Agent action progress messages: show a single distinct badge, no confidence.
+  if (status === "agent_action") {
+    return (
+      <Badge tone="info" style={{ cursor: "default" }}>
+        {t("statusAgentAction", locale)}
+      </Badge>
+    );
+  }
+
   const statusTone = clarifying
     ? "warning"
     : status === "answered"
@@ -51,10 +60,12 @@ export function ConfidenceBadge({
         ? t("tooltipStatusPartial", locale)
         : t("tooltipStatusRefused", locale);
 
+  const hasValidConfidence = confidence != null && !isNaN(confidence);
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Badge tone={statusTone} title={statusTooltip} style={{ cursor: "help" }}>{statusLabel}</Badge>
-      {(() => {
+      {hasValidConfidence && (() => {
         const tierTone = confidence >= 0.80 ? "success" : confidence >= 0.55 ? "warning" : "danger";
         const tierKey = confidence >= 0.80 ? "confidenceHigh" : confidence >= 0.55 ? "confidenceMedium" : "confidenceLow";
         return (

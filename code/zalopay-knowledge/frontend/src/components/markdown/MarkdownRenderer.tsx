@@ -8,6 +8,13 @@ import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+function extractText(node: ReactNode): string {
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(extractText).join("");
+  return "";
+}
+
 export interface MarkdownRendererProps {
   content: string;
   /** When provided, [n] markers in text become citation links. */
@@ -78,9 +85,30 @@ export function MarkdownRenderer({
         <blockquote className="my-4">{children}</blockquote>
       ),
       hr: () => <hr className="my-6 border-border" />,
-      strong: ({ children }) => (
-        <strong className="font-semibold text-content-primary">{wrap(children)}</strong>
-      ),
+      strong: ({ children }) => {
+        const text = extractText(children as ReactNode);
+        // Color compliance status keywords.
+        if (/^comply$/i.test(text)) {
+          return <strong className="font-semibold" style={{ color: "#16a34a" }}>{children}</strong>;
+        }
+        if (/^violate$/i.test(text)) {
+          return <strong className="font-semibold" style={{ color: "#dc2626" }}>{children}</strong>;
+        }
+        if (/^chưa rõ$/i.test(text)) {
+          return <strong className="font-semibold" style={{ color: "#d97706" }}>{children}</strong>;
+        }
+        // Color decision result lines.
+        if (/passed/i.test(text) && /✅/.test(text)) {
+          return <strong className="font-semibold text-base" style={{ color: "#16a34a" }}>{children}</strong>;
+        }
+        if (/failed/i.test(text) && /❌/.test(text)) {
+          return <strong className="font-semibold text-base" style={{ color: "#dc2626" }}>{children}</strong>;
+        }
+        if (/partial fail/i.test(text) && /⚠️/.test(text)) {
+          return <strong className="font-semibold text-base" style={{ color: "#d97706" }}>{children}</strong>;
+        }
+        return <strong className="font-semibold text-content-primary">{wrap(children)}</strong>;
+      },
       em: ({ children }) => <em className="italic">{wrap(children)}</em>,
       del: ({ children }) => (
         <del className="text-slate-500 line-through">{wrap(children)}</del>

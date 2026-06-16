@@ -109,6 +109,8 @@ export function useChat() {
   const saveThread = useSessionStore((s) => s.saveThread);
   const getThread = useSessionStore((s) => s.getThread);
   const clearSessionAction = useSessionStore((s) => s.clearSessionAction);
+  // Subscribe to live thread changes so webhook-triggered sessions update in real-time.
+  const liveThread = useSessionStore((s) => s.threads[sessionId]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -137,6 +139,18 @@ export function useChat() {
       abortRef.current?.abort();
     };
   }, []);
+
+  // Re-sync messages from the store when a webhook-triggered session is updated
+  // by the background polling (new progress messages arrive every ~3s).
+  useEffect(() => {
+    if (!liveThread) return;
+    const isWebhook = liveThread.processingStatus != null;
+    const isActive = !loading;  // don't clobber mid-stream user sessions
+    if (isWebhook && isActive && liveThread.messages.length > messages.length) {
+      setMessages(liveThread.messages as ChatMessage[]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveThread?.messages?.length, liveThread?.processingStatus]);
 
   useEffect(() => {
     if (hydratedSessionRef.current === sessionId) return;

@@ -11,6 +11,7 @@ export function formatMs(ms: number): string {
 }
 
 export function formatConfidence(value: number): string {
+  if (value == null || isNaN(value)) return "–";
   return `${Math.round(value * 100)}%`;
 }
 

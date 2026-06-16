@@ -151,6 +151,7 @@ const strings: Strings = {
   citationPage: { en: "Page", vi: "Trang" },
   citationUpdated: { en: "Updated", vi: "Cập nhật" },
   statusPartial: { en: "Partial answer", vi: "Trả lời một phần" },
+  statusAgentAction: { en: "Agent Action", vi: "Agent Action" },
   statusClarify: { en: "Clarification needed", vi: "Cần làm rõ" },
   partialGapHint: {
     en: "Some targeted departments had no relevant documentation. The answer below reflects only the sources that were found.",

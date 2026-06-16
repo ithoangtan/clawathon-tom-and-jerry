@@ -50,16 +50,21 @@ def handle_jira_event(
     jira: JiraPort,
     confluence_writer: ConfluenceWriterPort,
     settings: Settings | None = None,
+    progress=None,  # callable(text: str, step: int) | None
 ) -> dict:
     """React to *event*. Returns a structured result (never raises)."""
+    from typing import Callable
+    _progress: Callable[[str, int], None] = progress or (lambda text, step: None)
     cfg = settings or get_settings()
 
     # 1. Resolve which workflow this ticket belongs to (label set by the executor).
+    _progress(f"🔍 **Đọc nội dung ticket {event.issue_key} từ Jira...**", 2)
     try:
         issue = jira.get_issue(event.issue_key)
     except JiraUnavailable as exc:
         return _result("error", reason=f"jira_unavailable: {exc}", issue=event.issue_key)
     labels = (issue.get("fields") or {}).get("labels") or []
+    summary = (issue.get("fields") or {}).get("summary") or event.issue_key
 
     # ── Testing mode: ticket labelled `testing` → echo the webhook payload as a
     # JSON code-block comment (debug/visibility). No workflow resolution. ──────
@@ -76,6 +81,12 @@ def handle_jira_event(
         defn = WORKFLOW_REGISTRY[slug]
         page_id = slug  # synthetic page_id for logging / append_confluence (no-op)
         logger.info("Using in-code workflow definition %r for %s", slug, event.issue_key)
+        _progress(
+            f"✅ **Đã đọc ticket**\n"
+            f"Tiêu đề: *{summary[:100]}*\n"
+            f"Label: `{wf_label}` → Workflow: **{defn.name}**",
+            3,
+        )
     else:
         # 2b. Fall back to Confluence-based workflow page resolution.
         try:
@@ -95,16 +106,27 @@ def handle_jira_event(
             defn = parse_workflow(page_text, llm=llm, settings=cfg)
         except WorkflowParseError as exc:
             return _result("error", reason=f"parse_failed: {exc}", issue=event.issue_key, page_id=page_id)
+        _progress(
+            f"✅ **Đã tải workflow từ Confluence**\n"
+            f"Label: `{wf_label}` → Workflow: **{defn.name}**",
+            3,
+        )
 
     # 3. Match a trigger.
     trig = match_trigger(event, defn)
     if trig is None:
         return _result("no_trigger_matched", issue=event.issue_key, page_id=page_id,
                        workflow=defn.name, n_triggers=len(defn.triggers))
+    _progress(
+        f"🎯 **Trigger khớp**: `status_changed` → `{event.status_to}`\n"
+        f"Bắt đầu thực thi action: *{trig.action[:120]}...*",
+        4,
+    )
 
     # 4. Run the action (LLM) + side-effects.
     result_text = _run_action(
-        event, issue, defn, trig.action, llm=llm, retriever=retriever, jira=jira, cfg=cfg
+        event, issue, defn, trig.action, llm=llm, retriever=retriever, jira=jira, cfg=cfg,
+        progress=_progress,
     )
 
     out: dict = {
@@ -113,14 +135,18 @@ def handle_jira_event(
         "page_id": page_id,
         "workflow": defn.name,
         "trigger_action": trig.action,
+        "result_text": result_text,
         "jira_comment": None,
         "confluence_updated": False,
     }
 
     # 4a. Always post the result as a Jira comment (visible, safe side-effect).
+    _progress(f"💬 **Đang post comment kết quả lên Jira {event.issue_key}...**", 7)
     try:
-        res = jira.add_comment(key=event.issue_key, body=f"**[Agent · {defn.name}]**\n\n{result_text}")
+        comment_header = f"**[Agent · {defn.name} · {event.issue_key}]**"
+        res = jira.add_comment(key=event.issue_key, body=f"{comment_header}\n\n{result_text}")
         out["jira_comment"] = {"dry_run": bool(res.get("dry_run")), "url": res.get("url")}
+        _progress(f"✅ **Comment đã được post** lên [{event.issue_key}]({res.get('url') or '#'})", 8)
     except JiraUnavailable as exc:
         out["jira_comment"] = {"error": str(exc)}
 
@@ -139,6 +165,14 @@ def handle_jira_event(
     # the workflow declares no Reactions table (backward compatible).
     decision = parse_decision(result_text)
     out["decision"] = decision
+    if decision:
+        reaction = next((r for r in (defn.reactions or []) if r.decision and r.decision.upper().replace(" ", "_").replace("-", "_") == decision), None)
+        verbs_preview = ", ".join(reaction.verbs) if reaction else "none"
+        _progress(
+            f"⚡ **Decision: {decision}**\n"
+            f"Áp dụng reactions: `{verbs_preview}`",
+            9,
+        )
     out["reactions"] = apply_reactions(
         decision, defn,
         issue_key=event.issue_key, report_text=result_text, issue=issue,
@@ -210,6 +244,7 @@ def _run_action(
     retriever: RetrieverPort,
     jira: JiraPort,
     cfg: Settings,
+    progress=None,
 ) -> str:
     """Produce the action result text via the LLM.
 
@@ -218,6 +253,7 @@ def _run_action(
     (2) the zalopay wiki via RAG. The review questions are read from the
     workflow page's step checklists (data, not hardcoded).
     """
+    _prog = progress or (lambda text, step: None)
     context = [
         f"Workflow: {defn.name}",
         f"Ticket {event.issue_key}: {issue.get('summary', '')} (status: {issue.get('status', '')})",
@@ -225,10 +261,14 @@ def _run_action(
     ]
 
     # 1. In-system documents referenced in the ticket Description (campaign spec…).
+    _prog(f"📄 **Đọc tài liệu campaign spec** được đính kèm trong ticket...", 5)
     description = (issue.get("fields") or {}).get("description")
     resolution = resolve_description_sources(description, settings=cfg, jira=jira)
     for src in resolution.sources:
         context.append(f"[tài liệu · {src.kind} · {src.title}]\n{src.text}")
+    if resolution.sources:
+        titles = ", ".join(f"*{s.title}*" for s in resolution.sources[:3])
+        _prog(f"📋 **Đã tải {len(resolution.sources)} tài liệu**: {titles}", 5)
     if resolution.skipped_external or resolution.unreadable:
         notes = []
         if resolution.skipped_external:
@@ -239,12 +279,21 @@ def _run_action(
 
     # 2. zalopay wiki grounding (RAG) using the action text as the query. Pull enough
     # policy text that the rule definitions are present (else the LLM over-marks "Chưa rõ").
+    _prog(f"🔎 **Tra cứu Risk knowledge base** (Risk SOP, Risk Principles, Policy)...", 6)
     try:
         hits = retriever.search(department="risk", query=action, k=6, language="vi")
         for h in hits:
             context.append(f"[chính sách] {h.title}: {(h.text or '')[:1500]}")
+        if hits:
+            titles = ", ".join(f"*{h.title}*" for h in hits[:3] if h.title)
+            _prog(f"📚 **Tìm thấy {len(hits)} chunks** từ Risk KB: {titles}...", 6)
     except RetrieverUnavailable:
         pass
+    _prog(
+        f"⚙️ **Đang phân tích {len([item for step in defn.steps for item in (step.checklist or [])])} tiêu chí** "
+        f"trong checklist Risk Review bằng LLM...",
+        7,
+    )
 
     # Review questions, decision gate, and valid decisions all live on the
     # workflow page — data, not code.

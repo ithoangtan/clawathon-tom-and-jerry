@@ -34,27 +34,22 @@ _deduper = EventDeduper()
 def _process_event(event: JiraEvent) -> None:
     """Background worker: resolve workflow → match trigger → run action.
 
-    Runs after the 200 ack so Jira does not time out / retry. Builds deps lazily
-    and never raises (handler degrades to a structured result). Indirected here
-    so tests can monkeypatch it to avoid heavy deps / network.
-
-    Creates a session in the DB before processing so the chat UI sidebar
-    shows a "Đang xử lý..." entry immediately. Updates status to "done" or
-    "error" after the handler completes.
+    Runs after the 200 ack so Jira does not time out / retry. Creates a session
+    immediately and emits incremental progress messages so the chat UI shows a
+    live activity feed while processing. Updates status to "done" / "error" when
+    the handler completes.
     """
     import uuid
+    from datetime import datetime, timezone
     from app.adapters.deps import get_deps
     from app.api.routes import get_session_store
     from app.integrations.jira_handler import handle_jira_event
     from app.workflow.labels import WORKFLOW_LABEL_PREFIX
     from app.workflow.registry import WORKFLOW_REGISTRY
 
-    # Determine workflow slug from event labels eagerly (before full jira fetch).
-    # We'll update the session title once we have the real issue summary.
     session_id = str(uuid.uuid4())
     session_store = get_session_store()
 
-    # Detect in-code workflow slug from event raw payload labels if available.
     raw_labels: list[str] = []
     if event.raw:
         issue_fields = (event.raw.get("issue") or {}).get("fields") or {}
@@ -63,6 +58,39 @@ def _process_event(event: JiraEvent) -> None:
     slug = wf_label[len(WORKFLOW_LABEL_PREFIX):] if wf_label else ""
     workflow_id = slug if slug in WORKFLOW_REGISTRY else (slug or "unknown")
 
+    # ── Live-progress machinery ───────────────────────────────────────────────
+    _messages: list[dict] = []
+
+    def _now() -> str:
+        return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    def _push(role: str, content: str, msg_id: str, response: dict | None = None) -> None:
+        msg: dict = {"role": role, "content": content, "id": msg_id, "timestamp": _now()}
+        if response:
+            msg["response"] = response
+        _messages.append(msg)
+        try:
+            session_store.update_messages(session_id, _messages)
+        except Exception:  # noqa: BLE001
+            pass
+
+    def progress(text: str, step: int) -> None:
+        """Emit a progress step as an assistant message with agent_action status."""
+        _push(
+            "assistant",
+            text,
+            f"wh-step-{session_id[:6]}-{step}",
+            response={
+                "status": "agent_action",
+                "answer": text,
+                "citations": [],
+                "source_departments": [],
+                "confidence": 0,
+                "feedback_id": "",
+            },
+        )
+
+    # ── Create session immediately so sidebar shows the entry ─────────────────
     try:
         session_store.create_processing_session(
             session_id=session_id,
@@ -73,6 +101,20 @@ def _process_event(event: JiraEvent) -> None:
     except Exception:  # noqa: BLE001
         logger.warning("Could not create processing session for %s", event.issue_key)
 
+    # First progress message immediately visible.
+    _push(
+        "user",
+        f"[Jira · {event.issue_key}] Ticket vừa chuyển sang **{event.status_to or 'RISK REVIEW'}**. "
+        f"Kích hoạt workflow **Campaign Risk Review**.",
+        f"wh-user-{session_id[:6]}",
+    )
+    progress(
+        f"📋 **Nhận sự kiện từ Jira**\n"
+        f"Ticket **{event.issue_key}** chuyển trạng thái → **{event.status_to or 'RISK REVIEW'}**. "
+        f"Đang bắt đầu quy trình review campaign tự động...",
+        1,
+    )
+
     try:
         deps = get_deps()
         result = handle_jira_event(
@@ -82,12 +124,59 @@ def _process_event(event: JiraEvent) -> None:
             jira=deps.jira,
             confluence_writer=deps.confluence_writer,
             settings=deps.settings,
+            progress=progress,
         )
         logger.info("Jira webhook processed %s → %s", event.issue_key, result.get("status"))
         final_status = "done" if result.get("status") not in ("error",) else "error"
-    except Exception:  # noqa: BLE001 — background work must never crash the worker
+
+        # Final message: the full risk report from the LLM.
+        result_text = result.get("result_text") or ""
+        decision = result.get("decision") or ""
+        verbs = (result.get("reactions") or {}).get("verbs") or []
+
+        # Auto-link KAN-\d+ ticket references in the result text.
+        import re as _re
+        cfg_inner = deps.settings
+        _jira_base = (cfg_inner.confluence_base_url or "").rstrip("/")
+        if _jira_base.endswith("/wiki"):
+            _jira_base = _jira_base[:-5]
+        if _jira_base:
+            result_text = _re.sub(
+                r'\bKAN-(\d+)\b',
+                lambda m: f"[{m.group(0)}]({_jira_base}/browse/{m.group(0)})",
+                result_text,
+            )
+
+        if result_text:
+            _DECISION_READABLE = {
+                "PASS": "✅ Passed",
+                "PARTIAL_FAIL": "⚠️ Partial Fail — Needs Clarification",
+                "FAIL": "❌ Failed",
+            }
+            footer = ""
+            if decision:
+                readable = _DECISION_READABLE.get(decision.upper().replace("-", "_"), decision)
+                footer = f"\n\n---\n**{readable}**"
+            if verbs:
+                footer += f" | {', '.join(verbs)}"
+            full_answer = result_text + footer
+            _push(
+                "assistant",
+                full_answer,
+                f"wh-result-{session_id[:6]}",
+                response={
+                    "status": "answered",
+                    "answer": full_answer,
+                    "citations": [],
+                    "source_departments": ["risk"],
+                    "confidence": 0.9,
+                    "feedback_id": "",
+                },
+            )
+    except Exception:  # noqa: BLE001
         logger.exception("Jira webhook background processing failed for %s", event.issue_key)
         final_status = "error"
+        progress(f"❌ **Lỗi**: Không thể hoàn thành xử lý cho {event.issue_key}.", 99)
 
     try:
         session_store.update_processing_status(session_id, final_status)
