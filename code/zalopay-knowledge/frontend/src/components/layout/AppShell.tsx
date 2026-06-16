@@ -20,11 +20,11 @@ import {
 } from "@/components/ui/icons";
 import { runBrandPulse, runHeroFloat, runNavStagger, useGSAP } from "@/lib/gsap";
 import { t } from "@/lib/i18n";
-import { classNames } from "@/lib/format";
+import { classNames, generateSessionId } from "@/lib/format";
 import { useHealth } from "@/hooks/useHealth";
 import { useUserStore } from "@/store/userStore";
 import { useSessionStore } from "@/store/sessionStore";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 const NAV_ICONS = {
   "/": MessageSquare,
@@ -63,7 +63,7 @@ export function Header() {
   const locale = useUserStore((s) => s.locale);
   const theme = useUserStore((s) => s.theme);
   const setTheme = useUserStore((s) => s.setTheme);
-  const requestNewSession = useSessionStore((s) => s.requestNewSession);
+  const navigate = useNavigate();
   const { health } = useHealth();
 
   const indexReady = health?.index_ready ?? false;
@@ -110,7 +110,7 @@ export function Header() {
             {indexReady ? t("healthHealthy", locale) : t("healthIndexPending", locale)}
           </Badge>
           <TutorialHelpButton />
-          <Button variant="ghost" onClick={() => requestNewSession()} className="hidden sm:inline-flex">
+          <Button variant="ghost" onClick={() => navigate(`/chat/${generateSessionId()}`)} className="hidden sm:inline-flex">
             <Plus size="sm" />
             {t("newSession", locale)}
           </Button>

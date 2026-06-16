@@ -32,15 +32,19 @@ describe("sessionStore", () => {
     expect(useSessionStore.getState().listThreads()).toHaveLength(0);
   });
 
-  it("queues session actions", () => {
-    useSessionStore.getState().requestNewSession();
-    expect(useSessionStore.getState().sessionAction).toEqual({ type: "new" });
+  it("queues session switch actions", () => {
+    useSessionStore.getState().requestSwitchSession("sess-1");
+    expect(useSessionStore.getState().sessionAction).toEqual({
+      type: "switch",
+      sessionId: "sess-1",
+    });
 
     useSessionStore.getState().clearSessionAction();
-    useSessionStore.getState().requestSwitchSession("sess-2");
+    useSessionStore.getState().requestSwitchSession("sess-2", true);
     expect(useSessionStore.getState().sessionAction).toEqual({
       type: "switch",
       sessionId: "sess-2",
+      skipSave: true,
     });
   });
 });

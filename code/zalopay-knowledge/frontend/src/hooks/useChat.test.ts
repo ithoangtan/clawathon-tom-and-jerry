@@ -513,7 +513,7 @@ describe("useChat", () => {
     });
 
     act(() => {
-      useSessionStore.getState().requestNewSession();
+      useSessionStore.getState().requestSwitchSession("sess-new-1");
     });
 
     await waitFor(() => {
@@ -522,7 +522,7 @@ describe("useChat", () => {
     });
 
     act(() => {
-      useSessionStore.getState().requestNewSession();
+      useSessionStore.getState().requestSwitchSession("sess-new-2");
     });
 
     await waitFor(() => {

@@ -162,12 +162,12 @@ export function useChat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveThread?.messages?.length, liveThread?.processingStatus]);
 
-  // ── Effect 3: Handle new / switch session requests ────────────────────────
+  // ── Effect 3: Handle session switch requests ─────────────────────────────
   useEffect(() => {
     if (!sessionAction) return;
     abortRef.current?.abort();
-    // Save the session we're leaving (no-op if it has no messages).
-    if (!(sessionAction.type === "new" && sessionAction.skipSave)) {
+    // Save the session we're leaving unless explicitly skipped.
+    if (!sessionAction.skipSave) {
       saveThread(
         useUserStore.getState().sessionId,
         messagesRef.current,
@@ -176,19 +176,17 @@ export function useChat() {
       );
     }
     // Change sessionId → triggers Effect 1 to hydrate the new session.
-    if (sessionAction.type === "new") {
-      useUserStore.getState().newSession();
-    } else {
-      useUserStore.getState().setSessionId(sessionAction.sessionId);
-    }
+    useUserStore.getState().setSessionId(sessionAction.sessionId);
     clearSessionAction();
   }, [sessionAction, saveThread, clearSessionAction]);
 
   // ── Effect 4: Save after each complete exchange ───────────────────────────
-  // Fires only when streaming is done and new messages arrived since last save.
+  // Fires only when the last message is a fully-revealed assistant response.
+  // This gives exactly 1 PUT per exchange (not 2).
   useEffect(() => {
     if (messages.length === 0) return;
-    if (messages.some((m) => m.streaming)) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant" || last.streaming) return;
     if (messages.length <= lastSavedCountRef.current) return;
     lastSavedCountRef.current = messages.length;
     saveThread(sessionId, messages, targetDepartments, targetAutoRoute);
@@ -239,6 +237,13 @@ export function useChat() {
       abortRef.current = controller;
 
       setMessages((prev) => [...prev, userMsg]);
+      // Optimistically register the session in the sidebar immediately (like ChatGPT/Claude).
+      useSessionStore.getState().registerSessionOptimistic(
+        sessionId,
+        [...messagesRef.current, userMsg],
+        targetDepartmentsRef.current,
+        targetAutoRouteRef.current,
+      );
       setInput("");
       setLoading(true);
       setStreamingStatus(null);

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ArrowRight, ChevronLeft, History, Menu, Plus, Search, Trash2, X } from "@/components/ui/icons";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-import { classNames, formatDate } from "@/lib/format";
+import { classNames, formatDate, generateSessionId } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import {
   matchesSearch,
@@ -56,7 +56,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
   const threadsRecord = useSessionStore((s) => s.threads);
   const threadsLoaded = useSessionStore((s) => s.loaded);
   const deleteThread = useSessionStore((s) => s.deleteThread);
-  const requestNewSession = useSessionStore((s) => s.requestNewSession);
+  const setSessionId = useUserStore((s) => s.setSessionId);
   const startPolling = useSessionStore((s) => s.startPolling);
   const stopPolling = useSessionStore((s) => s.stopPolling);
   const navigate = useNavigate();
@@ -94,8 +94,10 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
     deleteThread(sessionId);
     setPendingDeleteId(null);
     if (sessionId === activeSessionId) {
-      requestNewSession(true);
-      navigate("/");
+      // Bypass Effect 3 (skip save — we just deleted this session).
+      const newId = generateSessionId();
+      setSessionId(newId);
+      navigate(`/chat/${newId}`);
     }
   }
 
@@ -130,8 +132,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
           variant="secondary"
           className="w-full justify-start"
           onClick={() => {
-            requestNewSession();
-            navigate("/");
+            navigate(`/chat/${generateSessionId()}`);
             onCloseMobile?.();
           }}
         >

@@ -8,9 +8,7 @@ import {
 } from "@/lib/sessionThread";
 import type { Department } from "@/lib/types";
 
-export type SessionAction =
-  | { type: "new"; skipSave?: boolean }
-  | { type: "switch"; sessionId: string };
+export type SessionAction = { type: "switch"; sessionId: string; skipSave?: boolean };
 
 interface SessionStore {
   threads: Record<string, SessionThread>;
@@ -24,11 +22,17 @@ interface SessionStore {
     targetDepartments: Department[],
     targetAutoRoute: boolean,
   ) => void;
+  /** Update local store optimistically (no API call). Used to show session in sidebar before response. */
+  registerSessionOptimistic: (
+    sessionId: string,
+    messages: ChatMessage[],
+    targetDepartments: Department[],
+    targetAutoRoute: boolean,
+  ) => void;
   deleteThread: (sessionId: string) => void;
   getThread: (sessionId: string) => SessionThread | undefined;
   listThreads: () => SessionThread[];
-  requestNewSession: (skipSave?: boolean) => void;
-  requestSwitchSession: (sessionId: string) => void;
+  requestSwitchSession: (sessionId: string, skipSave?: boolean) => void;
   clearSessionAction: () => void;
   startPolling: () => void;
   stopPolling: () => void;
@@ -133,10 +137,17 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
 
   listThreads: () => sortThreads(Object.values(get().threads)),
 
-  requestNewSession: (skipSave) => set({ sessionAction: { type: "new", skipSave } }),
+  registerSessionOptimistic: (sessionId, messages, targetDepartments, targetAutoRoute) => {
+    const existing = get().threads[sessionId];
+    const thread = buildThread(sessionId, messages, targetDepartments, targetAutoRoute, existing);
+    if (!thread) return;
+    set((state) => ({
+      threads: { ...state.threads, [sessionId]: thread },
+    }));
+  },
 
-  requestSwitchSession: (sessionId) =>
-    set({ sessionAction: { type: "switch", sessionId } }),
+  requestSwitchSession: (sessionId, skipSave) =>
+    set({ sessionAction: { type: "switch", sessionId, skipSave } }),
 
   clearSessionAction: () => set({ sessionAction: null }),
 }));
