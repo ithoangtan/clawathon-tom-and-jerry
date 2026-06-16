@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { ChatMessage } from "@/hooks/useChat";
+import { api } from "@/lib/apiClient";
 import {
   buildThread,
   sortThreads,
@@ -9,12 +9,14 @@ import {
 import type { Department } from "@/lib/types";
 
 export type SessionAction =
-  | { type: "new" }
+  | { type: "new"; skipSave?: boolean }
   | { type: "switch"; sessionId: string };
 
 interface SessionStore {
   threads: Record<string, SessionThread>;
   sessionAction: SessionAction | null;
+  loaded: boolean;
+  loadThreads: () => Promise<void>;
   saveThread: (
     sessionId: string,
     messages: ChatMessage[],
@@ -24,54 +26,63 @@ interface SessionStore {
   deleteThread: (sessionId: string) => void;
   getThread: (sessionId: string) => SessionThread | undefined;
   listThreads: () => SessionThread[];
-  requestNewSession: () => void;
+  requestNewSession: (skipSave?: boolean) => void;
   requestSwitchSession: (sessionId: string) => void;
   clearSessionAction: () => void;
 }
 
-export const useSessionStore = create<SessionStore>()(
-  persist(
-    (set, get) => ({
-      threads: {},
-      sessionAction: null,
+export const useSessionStore = create<SessionStore>()((set, get) => ({
+  threads: {},
+  sessionAction: null,
+  loaded: false,
 
-      saveThread: (sessionId, messages, targetDepartments, targetAutoRoute) => {
-        const existing = get().threads[sessionId];
-        const thread = buildThread(
-          sessionId,
-          messages,
-          targetDepartments,
-          targetAutoRoute,
-          existing,
-        );
-        if (!thread) return;
+  loadThreads: async () => {
+    try {
+      const { threads } = await api.listSessions();
+      const record: Record<string, SessionThread> = {};
+      for (const t of threads as SessionThread[]) {
+        record[t.sessionId] = t;
+      }
+      set({ threads: record, loaded: true });
+    } catch {
+      set({ loaded: true });
+    }
+  },
 
-        set((state) => ({
-          threads: { ...state.threads, [sessionId]: thread },
-        }));
-      },
+  saveThread: (sessionId, messages, targetDepartments, targetAutoRoute) => {
+    const existing = get().threads[sessionId];
+    const thread = buildThread(
+      sessionId,
+      messages,
+      targetDepartments,
+      targetAutoRoute,
+      existing,
+    );
+    if (!thread) return;
 
-      deleteThread: (sessionId) => {
-        set((state) => {
-          const { [sessionId]: _removed, ...rest } = state.threads;
-          return { threads: rest };
-        });
-      },
+    set((state) => ({
+      threads: { ...state.threads, [sessionId]: thread },
+    }));
 
-      getThread: (sessionId) => get().threads[sessionId],
+    api.upsertSession(sessionId, thread).catch(() => {/* best-effort */});
+  },
 
-      listThreads: () => sortThreads(Object.values(get().threads)),
+  deleteThread: (sessionId) => {
+    set((state) => {
+      const { [sessionId]: _removed, ...rest } = state.threads;
+      return { threads: rest };
+    });
+    api.deleteSession(sessionId).catch(() => {/* best-effort */});
+  },
 
-      requestNewSession: () => set({ sessionAction: { type: "new" } }),
+  getThread: (sessionId) => get().threads[sessionId],
 
-      requestSwitchSession: (sessionId) =>
-        set({ sessionAction: { type: "switch", sessionId } }),
+  listThreads: () => sortThreads(Object.values(get().threads)),
 
-      clearSessionAction: () => set({ sessionAction: null }),
-    }),
-    {
-      name: "zalopay-knowledge-sessions",
-      partialize: (state) => ({ threads: state.threads }),
-    },
-  ),
-);
+  requestNewSession: (skipSave) => set({ sessionAction: { type: "new", skipSave } }),
+
+  requestSwitchSession: (sessionId) =>
+    set({ sessionAction: { type: "switch", sessionId } }),
+
+  clearSessionAction: () => set({ sessionAction: null }),
+}));

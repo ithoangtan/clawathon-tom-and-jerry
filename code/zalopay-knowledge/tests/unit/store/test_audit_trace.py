@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from app.store.audit import AuditStore
 from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
+from tests.unit.store.conftest import _mysql_available
 
 
 def test_log_query_persists_stage_trace(tmp_path) -> None:
+    if not _mysql_available():
+        pytest.skip("requires MySQL")
     store = AuditStore()
     trace = {
         "query": "What is KYC?",

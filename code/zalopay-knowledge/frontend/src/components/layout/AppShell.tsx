@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
@@ -110,7 +110,7 @@ export function Header() {
             {indexReady ? t("healthHealthy", locale) : t("healthIndexPending", locale)}
           </Badge>
           <TutorialHelpButton />
-          <Button variant="ghost" onClick={requestNewSession} className="hidden sm:inline-flex">
+          <Button variant="ghost" onClick={() => requestNewSession()} className="hidden sm:inline-flex">
             <Plus size="sm" />
             {t("newSession", locale)}
           </Button>
@@ -193,6 +193,13 @@ export function Nav() {
 export function AppShell({ children }: { children: ReactNode }) {
   const locale = useUserStore((s) => s.locale);
   const { loading } = useHealth();
+  const loadThreads = useSessionStore((s) => s.loadThreads);
+
+  useEffect(() => {
+    if (!loading) {
+      loadThreads();
+    }
+  }, [loading, loadThreads]);
 
   if (loading) {
     return (

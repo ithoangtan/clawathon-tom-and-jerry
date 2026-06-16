@@ -11,6 +11,16 @@ from app.store.meta import MetaStore
 from app.store.sync_state import SyncOrchestrator
 
 
+def _mysql_available() -> bool:
+    """Return True only when a real MySQL server (not our test stub) is available."""
+    import pymysql as _pymysql
+    # Real pymysql package has __version__; our stub ModuleType does not.
+    return hasattr(_pymysql, "__version__")
+
+
+_HAS_MYSQL = _mysql_available()
+
+
 @pytest.fixture
 def tmp_db_dir(tmp_path: Path) -> Path:
     """Directory for isolated SQLite database files (MetaStore only)."""
@@ -27,6 +37,8 @@ def meta_store(tmp_db_dir: Path) -> MetaStore:
 @pytest.fixture
 def audit_store() -> AuditStore:
     """AuditStore backed by MySQL — truncates tables before each test for isolation."""
+    if not _HAS_MYSQL:
+        pytest.skip("requires MySQL")
     store = AuditStore()
     conn = get_connection()
     try:
@@ -41,6 +53,8 @@ def audit_store() -> AuditStore:
 @pytest.fixture
 def feedback_store() -> FeedbackStore:
     """FeedbackStore backed by MySQL — truncates tables before each test for isolation."""
+    if not _HAS_MYSQL:
+        pytest.skip("requires MySQL")
     store = FeedbackStore()
     conn = get_connection()
     try:

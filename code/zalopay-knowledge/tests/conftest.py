@@ -16,6 +16,31 @@ if "pypdf" not in sys.modules:
     _pypdf.PdfReader = MagicMock()
     sys.modules["pypdf"] = _pypdf
 
+if "opensearchpy" not in sys.modules:
+    _opensearchpy = ModuleType("opensearchpy")
+    _opensearchpy.OpenSearch = MagicMock()
+    _opensearchpy.__path__ = []
+    _opensearchpy_helpers = ModuleType("opensearchpy.helpers")
+    _opensearchpy_helpers.bulk = MagicMock(return_value=(0, []))  # bulk returns (ok_count, errors)
+    _opensearchpy.helpers = _opensearchpy_helpers
+    sys.modules["opensearchpy"] = _opensearchpy
+    sys.modules["opensearchpy.helpers"] = _opensearchpy_helpers
+
+if "pymysql" not in sys.modules:
+    _pymysql = ModuleType("pymysql")
+    _pymysql.connect = MagicMock()
+    _pymysql.Error = Exception
+    _pymysql.__path__ = []  # make it a package so submodule imports work
+    _pymysql_conn = ModuleType("pymysql.connections")
+    _pymysql_conn.Connection = MagicMock()
+    _pymysql_cursors = ModuleType("pymysql.cursors")
+    _pymysql_cursors.DictCursor = MagicMock()
+    _pymysql.connections = _pymysql_conn
+    _pymysql.cursors = _pymysql_cursors
+    sys.modules["pymysql"] = _pymysql
+    sys.modules["pymysql.connections"] = _pymysql_conn
+    sys.modules["pymysql.cursors"] = _pymysql_cursors
+
 
 @pytest.fixture(autouse=True)
 def test_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

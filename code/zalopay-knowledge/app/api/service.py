@@ -258,7 +258,10 @@ def stream_chat(ctx: UserContext, request: ChatRequest) -> Iterator[dict[str, An
         ):
             for mode, payload in _iter_stream_chunks(chunk):
                 if mode == "custom":
-                    yield {"event": "pipeline", "data": payload}
+                    if payload.get("type") == "text_chunk":
+                        yield {"event": "text", "data": {"chunk": payload["chunk"]}}
+                    else:
+                        yield {"event": "pipeline", "data": payload}
                     continue
 
                 for node_name, update in payload.items():

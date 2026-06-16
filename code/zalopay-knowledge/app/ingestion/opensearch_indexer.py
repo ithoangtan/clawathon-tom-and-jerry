@@ -19,7 +19,7 @@ import logging
 from pathlib import Path
 from typing import Union
 
-from app.adapters.embeddings import Embedder
+from app.adapters.embeddings import Embedder, make_embedder
 from app.config import Settings, get_settings
 from app.store.meta import MetaStore
 
@@ -86,12 +86,7 @@ class OpenSearchIndexBuilder:
             # Fallback: local SQLite (only used when MySQL not configured).
             index_dir = Path(self._cfg.index_dir)
             self._meta = MetaStore(index_dir / "meta.db")
-        from app.adapters.openai_credentials import resolve_openai_api_key
-
-        self._embedder = Embedder(
-            self._cfg.embedding_model,
-            api_key=resolve_openai_api_key(self._cfg),
-        )
+        self._embedder = make_embedder(self._cfg)
         self._prefix = self._cfg.opensearch_index_prefix
         self._client = self._build_client()
 

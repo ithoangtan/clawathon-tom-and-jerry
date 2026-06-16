@@ -2,10 +2,6 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import { useNavigate, useLocation } from "react-router-dom";
 import { api, ApiError, chatStream } from "@/lib/apiClient";
 import {
-  applyPipelineEvent,
-  applyPipelineNodeEvent,
-  completePipeline,
-  createInitialPipeline,
   hidePipeline,
   type PipelineProgressState,
 } from "@/lib/pipelineSteps";
@@ -176,12 +172,14 @@ export function useChat() {
     const currentAutoRoute = targetAutoRouteRef.current;
 
     suppressThreadSaveRef.current = true;
-    saveThread(
-      currentSessionId,
-      currentMessages,
-      currentDepartments,
-      currentAutoRoute,
-    );
+    if (!(sessionAction.type === "new" && sessionAction.skipSave)) {
+      saveThread(
+        currentSessionId,
+        currentMessages,
+        currentDepartments,
+        currentAutoRoute,
+      );
+    }
 
     if (sessionAction.type === "new") {
       resetChatState(
@@ -269,7 +267,7 @@ export function useChat() {
       setInput("");
       setLoading(true);
       setStreamingStatus(null);
-      setPipelineProgress(createInitialPipeline());
+      setPipelineProgress(null);
       setError(null);
       setLastQuestion(trimmed);
 
@@ -279,7 +277,6 @@ export function useChat() {
         setStreamingStatus("Đang xử lý (mock)…");
         await new Promise((r) => setTimeout(r, mockScenario.delayMs));
         if (controller.signal.aborted) return;
-        setPipelineProgress(null);
         setLoading(false);
         setStreamingStatus(null);
         if (!mockScenario.response) {
@@ -309,31 +306,37 @@ export function useChat() {
       try {
         let finalResponse: ChatResponse | null = null;
         let streamError: string | null = null;
-        let sawPipelineEvents = false;
+        let streamingStarted = false;
+        let streamedText = "";
 
         for await (const event of chatStream(body, ctx, {
           signal: controller.signal,
         })) {
-          if (event.event === "pipeline") {
-            sawPipelineEvents = true;
-            setPipelineProgress((prev) =>
-              applyPipelineEvent(prev ?? createInitialPipeline(), event.data),
-            );
-          } else if (event.event === "node") {
-            if (!sawPipelineEvents) {
-              setPipelineProgress((prev) =>
-                applyPipelineNodeEvent(prev ?? createInitialPipeline(), event.data),
+          if (event.event === "text") {
+            const chunk = typeof event.data.chunk === "string" ? event.data.chunk : "";
+            if (!chunk) continue;
+            streamedText += chunk;
+
+            if (!streamingStarted) {
+              streamingStarted = true;
+              setLoading(false);
+              const timestamp = new Date().toISOString();
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: assistantId,
+                  role: "assistant" as const,
+                  content: streamedText,
+                  timestamp,
+                  streaming: true,
+                },
+              ]);
+            } else {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId ? { ...m, content: streamedText } : m,
+                ),
               );
-            }
-            const stepLabel =
-              typeof event.data.step_label === "string"
-                ? event.data.step_label
-                : undefined;
-            const node = event.data.node;
-            if (stepLabel) {
-              setStreamingStatus(stepLabel);
-            } else if (typeof node === "string") {
-              setStreamingStatus(node);
             }
           } else if (event.event === "error") {
             streamError =
@@ -347,26 +350,37 @@ export function useChat() {
         }
 
         if (streamError) {
-          setPipelineProgress(null);
           setError(streamError);
+          if (streamingStarted) {
+            setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+          }
           return;
         }
 
         if (finalResponse) {
-          setPipelineProgress((prev) =>
-            completePipeline(prev ?? createInitialPipeline(), {
-              departments: finalResponse.source_departments,
-              departmentCount: finalResponse.source_departments.length,
-              totalElapsedMs: prev?.totalElapsedMs,
-            }),
-          );
-          setLoading(false);
-          setStreamingStatus(null);
-          await appendAssistant(
-            finalResponse,
-            assistantId,
-            shouldRevealAnswerProgressively(finalResponse),
-          );
+          if (streamingStarted) {
+            // Enrich existing streaming message with full metadata
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      content: finalResponse!.answer || streamedText,
+                      response: finalResponse!,
+                      streaming: false,
+                    }
+                  : m,
+              ),
+            );
+          } else {
+            // No text was streamed (refusal / clarify) — use normal append
+            setLoading(false);
+            await appendAssistant(
+              finalResponse,
+              assistantId,
+              shouldRevealAnswerProgressively(finalResponse),
+            );
+          }
           return;
         }
 
@@ -379,21 +393,18 @@ export function useChat() {
             streamErr instanceof ApiError
               ? streamErr.detail ?? streamErr.message
               : "Request failed";
-          setPipelineProgress(null);
           setError(message);
           return;
         }
 
         try {
           const response = await api.chat(body, ctx);
-          setPipelineProgress(null);
           setLoading(false);
           setStreamingStatus(null);
           await appendAssistant(response, assistantId, false);
         } catch (e) {
           const message =
             e instanceof ApiError ? e.detail ?? e.message : "Request failed";
-          setPipelineProgress(null);
           setError(message);
         }
       } finally {

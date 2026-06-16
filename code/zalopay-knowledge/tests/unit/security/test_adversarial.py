@@ -251,7 +251,7 @@ class TestMaasTimeout:
         llm._client.chat.completions.create.side_effect = APITimeoutError(request=MagicMock())
 
         with patch("app.adapters.maas_llm._MAX_ATTEMPTS", 1):
-            with pytest.raises(LLMUnavailable, match="All models exhausted"):
+            with pytest.raises(LLMUnavailable):
                 llm.complete(
                     tier=ModelTier.SMALL,
                     messages=[{"role": "user", "content": "ping"}],

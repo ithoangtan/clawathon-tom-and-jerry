@@ -10,7 +10,7 @@ from pathlib import Path
 import faiss
 import numpy as np
 
-from app.adapters.embeddings import Embedder
+from app.adapters.embeddings import Embedder, make_embedder
 from app.config import Settings, get_settings
 from app.store.meta import MetaStore
 
@@ -26,9 +26,7 @@ class IndexBuilder:
         self._faiss_dir = index_dir / "faiss"
         self._faiss_dir.mkdir(parents=True, exist_ok=True)
         self._meta = MetaStore(index_dir / "meta.db")
-        self._embedder = Embedder(
-            self._cfg.embedding_model, cache_dir=index_dir / "hf-cache"
-        )
+        self._embedder = make_embedder(self._cfg)
 
     def rebuild_department(self, department: str, chunks: list[dict]) -> int:
         """Embed *chunks*, write FAISS + meta. Returns chunk count.

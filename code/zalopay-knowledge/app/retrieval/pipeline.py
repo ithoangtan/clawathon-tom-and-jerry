@@ -26,12 +26,15 @@ def refine_candidates(
     *,
     settings: Settings | None = None,
     reranker: RerankFn | CrossEncoderReranker | None = None,
+    keywords: str = "",
 ) -> list[RetrievedChunk]:
     """Refine a dense candidate pool to the final top-k chunks.
 
     Pipeline (MVP checklist §2 Retrieval):
     1. Prefer newest ``last_modified`` when URLs collide.
     2. Hybrid: fuse dense rank + BM25 lexical scores (RRF).
+       When LLM-extracted ``keywords`` are available they replace the full query
+       for BM25 scoring — focused terms improve precision over conversational noise.
     3. Cross-encoder rerank → keep ``topk`` (default 5–8).
     """
     cfg = settings or get_settings()
@@ -42,7 +45,8 @@ def refine_candidates(
 
     if cfg.hybrid_search_enabled and len(pool) > 1:
         texts = [f"{c.title}\n{c.text}".strip() for c in pool]
-        lexical = bm25_scores(query, texts)
+        bm25_query = keywords if keywords else query
+        lexical = bm25_scores(bm25_query, texts)
         pool = reciprocal_rank_fusion(pool, lexical)
 
     final_k = min(cfg.topk, len(pool))

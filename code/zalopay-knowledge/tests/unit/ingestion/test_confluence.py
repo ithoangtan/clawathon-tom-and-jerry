@@ -245,8 +245,19 @@ class TestConfluenceClient:
             resp.raise_for_status = MagicMock()
             return resp
 
+        def make_labels_response() -> MagicMock:
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = {"results": []}
+            return resp
+
         mock_client = MagicMock()
-        mock_client.get.side_effect = [make_response(1), make_response(2)]
+        # fetch_page_body makes 2 client.get calls per invocation:
+        # one for the page body, one for _fetch_labels (since embedded labels are absent)
+        mock_client.get.side_effect = [
+            make_response(1), make_labels_response(),
+            make_response(2), make_labels_response(),
+        ]
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
 

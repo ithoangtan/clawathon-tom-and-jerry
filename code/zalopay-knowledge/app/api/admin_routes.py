@@ -2,6 +2,8 @@ from __future__ import annotations
 
 """Admin sync API — trigger jobs and inspect detailed status/history."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 
@@ -15,6 +17,8 @@ from app.api.schemas import (
 )
 from app.common.departments import get_department
 from app.config import Settings, get_settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -117,6 +121,97 @@ def gdrive_authorize(settings: Settings = Depends(get_settings)) -> JSONResponse
         return JSONResponse({"status": "pending", "authorization_url": auth_url})
 
     raise HTTPException(status_code=502, detail="AgentBase returned neither token nor auth URL")
+
+
+@router.post("/reindex")
+def admin_reindex(ctx: UserContext = Depends(require_user_context)) -> JSONResponse:
+    """Force full re-index: clear sync_sources cache + delete OpenSearch indexes.
+
+    Use this after changing the embedding model (same or different dimension).
+    After this call, trigger a full sync via POST /api/admin/sync to re-embed
+    all documents with the new model.
+
+    What this does:
+    1. Deletes all rows in sync_sources (clears content-hash dedup cache).
+    2. Deletes all OpenSearch department indexes (removes stale vectors).
+
+    The next sync will re-embed every document from scratch.
+    """
+    _ = ctx
+    cfg = get_settings()
+
+    deleted_indexes: list[str] = []
+    cleared_sources: int = 0
+
+    # Step 1 — clear sync_sources so the next sync re-processes every doc
+    try:
+        if cfg.db_host and cfg.db_user:
+            from app.store.db import get_connection
+
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM sync_sources")
+                    cleared_sources = cur.rowcount
+                conn.commit()
+            finally:
+                conn.close()
+            logger.info("admin_reindex: cleared %d rows from sync_sources", cleared_sources)
+        else:
+            # FAISS / SQLite mode
+            from app.config import get_settings as _cfg
+            from pathlib import Path
+            from app.store.meta import MetaStore
+
+            index_dir = Path(cfg.index_dir)
+            meta = MetaStore(index_dir / "meta.db")
+            from app.common.departments import iter_keys
+            for dept in iter_keys():
+                meta.clear_department(dept)
+            logger.info("admin_reindex: cleared MetaStore sync sources")
+    except Exception as exc:
+        logger.error("admin_reindex: failed to clear sync_sources: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Failed to clear sync cache: {exc}") from exc
+
+    # Step 2 — delete OpenSearch indexes so stale vectors are gone
+    if cfg.vector_store == "opensearch" and cfg.opensearch_host:
+        try:
+            from opensearchpy import OpenSearch
+            from app.common.departments import iter_keys
+
+            client = OpenSearch(
+                hosts=[{"host": cfg.opensearch_host, "port": cfg.opensearch_port}],
+                http_auth=(cfg.opensearch_user, cfg.opensearch_password),
+                use_ssl=cfg.opensearch_use_ssl,
+                verify_certs=cfg.opensearch_verify_certs,
+                ssl_show_warn=False,
+            )
+            prefix = cfg.opensearch_index_prefix
+            for dept in iter_keys():
+                index = f"{prefix}_{dept}"
+                if client.indices.exists(index=index):
+                    client.indices.delete(index=index)
+                    deleted_indexes.append(index)
+                    logger.info("admin_reindex: deleted OpenSearch index %s", index)
+        except Exception as exc:
+            logger.error("admin_reindex: failed to delete OpenSearch indexes: %s", exc)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Sync cache cleared but failed to delete vector indexes: {exc}",
+            ) from exc
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "cleared_sync_sources": cleared_sources,
+            "deleted_indexes": deleted_indexes,
+            "message": (
+                f"Re-index prepared: cleared {cleared_sources} sync cache rows"
+                + (f", deleted {len(deleted_indexes)} vector index(es)" if deleted_indexes else "")
+                + ". Trigger a full sync to re-embed all documents."
+            ),
+        },
+    )
 
 
 @router.get("/sync/history", response_model=AdminSyncHistoryResponse)

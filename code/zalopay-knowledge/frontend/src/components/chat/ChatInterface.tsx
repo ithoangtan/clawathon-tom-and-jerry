@@ -3,10 +3,10 @@ import {
   CitationEvidenceInspector,
   type CitationInspectorState,
 } from "@/components/chat/CitationEvidenceInspector";
+import { ChatAvatar } from "@/components/chat/ChatAvatar";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { DepartmentTargetBar } from "@/components/chat/DepartmentTargetBar";
-import { PipelineProgress } from "@/components/chat/PipelineProgress";
 import { UserMessage } from "@/components/chat/UserMessage";
 import { ErrorState } from "@/components/ui/StateViews";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -28,14 +28,14 @@ import { Link } from "react-router-dom";
 
 const EXAMPLE_QUESTIONS = {
   en: [
-    "What is the escalation process when a fraud alert triggers on a high-value merchant transaction?",
-    "Walk me through the settlement reconciliation steps with a partner bank after a failed batch.",
-    "What KYC re-verification is required when a merchant's transaction volume doubles?",
+    "What fraud detection models does Zalopay use in its e-wallet ecosystem?",
+    "How does the Lucky Wheel campaign work and what are its v2 configuration steps?",
+    "What are the commercial terms and revenue sharing models for bank partnerships?",
   ],
   vi: [
-    "Quy trình leo thang khi cảnh báo gian lận kích hoạt trên giao dịch merchant giá trị cao là gì?",
-    "Các bước đối soát thanh toán với ngân hàng đối tác khi một batch thất bại diễn ra như thế nào?",
-    "Cần xác minh lại KYC như thế nào khi khối lượng giao dịch của merchant tăng gấp đôi?",
+    "Mô hình phát hiện gian lận trong hệ sinh thái ví điện tử của Zalopay hoạt động như thế nào?",
+    "Các bước cấu hình và vận hành chiến dịch Lucky Wheel v2 là gì?",
+    "Điều khoản thương mại và mô hình chia sẻ doanh thu trong quan hệ đối tác ngân hàng gồm những gì?",
   ],
 };
 
@@ -51,15 +51,12 @@ export function ChatInterface() {
     targetAutoRoute,
     setTargetAutoRoute,
     loading,
-    streamingStatus,
-    pipelineProgress,
-    dismissPipelineSummary,
     error,
     sendMessage,
     retryLast,
   } = useChat();
 
-  const scrollRef = useSmoothScroll([messages, loading, streamingStatus, pipelineProgress]);
+  const scrollRef = useSmoothScroll([messages, loading]);
 
   const { startTutorial, isRunning } = useTutorialContext();
   const responseDismissed = useTutorialStore((s) => s.dismissed["response"] ?? false);
@@ -89,12 +86,12 @@ export function ChatInterface() {
   const [examples, setExamples] = useState<string[]>(fallbackExamples);
 
   useEffect(() => {
-    api.suggestedQuestions().then((data) => {
+    api.suggestedQuestions(locale).then((data) => {
       if (data.questions.length > 0) {
         setExamples(data.questions);
       }
     }).catch(() => { /* keep fallback */ });
-  }, []);
+  }, [locale]);
 
   const closeInspector = useCallback(() => setInspector(null), []);
 
@@ -278,11 +275,16 @@ export function ChatInterface() {
                   ) : null;
                 })}
 
-                {(loading || pipelineProgress?.phase === "collapsed") && pipelineProgress && (
-                  <PipelineProgress
-                    progress={pipelineProgress}
-                    onCollapsedDismiss={dismissPipelineSummary}
-                  />
+                {loading && (
+                  <div className="flex gap-3" role="status" aria-live="polite">
+                    <ChatAvatar role="assistant" className="avatar-assistant-glow" />
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-content-secondary">
+                        {t("assistantName", locale)}
+                      </span>
+                      <p className="mt-1.5 text-sm text-content-muted">{t("sending", locale)}</p>
+                    </div>
+                  </div>
                 )}
 
                 {error && (

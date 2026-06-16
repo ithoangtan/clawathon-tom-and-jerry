@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from app.adapters.embeddings import Embedder
+from app.adapters.embeddings import Embedder, make_embedder
 from app.common.departments import iter_keys
 from app.config import Settings, get_settings
 from app.ports.errors import RetrieverUnavailable
@@ -80,9 +80,7 @@ class FaissRetriever:
         self._cfg = settings or get_settings()
         index_dir = Path(self._cfg.index_dir)
 
-        self._embedder = Embedder(
-            self._cfg.embedding_model, cache_dir=index_dir / "hf-cache"
-        )
+        self._embedder = make_embedder(self._cfg)
         self._meta = MetaStore(index_dir / "meta.db")
         self._faiss_dir = index_dir / "faiss"
         self._indexes: dict[str, "faiss.Index"] = self._load_partitions()

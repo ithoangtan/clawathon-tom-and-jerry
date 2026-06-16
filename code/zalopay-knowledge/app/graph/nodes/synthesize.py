@@ -15,6 +15,8 @@ If there are no graded chunks, it short-circuits to the
 import logging
 from typing import Callable
 
+from langgraph.config import get_stream_writer
+
 from app.config import Settings, get_settings
 from app.graph.nodes._helpers import (
     budget_exceeded,
@@ -71,22 +73,39 @@ def make_synthesize_node(
         ]
 
         try:
-            result = llm.complete(
-                tier=ModelTier.MAIN,
-                messages=messages,
-                temperature=0.0,
-                response_format="text",
-                timeout_s=cfg.branch_timeout_s,
-            )
+            writer = None
+            try:
+                writer = get_stream_writer()
+            except RuntimeError:
+                pass
+
+            if writer and hasattr(llm, "complete_stream"):
+                full_text = ""
+                for token in llm.complete_stream(
+                    tier=ModelTier.MAIN,
+                    messages=messages,
+                    temperature=0.0,
+                    timeout_s=cfg.branch_timeout_s,
+                ):
+                    full_text += token
+                    writer({"type": "text_chunk", "chunk": token, "department": department})
+                answer = full_text.strip() or CANNOT_ANSWER
+                model_used = llm.get_last_model(ModelTier.MAIN) if hasattr(llm, "get_last_model") else ""
+            else:
+                result = llm.complete(
+                    tier=ModelTier.MAIN,
+                    messages=messages,
+                    temperature=0.0,
+                    response_format="text",
+                    timeout_s=cfg.branch_timeout_s,
+                )
+                answer = (result.text or "").strip() or CANNOT_ANSWER
+                model_used = result.model_used
         except LLMUnavailable as exc:
             logger.warning("synthesize[%s]: LLM unavailable: %s", department, exc)
             return {"draft_answer": CANNOT_ANSWER, "draft_citations": []}
 
-        answer = (result.text or "").strip()
-        if not answer:
-            answer = CANNOT_ANSWER
-
-        logger.info("synthesize[%s]: %d chars, %d citations model=%s", department, len(answer), len(citations), result.model_used)
-        return {"draft_answer": answer, "draft_citations": citations, "model_used": result.model_used}
+        logger.info("synthesize[%s]: %d chars, %d citations model=%s", department, len(answer), len(citations), model_used)
+        return {"draft_answer": answer, "draft_citations": citations, "model_used": model_used}
 
     return synthesize

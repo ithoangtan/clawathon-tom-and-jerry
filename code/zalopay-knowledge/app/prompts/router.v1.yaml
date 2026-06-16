@@ -97,11 +97,19 @@ system: |
   {
     "intent": "<intent label>",
     "target_departments": ["<dept_key>", ...],
-    "confidence": <float 0.0 to 1.0>
+    "confidence": <float 0.0 to 1.0>,
+    "retrieval_keywords": "<space-separated key domain terms>"
   }
 
   Department keys must be exactly one of: {department_keys}.
   confidence must be a float between 0.0 and 1.0 inclusive.
+
+  retrieval_keywords: For knowledge intents (policy_lookup, process_question, definition,
+  contact_or_channel, cross_dept_inquiry), extract 3–8 key domain terms from the question —
+  nouns, proper nouns, product names, process names, technical terms, and action verbs.
+  Strip filler words (như thế nào, là gì, tôi muốn biết, please tell me, what is, how to).
+  Include both Vietnamese and English forms when both appear.
+  For non-knowledge intents (greeting, capability_query, workflow_execution, etc.) return "".
 
 user: |
   Conversation history (if any):

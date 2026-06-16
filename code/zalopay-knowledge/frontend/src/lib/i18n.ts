@@ -288,6 +288,23 @@ const strings: Strings = {
   adminFilterAll: { en: "All sources", vi: "Tất cả nguồn" },
   adminFilterConfluence: { en: "Confluence only", vi: "Chỉ Confluence" },
   adminFilterDrive: { en: "Drive only", vi: "Chỉ Drive" },
+  adminReindexTitle: { en: "Force Re-index", vi: "Buộc Re-index" },
+  adminReindexSubtitle: {
+    en: "Use this after changing the embedding model to clear stale vectors and re-embed all documents from scratch.",
+    vi: "Dùng sau khi đổi embedding model để xóa vector cũ và embed lại toàn bộ tài liệu từ đầu.",
+  },
+  adminReindexWarning: {
+    en: "This will delete all vector indexes and clear the sync cache. All documents will be re-embedded on the next sync. This cannot be undone.",
+    vi: "Thao tác này sẽ xóa toàn bộ vector index và cache đồng bộ. Tất cả tài liệu sẽ được embed lại trong lần sync tiếp theo. Không thể hoàn tác.",
+  },
+  adminReindexButton: { en: "Clear & Re-index", vi: "Xóa & Re-index" },
+  adminReindexConfirm: { en: "Confirm Re-index", vi: "Xác nhận Re-index" },
+  adminReindexCancel: { en: "Cancel", vi: "Hủy" },
+  adminReindexRunning: { en: "Clearing indexes…", vi: "Đang xóa index…" },
+  adminReindexDone: { en: "Done! Trigger a full sync to re-embed all documents.", vi: "Xong! Hãy kích hoạt sync toàn bộ để embed lại tài liệu." },
+  adminReindexFailed: { en: "Failed to clear indexes.", vi: "Không thể xóa index." },
+  adminReindexClearedRows: { en: "Cleared {n} sync cache rows", vi: "Đã xóa {n} hàng cache đồng bộ" },
+  adminReindexDeletedIndexes: { en: "Deleted {n} vector index(es)", vi: "Đã xóa {n} vector index" },
   dashboardSubtitle: {
     en: "Real-time usage metrics, sync health, and query history for your knowledge agent.",
     vi: "Số liệu sử dụng theo thời gian thực, tình trạng đồng bộ và lịch sử truy vấn của trợ lý tri thức.",

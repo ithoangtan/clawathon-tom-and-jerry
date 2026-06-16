@@ -53,9 +53,10 @@ interface SessionSidebarPanelProps {
 export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSidebarPanelProps) {
   const locale = useUserStore((s) => s.locale);
   const activeSessionId = useUserStore((s) => s.sessionId);
-  const newSession = useUserStore((s) => s.newSession);
   const threadsRecord = useSessionStore((s) => s.threads);
+  const threadsLoaded = useSessionStore((s) => s.loaded);
   const deleteThread = useSessionStore((s) => s.deleteThread);
+  const requestNewSession = useSessionStore((s) => s.requestNewSession);
   const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
@@ -79,7 +80,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
     deleteThread(sessionId);
     setPendingDeleteId(null);
     if (sessionId === activeSessionId) {
-      newSession();
+      requestNewSession(true);
       navigate("/");
     }
   }
@@ -115,7 +116,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
           variant="secondary"
           className="w-full justify-start"
           onClick={() => {
-            newSession();
+            requestNewSession();
             navigate("/");
             onCloseMobile?.();
           }}
@@ -145,7 +146,11 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
         role="list"
         aria-label={t("sessionHistory", locale)}
       >
-        {filtered.length === 0 ? (
+        {!threadsLoaded ? (
+          <p className="px-2 py-6 text-center text-xs text-content-secondary" role="status">
+            {locale === "vi" ? "Đang tải…" : "Loading…"}
+          </p>
+        ) : filtered.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-content-secondary" role="status">
             {t("noSessions", locale)}
           </p>

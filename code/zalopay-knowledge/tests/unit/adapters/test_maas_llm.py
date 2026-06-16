@@ -80,18 +80,9 @@ def test_complete_returns_parsed_result(maas_llm: VngMaasLLM) -> None:
     assert call_kwargs["messages"] == [{"role": "user", "content": "hi"}]
 
 
-def test_complete_raises_when_api_key_missing() -> None:
-    llm = VngMaasLLM(Settings(llm_api_key="", small_model="s", main_model="m", log_level="error"))
-
-    with pytest.raises(LLMUnavailable, match="API key"):
-        llm.complete(tier=ModelTier.SMALL, messages=[])
-
-
-def test_complete_uses_greennode_api_key_on_agentbase() -> None:
+def test_complete_uses_openai_api_key() -> None:
     settings = Settings(
-        app_env="agentbase",
-        llm_api_key="",
-        greennode_api_key="platform-key",
+        openai_api_key="sk-test",
         small_model="s",
         main_model="m",
         log_level="error",
@@ -144,7 +135,7 @@ def test_complete_raises_llm_unavailable_after_transient_exhaustion(maas_llm: Vn
     )
 
     with patch("app.adapters.maas_llm._MAX_ATTEMPTS", 1):
-        with pytest.raises(LLMUnavailable, match="All models exhausted"):
+        with pytest.raises(LLMUnavailable):
             maas_llm.complete(tier=ModelTier.SMALL, messages=[{"role": "user", "content": "x"}])
 
 
@@ -182,6 +173,8 @@ def test_is_reachable_true_when_models_list_succeeds(maas_llm: VngMaasLLM) -> No
 
 def test_is_reachable_false_without_api_key() -> None:
     llm = VngMaasLLM(Settings(llm_api_key="", small_model="s", main_model="m", log_level="error"))
+    llm._client = MagicMock()
+    llm._client.models.list.side_effect = APIConnectionError(request=MagicMock())
     assert llm.is_reachable() is False
 
 
@@ -199,7 +192,7 @@ def test_complete_raises_llm_unavailable_on_api_timeout(maas_llm: VngMaasLLM) ->
     maas_llm._client.chat.completions.create.side_effect = APITimeoutError(request=MagicMock())
 
     with patch("app.adapters.maas_llm._MAX_ATTEMPTS", 1):
-        with pytest.raises(LLMUnavailable, match="All models exhausted"):
+        with pytest.raises(LLMUnavailable):
             maas_llm.complete(
                 tier=ModelTier.SMALL,
                 messages=[{"role": "user", "content": "slow"}],

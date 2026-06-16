@@ -16,7 +16,7 @@ Search flow for one department branch:
 
 import logging
 
-from app.adapters.embeddings import Embedder
+from app.adapters.embeddings import Embedder, make_embedder
 from app.config import Settings, get_settings
 from app.ports.errors import RetrieverUnavailable
 from app.ports.types import RetrievedChunk
@@ -56,13 +56,8 @@ class OpenSearchRetriever:
     def __init__(self, settings: Settings | None = None) -> None:
         from pathlib import Path
 
-        from app.adapters.openai_credentials import resolve_openai_api_key
-
         self._cfg = settings or get_settings()
-        self._embedder = Embedder(
-            self._cfg.embedding_model,
-            api_key=resolve_openai_api_key(self._cfg),
-        )
+        self._embedder = make_embedder(self._cfg)
         self._client = self._build_client()
         self._prefix = self._cfg.opensearch_index_prefix
 

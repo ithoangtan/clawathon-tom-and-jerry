@@ -137,7 +137,7 @@ class TestIndexBuilder:
         mock_deps = MagicMock()
         mock_deps.retriever = mock_retriever
 
-        with patch("app.ingestion.indexer.get_deps", return_value=mock_deps):
+        with patch("app.adapters.deps.get_deps", return_value=mock_deps):
             builder.reload_retriever()
 
         mock_retriever.reload.assert_called_once()

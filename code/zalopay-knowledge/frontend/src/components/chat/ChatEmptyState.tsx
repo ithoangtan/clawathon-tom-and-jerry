@@ -98,24 +98,26 @@ export function ChatEmptyState({ examples, onExampleClick, children, belowInput 
         {belowInput ? <div className="mt-2.5 space-y-2 text-left">{belowInput}</div> : null}
       </div>
 
-      <div className="mt-5 w-full" data-tour="example-questions">
-        <p className="text-[11px] font-medium text-content-muted">
-          {t("exampleQuestions", locale)}
-        </p>
-        <ul className="mt-2.5 flex flex-wrap justify-center gap-2" role="list">
-          {examples.map((q) => (
-            <li key={q} data-example-question>
-              <button
-                type="button"
-                className="chat-prompt-ghost focus-visible:ring-2 focus-visible:ring-brand"
-                onClick={() => onExampleClick(q)}
-              >
-                {q}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {examples.length > 0 && (
+        <div className="mt-5 w-full" data-tour="example-questions">
+          <p className="text-[11px] font-medium text-content-muted">
+            {t("exampleQuestions", locale)}
+          </p>
+          <ul className="mt-2.5 flex flex-wrap justify-center gap-2" role="list">
+            {examples.map((q) => (
+              <li key={q} data-example-question>
+                <button
+                  type="button"
+                  className="chat-prompt-ghost focus-visible:ring-2 focus-visible:ring-brand"
+                  onClick={() => onExampleClick(q)}
+                >
+                  {q}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

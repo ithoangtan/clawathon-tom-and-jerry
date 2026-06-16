@@ -19,8 +19,8 @@ def _make_retriever(
     settings: Settings,
     embedder: MagicMock | None = None,
 ) -> FaissRetriever:
-    with patch("app.adapters.faiss_retriever.Embedder") as mock_cls:
-        mock_cls.return_value = embedder or MagicMock()
+    with patch("app.adapters.faiss_retriever.make_embedder") as mock_factory:
+        mock_factory.return_value = embedder or MagicMock()
         return FaissRetriever(settings)
 
 

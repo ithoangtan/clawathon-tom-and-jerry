@@ -252,6 +252,10 @@ class TestKillSwitch:
 
 
 class TestAuditTrail:
+    @pytest.fixture(autouse=True)
+    def _require_mysql(self, requires_mysql):
+        _ = requires_mysql
+
     def test_audit_logs_question_citations_and_answer_preview(
         self, client: TestClient, ready_retriever: None
     ) -> None:

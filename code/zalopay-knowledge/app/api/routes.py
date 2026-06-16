@@ -8,7 +8,7 @@ Health probes live in ``app.api.app.register_health_routes`` — not here.
 import json
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.adapters.deps import get_deps
@@ -30,12 +30,21 @@ from app.api.service import (
 )
 from app.ingestion.orchestrator import SyncService
 from app.metrics import load_eval_snapshot, merge_dashboard_metrics
+from app.store.session_store import SessionStore
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 _sync_service: SyncService | None = None
+_session_store: SessionStore | None = None
+
+
+def get_session_store() -> SessionStore:
+    global _session_store
+    if _session_store is None:
+        _session_store = SessionStore()
+    return _session_store
 
 
 def get_sync_service() -> SyncService:
@@ -147,10 +156,31 @@ def dashboard() -> DashboardData:
     return DashboardData(**metrics)
 
 
+_CURATED_QUESTIONS = {
+    "en": [
+        "What fraud detection models does Zalopay use in its e-wallet ecosystem?",
+        "How does the Lucky Wheel campaign work and what are its v2 configuration steps?",
+        "What are the commercial terms and revenue sharing models for bank partnerships?",
+    ],
+    "vi": [
+        "Mô hình phát hiện gian lận trong hệ sinh thái ví điện tử của Zalopay hoạt động như thế nào?",
+        "Các bước cấu hình và vận hành chiến dịch Lucky Wheel v2 là gì?",
+        "Điều khoản thương mại và mô hình chia sẻ doanh thu trong quan hệ đối tác ngân hàng gồm những gì?",
+    ],
+}
+
+
 @router.get("/api/suggested-questions")
-def suggested_questions() -> JSONResponse:
-    """Return top 3 most frequently asked questions for the chat empty state."""
+def suggested_questions(lang: str = "vi") -> JSONResponse:
+    """Return top 3 most frequently asked questions for the chat empty state.
+
+    Falls back to curated starter questions when audit history is empty,
+    ensuring suggestions are always grounded in actual indexed documents.
+    """
     questions = get_audit_store().popular_questions(limit=3)
+    if not questions:
+        locale = lang if lang in _CURATED_QUESTIONS else "vi"
+        questions = _CURATED_QUESTIONS[locale]
     return JSONResponse(content={"questions": questions})
 
 
@@ -160,3 +190,27 @@ def knowledge_gaps() -> JSONResponse:
     refused = get_audit_store().refused_questions(limit=20, days=30)
     low_rated = get_feedback_store().feedback_gaps(limit=20)
     return JSONResponse(content={"refused_questions": refused, "low_rated_docs": low_rated})
+
+
+# ── Shared session threads ────────────────────────────────────────────────────
+
+@router.get("/api/sessions")
+def list_sessions() -> JSONResponse:
+    """Return all shared chat session threads ordered by updated_at DESC."""
+    threads = get_session_store().list_all()
+    return JSONResponse(content={"threads": threads})
+
+
+@router.put("/api/sessions/{session_id}", status_code=204)
+def upsert_session(session_id: str, body: dict = Body(...)) -> Response:
+    """Create or update a session thread."""
+    body["sessionId"] = session_id
+    get_session_store().upsert(body)
+    return Response(status_code=204)
+
+
+@router.delete("/api/sessions/{session_id}", status_code=204)
+def delete_session(session_id: str) -> Response:
+    """Delete a session thread."""
+    get_session_store().delete(session_id)
+    return Response(status_code=204)

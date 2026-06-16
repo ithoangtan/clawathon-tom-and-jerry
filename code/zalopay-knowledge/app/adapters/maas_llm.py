@@ -16,6 +16,7 @@ The class is still named ``VngMaasLLM`` for backward compatibility so
 
 import logging
 import time
+from typing import Iterator
 
 from openai import (
     APIConnectionError,
@@ -149,6 +150,40 @@ class VngMaasLLM:
             return result
 
         raise LLMUnavailable(f"exhausted modes for {model}: {last_exc}") from last_exc
+
+    def complete_stream(
+        self,
+        *,
+        tier: ModelTier,
+        messages: list[dict],
+        temperature: float = 0.0,
+        max_tokens: int | None = None,
+        timeout_s: float | None = None,
+    ) -> Iterator[str]:
+        """Stream completion tokens one by one."""
+        model = self._cfg.small_model if tier == ModelTier.SMALL else self._cfg.main_model
+        if not model:
+            return
+        effective_timeout = timeout_s if timeout_s is not None else self._cfg.llm_request_timeout_s
+        kwargs: dict = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "timeout": effective_timeout,
+            "stream": True,
+        }
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
+        try:
+            for chunk in self._client.chat.completions.create(**kwargs):
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    yield delta
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("complete_stream failed: %s; caller should fall back", exc)
+            return
 
     def get_last_model(self, tier: ModelTier) -> str:
         return self._last_model.get(

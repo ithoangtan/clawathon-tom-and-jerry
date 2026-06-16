@@ -22,8 +22,21 @@ AUTH_HEADERS = {
 }
 
 
+def _mysql_available() -> bool:
+    import pymysql as _pymysql
+    return hasattr(_pymysql, "__version__")
+
+
+@pytest.fixture
+def requires_mysql():
+    if not _mysql_available():
+        pytest.skip("requires MySQL")
+
+
 @pytest.fixture(autouse=True)
 def _clean_mysql_tables() -> None:
+    if not _mysql_available():
+        return  # skip cleanup when MySQL stub is in place
     from app.store.db import get_connection
     conn = get_connection()
     try:

@@ -174,6 +174,7 @@ def make_retrieve_node(
             return {"chunks": []}
 
         query = state.get("retrieval_query") or state.get("question", "")
+        keywords = state.get("retrieval_keywords") or ""
         pool_k = cfg.retrieve_pool if cfg.hybrid_search_enabled or cfg.reranker_enabled else cfg.topk
         lang = state.get("request_language", "en")
 
@@ -207,6 +208,12 @@ def make_retrieve_node(
             except RetrieverUnavailable:
                 return base
 
+        # LLM-extracted keywords: run a focused keyword search and merge results.
+        # Keywords strip conversational noise so BM25 can surface exact domain term
+        # matches that get diluted when the full question is used as-is.
+        if keywords:
+            results = _merge_with_alt(results, keywords, "keyword-extracted")
+
         # Technical query expansion (HTTP verbs, SQL dialects, API paths)
         if cfg.query_expansion_enabled:
             alt_query = _expand_technical_query(query)
@@ -221,7 +228,7 @@ def make_retrieve_node(
                 results = _merge_with_alt(results, bilingual_query, "bilingual-expanded")
 
         if cfg.hybrid_search_enabled or cfg.reranker_enabled:
-            results = refine_candidates(query, results, settings=cfg)
+            results = refine_candidates(query, results, settings=cfg, keywords=keywords)
 
         chunks: list[Chunk] = [_to_chunk(r, department) for r in results]
         logger.info("retrieve[%s]: %d chunks", department, len(chunks))

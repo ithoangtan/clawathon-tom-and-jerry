@@ -78,7 +78,7 @@ export interface ChatRequest {
 }
 
 /** SSE event names from POST /chat/stream */
-export type ChatStreamEventName = "start" | "node" | "pipeline" | "error" | "done";
+export type ChatStreamEventName = "start" | "node" | "pipeline" | "text" | "error" | "done";
 
 /** `node` event payload from POST /chat/stream (pipeline timeline). */
 export interface StreamNodeEvent {

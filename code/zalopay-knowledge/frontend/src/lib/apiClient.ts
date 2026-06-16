@@ -250,7 +250,35 @@ export const api = {
     });
   },
 
-  suggestedQuestions(): Promise<{ questions: string[] }> {
-    return request<{ questions: string[] }>("/api/suggested-questions", { method: "GET" });
+  suggestedQuestions(lang: string = "vi"): Promise<{ questions: string[] }> {
+    return request<{ questions: string[] }>(`/api/suggested-questions?lang=${lang}`, { method: "GET" });
+  },
+
+  adminReindex(ctx: UserContext): Promise<{
+    cleared_sync_sources: number;
+    deleted_indexes: string[];
+    message: string;
+  }> {
+    return request(
+      "/api/admin/reindex",
+      { method: "POST", body: JSON.stringify({}) },
+      ctx,
+    );
+  },
+
+  listSessions(): Promise<{ threads: unknown[] }> {
+    return request<{ threads: unknown[] }>("/api/sessions", { method: "GET" });
+  },
+
+  upsertSession(sessionId: string, thread: unknown): Promise<void> {
+    return request<void>(`/api/sessions/${sessionId}`, {
+      method: "PUT",
+      body: JSON.stringify(thread),
+      headers: { "Content-Type": "application/json" },
+    });
+  },
+
+  deleteSession(sessionId: string): Promise<void> {
+    return request<void>(`/api/sessions/${sessionId}`, { method: "DELETE" });
   },
 };

@@ -160,6 +160,7 @@ def make_router_node(
 
         intent = str(data.get("intent", "unclear"))
         confidence = _clamp(data.get("confidence", 0.0))
+        keywords = str(data.get("retrieval_keywords", "") or "").strip()
 
         # ── Path 2: short-circuit intents (no retrieval needed) ───────────────
         if intent in SHORT_CIRCUIT_INTENTS:
@@ -190,12 +191,19 @@ def make_router_node(
         # department picks (``raw_targets``) are advisory only and intentionally
         # ignored here. ``confidence`` is kept for telemetry/UI, not for gating.
         fan = sorted(allowed)
-        logger.info("Router: intent=%s → fan-out all %d dept(s) conf=%.2f", intent, len(fan), confidence)
+        if keywords:
+            logger.info(
+                "Router: intent=%s → fan-out all %d dept(s) conf=%.2f keywords=%r",
+                intent, len(fan), confidence, keywords,
+            )
+        else:
+            logger.info("Router: intent=%s → fan-out all %d dept(s) conf=%.2f", intent, len(fan), confidence)
         return {
             "intent": intent,
             "target_departments": fan,
             "routing_confidence": confidence,
             "clarify_question": None,
+            "retrieval_keywords": keywords,
         }
 
     return router

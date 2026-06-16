@@ -71,8 +71,8 @@ class Settings(BaseSettings):
     # ── Embeddings ────────────────────────────────────────────────────────────
 
     embedding_model: str = Field(
-        default="text-embedding-3-large",
-        description="OpenAI embedding model id",
+        default="baai/bge-m3",
+        description="Embedding model id (VNG MaaS: baai/bge-m3; OpenAI: text-embedding-3-large)",
     )
 
     # ── OpenAI ────────────────────────────────────────────────────────────────

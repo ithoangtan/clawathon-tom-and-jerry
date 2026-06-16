@@ -5,21 +5,23 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.adapters.agentbase_checkpointer import AgentBaseCheckpointer
 from app.adapters.deps import build_deps, get_deps
+from app.adapters.mysql_checkpointer import MySQLCheckpointer
 from app.adapters.sqlite_checkpointer import SqliteCheckpointer
 from app.config import Settings
 
 
 @pytest.fixture
 def patched_adapters():
-    """Avoid loading FAISS / embedding models when testing wiring only."""
+    """Avoid loading FAISS / OpenSearch / embedding models when testing wiring only."""
     with (
         patch("app.adapters.deps.VngMaasLLM") as mock_llm_cls,
         patch("app.adapters.deps.FaissRetriever") as mock_retriever_cls,
+        patch("app.adapters.opensearch_retriever.OpenSearchRetriever") as mock_os_cls,
     ):
         mock_llm_cls.return_value = MagicMock(name="llm")
         mock_retriever_cls.return_value = MagicMock(name="retriever")
+        mock_os_cls.return_value = MagicMock(name="retriever")
         yield mock_llm_cls, mock_retriever_cls
 
 
@@ -59,9 +61,8 @@ def test_build_deps_agentbase_wires_platform_adapters(
 
     deps = build_deps(settings)
 
-    assert isinstance(deps.checkpointer, AgentBaseCheckpointer)
-    assert deps.recall is not None
-    assert callable(deps.recall)
+    assert isinstance(deps.checkpointer, MySQLCheckpointer)
+    assert deps.recall is None
 
 
 def test_get_deps_is_cached(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -76,6 +77,7 @@ def test_get_deps_is_cached(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     with (
         patch("app.adapters.deps.VngMaasLLM", return_value=MagicMock()),
         patch("app.adapters.deps.FaissRetriever", return_value=MagicMock()),
+        patch("app.adapters.opensearch_retriever.OpenSearchRetriever", return_value=MagicMock()),
     ):
         first = get_deps()
         second = get_deps()

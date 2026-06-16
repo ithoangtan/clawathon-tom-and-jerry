@@ -174,6 +174,10 @@ class TestChatStreamRoute:
 
 
 class TestFeedbackRoute:
+    @pytest.fixture(autouse=True)
+    def _require_mysql(self, requires_mysql):
+        _ = requires_mysql
+
     def test_feedback_missing_header_returns_400(self, client: TestClient) -> None:
         resp = client.post(
             "/feedback",
@@ -335,6 +339,10 @@ class TestSyncRoutes:
 
 
 class TestDashboardRoute:
+    @pytest.fixture(autouse=True)
+    def _require_mysql(self, requires_mysql):
+        _ = requires_mysql
+
     def test_dashboard_empty_metrics(self, client: TestClient) -> None:
         resp = client.get("/api/dashboard")
         assert resp.status_code == 200
@@ -392,6 +400,10 @@ class TestDashboardRoute:
 
 
 class TestSuggestedQuestionsRoute:
+    @pytest.fixture(autouse=True)
+    def _require_mysql(self, requires_mysql):
+        _ = requires_mysql
+
     def _log(self, question: str, fid: str) -> None:
         from app.api.service import get_audit_store
         get_audit_store().log_query(

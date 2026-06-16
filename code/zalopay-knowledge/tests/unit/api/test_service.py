@@ -158,7 +158,8 @@ def test_stream_chat_emits_sse_friendly_events() -> None:
     assert events[-1]["data"]["feedback_id"] == "fb-stream"
 
 
-def test_record_chat_outcome_registers_feedback_and_audit() -> None:
+def test_record_chat_outcome_registers_feedback_and_audit(requires_mysql) -> None:
+    _ = requires_mysql
     ctx = UserContext(
         user_id="audit-user",
         session_id="audit-session",

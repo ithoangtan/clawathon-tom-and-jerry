@@ -4,6 +4,7 @@ import { AdminSyncTable } from "@/components/admin/AdminSyncTable";
 import { AdminSyncTimeline } from "@/components/admin/AdminSyncTimeline";
 import { RecentJobsSection } from "@/components/admin/AdminSyncStatusPanel";
 import { KnowledgeGapPanel } from "@/components/admin/KnowledgeGapPanel";
+// import { AdminReindexCard } from "@/components/admin/AdminReindexCard";
 import { Database } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import { usePageTutorial } from "@/hooks/useTutorial";
@@ -54,6 +55,9 @@ export function AdminPage() {
         <div data-tour="admin-jobs">
           <RecentJobsSection />
         </div>
+
+        {/* Force re-index (after embedding model change) */}
+        {/* <AdminReindexCard /> */}
 
         {/* Knowledge gap tracker */}
         <section aria-labelledby="knowledge-gaps-heading">

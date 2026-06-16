@@ -179,6 +179,9 @@ class GraphState(TypedDict, total=False):
     retrieval_query: str
     """Query sent to the retriever — may include STM context for follow-ups."""
 
+    retrieval_keywords: str
+    """Key domain terms extracted by the router for BM25 precision boost."""
+
     conversation_history: str
     """Formatted prior turns for router / synthesis prompts (FR-1.3)."""
 
@@ -306,6 +309,9 @@ class DeptState(TypedDict, total=False):
 
     retrieval_query: str
     """Retriever query, expanded with STM context when needed."""
+
+    retrieval_keywords: str
+    """Key domain terms extracted by the router for BM25 precision boost."""
 
     conversation_history: str
     """Prior conversation turns for grounded follow-up answers."""
