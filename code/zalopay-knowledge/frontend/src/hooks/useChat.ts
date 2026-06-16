@@ -82,23 +82,6 @@ async function revealAnswerProgressively(
   });
 }
 
-function resetChatState(
-  setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
-  setTargetDepartments: Dispatch<SetStateAction<Department[]>>,
-  setTargetAutoRoute: Dispatch<SetStateAction<boolean>>,
-  setError: Dispatch<SetStateAction<string | null>>,
-  setLastQuestion: Dispatch<SetStateAction<string | null>>,
-  setInput: Dispatch<SetStateAction<string>>,
-  setPipelineProgress: Dispatch<SetStateAction<PipelineProgressState | null>>,
-) {
-  setMessages([]);
-  setTargetDepartments([]);
-  setTargetAutoRoute(true);
-  setError(null);
-  setLastQuestion(null);
-  setInput("");
-  setPipelineProgress(null);
-}
 
 export function useChat() {
   const location = useLocation();
@@ -106,9 +89,7 @@ export function useChat() {
   const sessionId = useUserStore((s) => s.sessionId);
   const sessionAction = useSessionStore((s) => s.sessionAction);
   const saveThread = useSessionStore((s) => s.saveThread);
-  const getThread = useSessionStore((s) => s.getThread);
   const clearSessionAction = useSessionStore((s) => s.clearSessionAction);
-  // Subscribe to live thread changes so webhook-triggered sessions update in real-time.
   const liveThread = useSessionStore((s) => s.threads[sessionId]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -123,11 +104,8 @@ export function useChat() {
   const [error, setError] = useState<string | null>(null);
   const [lastQuestion, setLastQuestion] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const hydratedSessionRef = useRef<string | null>(null);
-  // Tracks how many messages were in the session when it was last loaded.
-  // The save effect skips when messages haven't grown past this baseline so
-  // that merely viewing a session never bumps its updatedAt.
-  const loadedMessageCountRef = useRef(-1);
+  // Message count at the last save (or session load). Prevents re-saving when just viewing.
+  const lastSavedCountRef = useRef(0);
   const messagesRef = useRef(messages);
   const targetDepartmentsRef = useRef(targetDepartments);
   const targetAutoRouteRef = useRef(targetAutoRoute);
@@ -136,112 +114,83 @@ export function useChat() {
   targetDepartmentsRef.current = targetDepartments;
   targetAutoRouteRef.current = targetAutoRoute;
 
+  // Abort in-flight requests on unmount.
   useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-    };
+    return () => { abortRef.current?.abort(); };
   }, []);
 
-  // Re-sync messages from the store in two cases:
-  // 1. Webhook sessions — background polling delivers new progress messages every ~3s.
-  // 2. Late hydration — loadThreads completed AFTER the session switch, so the initial
-  //    hydration found no thread and left messages empty; sync once the store catches up.
+  // ── Effect 1: Hydrate UI whenever the active session changes ──────────────
+  // Runs on mount and every time sessionId changes (new session or switch).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!liveThread) return;
-    const isWebhook = liveThread.processingStatus != null;
-    const isActive = !loading;
-    if (isWebhook && isActive && liveThread.messages.length > 0 && liveThread.messages.length >= messages.length) {
-      // Webhook polling update.
+    const thread = useSessionStore.getState().getThread(sessionId);
+    setLoading(false);
+    setStreamingStatus(null);
+    setError(null);
+    setLastQuestion(null);
+    setInput("");
+    setPipelineProgress(null);
+    if (thread) {
+      setMessages(thread.messages as ChatMessage[]);
+      setTargetDepartmentsState(thread.targetDepartments);
+      setTargetAutoRouteState(resolveTargetAutoRoute(thread));
+      lastSavedCountRef.current = thread.messages.length;
+    } else {
+      setMessages([]);
+      setTargetDepartmentsState([]);
+      setTargetAutoRouteState(true);
+      lastSavedCountRef.current = 0;
+    }
+  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Effect 2: Late-hydration + webhook sync ───────────────────────────────
+  // Two cases where we need to sync from the live store entry:
+  // a) loadThreads completed after the hydration above ran (page refresh race).
+  // b) Webhook sessions: polling pushes new messages every ~3s.
+  useEffect(() => {
+    if (!liveThread || loading) return;
+    if (liveThread.processingStatus != null) {
+      // Webhook: accept any update that is at least as long as what we have.
+      if (liveThread.messages.length > 0 && liveThread.messages.length >= messages.length) {
+        setMessages(liveThread.messages as ChatMessage[]);
+      }
+    } else if (messages.length === 0 && liveThread.messages.length > 0) {
+      // Late-hydration: store was empty when Effect 1 ran, now populated.
       setMessages(liveThread.messages as ChatMessage[]);
-    } else if (!isWebhook && !loading && messages.length === 0 && liveThread.messages.length > 0) {
-      // Late hydration: store was empty at switch time, now populated from DB.
-      setMessages(liveThread.messages as ChatMessage[]);
-      loadedMessageCountRef.current = liveThread.messages.length;
+      lastSavedCountRef.current = liveThread.messages.length;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveThread?.messages?.length, liveThread?.processingStatus]);
 
-  useEffect(() => {
-    if (hydratedSessionRef.current === sessionId) return;
-
-    const thread = getThread(sessionId);
-    if (thread) {
-      setMessages(thread.messages);
-      setTargetDepartmentsState(thread.targetDepartments);
-      setTargetAutoRouteState(resolveTargetAutoRoute(thread));
-      loadedMessageCountRef.current = thread.messages.length;
-    } else if (hydratedSessionRef.current !== null) {
-      resetChatState(
-        setMessages,
-        setTargetDepartmentsState,
-        setTargetAutoRouteState,
-        setError,
-        setLastQuestion,
-        setInput,
-        setPipelineProgress,
-      );
-      loadedMessageCountRef.current = 0;
-    }
-
-    hydratedSessionRef.current = sessionId;
-  }, [sessionId, getThread]);
-
+  // ── Effect 3: Handle new / switch session requests ────────────────────────
   useEffect(() => {
     if (!sessionAction) return;
-
     abortRef.current?.abort();
-    const { setSessionId, newSession } = useUserStore.getState();
-    const currentSessionId = useUserStore.getState().sessionId;
-    const currentMessages = messagesRef.current;
-    const currentDepartments = targetDepartmentsRef.current;
-    const currentAutoRoute = targetAutoRouteRef.current;
-
+    // Save the session we're leaving (no-op if it has no messages).
     if (!(sessionAction.type === "new" && sessionAction.skipSave)) {
       saveThread(
-        currentSessionId,
-        currentMessages,
-        currentDepartments,
-        currentAutoRoute,
+        useUserStore.getState().sessionId,
+        messagesRef.current,
+        targetDepartmentsRef.current,
+        targetAutoRouteRef.current,
       );
     }
-
+    // Change sessionId → triggers Effect 1 to hydrate the new session.
     if (sessionAction.type === "new") {
-      resetChatState(
-        setMessages,
-        setTargetDepartmentsState,
-        setTargetAutoRouteState,
-        setError,
-        setLastQuestion,
-        setInput,
-        setPipelineProgress,
-      );
-      newSession();
-      loadedMessageCountRef.current = 0;
-      hydratedSessionRef.current = useUserStore.getState().sessionId;
+      useUserStore.getState().newSession();
     } else {
-      const thread = getThread(sessionAction.sessionId);
-      setSessionId(sessionAction.sessionId);
-      setMessages(thread?.messages ?? []);
-      setTargetDepartmentsState(thread?.targetDepartments ?? []);
-      setTargetAutoRouteState(thread ? resolveTargetAutoRoute(thread) : true);
-      setError(null);
-      setLastQuestion(null);
-      setInput("");
-      setPipelineProgress(null);
-      loadedMessageCountRef.current = thread?.messages?.length ?? 0;
-      hydratedSessionRef.current = sessionAction.sessionId;
+      useUserStore.getState().setSessionId(sessionAction.sessionId);
     }
-
     clearSessionAction();
-  }, [sessionAction, saveThread, getThread, clearSessionAction]);
+  }, [sessionAction, saveThread, clearSessionAction]);
 
+  // ── Effect 4: Save after each complete exchange ───────────────────────────
+  // Fires only when streaming is done and new messages arrived since last save.
   useEffect(() => {
     if (messages.length === 0) return;
-    if (messages.length <= loadedMessageCountRef.current) return;
-    // Skip while the assistant is still streaming — the final setMessages (streaming: false)
-    // will trigger this effect again with the complete content, giving exactly 2 PUTs per
-    // exchange: one when the user message is appended, one when the response is complete.
     if (messages.some((m) => m.streaming)) return;
+    if (messages.length <= lastSavedCountRef.current) return;
+    lastSavedCountRef.current = messages.length;
     saveThread(sessionId, messages, targetDepartments, targetAutoRoute);
   }, [messages, targetDepartments, targetAutoRoute, sessionId, saveThread]);
 
