@@ -154,6 +154,17 @@ class Settings(BaseSettings):
         ),
     )
 
+    # ── Gmail (email notifications) ──────────────────────────────────────────
+
+    gmail_client_id: str = Field(default="", description="OAuth2 client ID for Gmail API")
+    gmail_client_secret: str = Field(default="", description="OAuth2 client secret for Gmail API")
+    gmail_refresh_token: str = Field(default="", description="OAuth2 refresh token (run scripts/get_gmail_token.py once)")
+    gmail_sender: str = Field(default="", description="Sender email address (must match the authorized account)")
+    chat_base_url: str = Field(
+        default="",
+        description="Base URL of the chat UI for email links, e.g. https://endpoint-xxx.agentbase-runtime.aiplatform.vngcloud.vn",
+    )
+
     # ── AgentBase platform (auto-injected) ────────────────────────────────────
 
     greennode_agent_identity: str = Field(

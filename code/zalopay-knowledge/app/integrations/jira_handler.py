@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 from app.adapters.confluence_writer import text_to_storage
 from app.config import Settings, get_settings
 from app.integrations.jira_events import JiraEvent
-from app.integrations.source_links import resolve_description_sources
+from app.integrations.source_links import extract_urls_from_adf, resolve_description_sources
 from app.ports.confluence_writer import ConfluenceWriterPort
 from app.ports.errors import ConfluenceUnavailable, JiraUnavailable, RetrieverUnavailable, WorkflowParseError
 from app.ports.jira import JiraPort
@@ -122,6 +122,42 @@ def handle_jira_event(
         f"Bắt đầu thực thi action: *{trig.action[:120]}...*",
         4,
     )
+
+    # 3.5 Validate Confluence links in description before running the LLM action.
+    _progress(f"🔗 **Kiểm tra link tài liệu** trong description ticket...", 5)
+    description_raw = (issue.get("fields") or {}).get("description")
+    conf_urls = [
+        u for u in extract_urls_from_adf(description_raw)
+        if "atlassian.net/wiki" in u or "/pages/" in u
+    ] if isinstance(description_raw, dict) else []
+
+    if not conf_urls:
+        invalid_msg = (
+            "❌ **Ticket không hợp lệ**\n\n"
+            "Description không chứa link Confluence campaign spec. "
+            "Vui lòng đính kèm link tài liệu Confluence vào Description rồi chuyển ticket về **To Do** và thử lại."
+        )
+        try:
+            jira.add_comment(key=event.issue_key, body=invalid_msg)
+        except JiraUnavailable:
+            pass
+        _try_transition(jira, event.issue_key, "To Do")
+        return _result("invalid", reason="no_confluence_link", issue=event.issue_key)
+
+    pre_resolution = resolve_description_sources(description_raw, settings=cfg, jira=jira)
+    if not pre_resolution.sources and pre_resolution.unreadable:
+        invalid_msg = (
+            "❌ **Ticket không hợp lệ**\n\n"
+            f"Tìm thấy {pre_resolution.unreadable} link Confluence trong Description nhưng không đọc được "
+            "(trang không tồn tại hoặc không có quyền truy cập). "
+            "Vui lòng kiểm tra lại link rồi chuyển ticket về **To Do** và thử lại."
+        )
+        try:
+            jira.add_comment(key=event.issue_key, body=invalid_msg)
+        except JiraUnavailable:
+            pass
+        _try_transition(jira, event.issue_key, "To Do")
+        return _result("invalid", reason="confluence_unreadable", issue=event.issue_key)
 
     # 4. Run the action (LLM) + side-effects.
     result_text = _run_action(
@@ -362,6 +398,16 @@ def _event_description(event: JiraEvent) -> str:
     if event.event_type == "field_changed":
         return f"Sự kiện: field {event.field} đổi {event.field_from} → {event.field_to}."
     return "Sự kiện: ticket được cập nhật."
+
+
+def _try_transition(jira: JiraPort, issue_key: str, transition_name: str) -> None:
+    """Attempt a Jira status transition; log and swallow errors so handler never crashes."""
+    try:
+        jira.update_issue_status(key=issue_key, transition_name=transition_name)
+    except JiraUnavailable as exc:
+        logger.warning("Could not transition %s to %r: %s", issue_key, transition_name, exc)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Unexpected error transitioning %s to %r: %s", issue_key, transition_name, exc)
 
 
 def _result(status: str, **kw) -> dict:

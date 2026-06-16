@@ -95,6 +95,18 @@ def _process_event(event: JiraEvent) -> None:
     session_id = str(uuid.uuid4())
     session_store = get_session_store()
 
+    # ── Extract assignee info from raw payload for email notification ─────────
+    _raw = event.raw or {}
+    _issue_fields_raw = (_raw.get("issue") or {}).get("fields") or {}
+    _assignee_raw = _issue_fields_raw.get("assignee") or {}
+    _user_raw = _raw.get("user") or {}
+    # emailAddress is often hidden in issue.fields.assignee; user.emailAddress has it
+    assignee_email = (_assignee_raw.get("emailAddress") or _user_raw.get("emailAddress") or "").strip()
+    assignee_name = (_assignee_raw.get("displayName") or _user_raw.get("displayName") or "").strip()
+    assignee_avatar = (
+        (_assignee_raw.get("avatarUrls") or _user_raw.get("avatarUrls") or {}).get("48x48") or ""
+    )
+
     raw_labels: list[str] = []
     if event.raw:
         issue_fields = (event.raw.get("issue") or {}).get("fields") or {}
@@ -209,6 +221,21 @@ def _process_event(event: JiraEvent) -> None:
                     "feedback_id": "",
                 },
             )
+
+        # ── Send email notification to assignee ───────────────────────────────
+        if assignee_email and result.get("status") not in ("error", "ignored", "invalid"):
+            _send_assignee_notification(
+                event=event,
+                session_id=session_id,
+                result=result,
+                assignee_email=assignee_email,
+                assignee_name=assignee_name,
+                assignee_avatar=assignee_avatar,
+                issue_url=_issue_url,
+                settings=deps.settings,
+                push=_push,
+            )
+
     except Exception:  # noqa: BLE001
         logger.exception("Jira webhook background processing failed for %s", event.issue_key)
         final_status = "error"
@@ -280,6 +307,84 @@ async def jira_webhook(
             "field": event.field,
         },
     )
+
+
+def _send_assignee_notification(
+    *,
+    event,
+    session_id: str,
+    result: dict,
+    assignee_email: str,
+    assignee_name: str,
+    assignee_avatar: str,
+    issue_url: str,
+    settings,
+    push,
+) -> None:
+    """Send email to assignee and push a chat notification message."""
+    from app.adapters.gmail_sender import send_email
+
+    issue_key = event.issue_key
+    summary = (result.get("result_text") or "")[:300].strip()
+    decision = (result.get("decision") or "").upper()
+    decision_label = _DECISION_READABLE.get(decision.replace("-", "_"), decision) if decision else ""
+
+    chat_url = ""
+    base = (settings.chat_base_url or "").rstrip("/")
+    if base:
+        chat_url = f"{base}/chat/{session_id}"
+
+    subject = f"[{issue_key}] Risk Review hoàn tất — {decision_label or 'Xem kết quả'}"
+
+    avatar_html = f'<img src="{assignee_avatar}" width="32" height="32" style="border-radius:50%;vertical-align:middle;margin-right:8px;" />' if assignee_avatar else ""
+    chat_link_html = (
+        f'<p><a href="{chat_url}" style="font-weight:bold;">🔗 Xem kết quả đầy đủ trên hệ thống</a></p>'
+        if chat_url else ""
+    )
+    jira_link_html = f'<p><a href="{issue_url}">📋 Xem ticket {issue_key} trên Jira</a></p>' if issue_url != "#" else ""
+
+    body_html = f"""
+<html><body style="font-family:sans-serif;color:#1a1a2e;max-width:600px;">
+  <div style="background:#f4f4f8;padding:20px;border-radius:8px;">
+    <h2 style="color:#0052cc;">Risk Review — {issue_key}</h2>
+    <p>Xin chào {avatar_html}<strong>{assignee_name or assignee_email}</strong>,</p>
+    <p>Workflow <strong>Campaign Risk Review</strong> cho ticket <strong>{issue_key}</strong> đã hoàn tất.</p>
+    {"<p><strong>Kết quả: " + decision_label + "</strong></p>" if decision_label else ""}
+    <blockquote style="border-left:4px solid #0052cc;padding-left:12px;color:#555;">
+      {summary.replace(chr(10), "<br>")}{"..." if len(result.get("result_text") or "") > 300 else ""}
+    </blockquote>
+    {chat_link_html}
+    {jira_link_html}
+    <hr style="border:none;border-top:1px solid #ddd;margin-top:20px;"/>
+    <p style="font-size:12px;color:#888;">Tin nhắn này được gửi tự động bởi Zalopay Knowledge Agent.</p>
+  </div>
+</body></html>
+"""
+
+    sent = send_email(to=assignee_email, subject=subject, body_html=body_html, settings=settings)
+
+    if sent:
+        avatar_md = f"![avatar]({assignee_avatar}){{width=24}}" if assignee_avatar else ""
+        notify_text = (
+            f"📧 **Đã gửi thông báo** tới {avatar_md} **{assignee_name}** "
+            f"({assignee_email})"
+            + (f" — [Xem conversation]({chat_url})" if chat_url else "")
+        )
+        push(
+            "assistant",
+            notify_text,
+            f"wh-notify-{session_id[:6]}",
+            response={
+                "status": "agent_action",
+                "answer": notify_text,
+                "citations": [],
+                "source_departments": [],
+                "confidence": 0,
+                "feedback_id": "",
+            },
+        )
+    else:
+        logger.warning("Gmail notification skipped or failed for %s → %s", event.issue_key, assignee_email)
 
 
 def _json(code: int, body: dict) -> Response:
