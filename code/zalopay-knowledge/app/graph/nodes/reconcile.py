@@ -78,12 +78,18 @@ def make_reconcile_node(
         # ── Fast path: single department, pass through ────────────────────────
         if len(answered) == 1:
             r = answered[0]
+            citations = list(r.get("citations") or [])
+            # Refusals from other depts are expected for domain-specific questions
+            # (router fans out broadly; non-relevant depts refuse normally).
+            # Only mark partial when multi-dept coverage is truly needed but incomplete.
+            has_citations = len(citations) > 0
+            status = "answered" if has_citations else ("partial" if refusals else "answered")
             return {
                 "answer": r["answer"],
-                "citations": list(r.get("citations") or []),
+                "citations": citations,
                 "conflicts": [],
                 "confidence": float(r.get("confidence", 0.0)),
-                "status": "partial" if refusals else "answered",
+                "status": status,
                 "refusals": refusals,
             }
 
@@ -108,7 +114,7 @@ def make_reconcile_node(
                 "citations": global_citations,
                 "conflicts": [],
                 "confidence": round(base_conf * 0.8, 3),
-                "status": "partial" if refusals else "answered",
+                "status": "answered",
                 "refusals": refusals,
             }
 
@@ -137,7 +143,7 @@ def make_reconcile_node(
                 "citations": global_citations,
                 "conflicts": [],
                 "confidence": round(base_conf * 0.8, 3),
-                "status": "partial" if refusals else "answered",
+                "status": "answered",
                 "refusals": refusals,
             }
 
@@ -145,8 +151,11 @@ def make_reconcile_node(
         conflicts = _parse_conflicts(data.get("conflicts"), answered)
 
         # A flagged conflict downgrades confidence and the overall status.
+        # Refusals from non-relevant departments are expected (router fans out
+        # broadly); they don't indicate an incomplete answer.  Only conflicts
+        # degrade the status to "partial".
         confidence = base_conf * (0.7 if conflicts else 1.0)
-        status = "partial" if (refusals or conflicts) else "answered"
+        status = "partial" if conflicts else "answered"
 
         logger.info(
             "reconcile: merged %d depts, %d conflicts, %d citations",

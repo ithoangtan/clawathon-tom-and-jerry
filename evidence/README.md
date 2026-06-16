@@ -1,15 +1,15 @@
-# Evidence — Zalopay Wiki Agent Agent QC Report
+# Evidence — Zalopay Wiki Agent QC Report
 
-**Date:** 2026-06-15
+**Date:** 2026-06-16
 **Tester:** QC (automated via Claude Code)
 **System under test:** Zalopay Internal Knowledge Agent
 **Endpoint:** `POST http://localhost:8080/chat` + UI at `http://localhost:5173`
-**Index:** 96 chunks — Confluence synced (Risk: 37, Grow: 23, Bank: 36)
-**Model:** `minimax/minimax-m2.5` (auto-fallback từ `qwen/qwen3.7-plus` — daily quota exhausted)
+**Index:** 122 chunks — Confluence synced (Risk: 49, Grow: 23, Bank: 36, Workflow: 14)
+**Model:** `gpt-5.4-nano` (OpenAI) — embeddings: `baai/bge-m3` (VNG MaaS, 1024-dim)
 
 ---
 
-## Tổng quan kết quả — 30 Test Cases
+## Tổng quan kết quả — 35 Test Cases
 
 | TC | Tên | Mode | Type | Verdict |
 |----|-----|------|------|---------|
@@ -42,9 +42,14 @@
 | [TC27](TC27-ui-dashboard-page.md) | UI: Dashboard page metrics | Browser UI | Happy | ✅ PASS |
 | [TC28](TC28-ui-settings-page.md) | UI: Settings page | Browser UI | Happy | ✅ PASS |
 | [TC29](TC29-ui-admin-knowledge-sync.md) | UI: Admin knowledge sync | Browser UI | Happy | ✅ PASS |
-| [TC30](TC30-ui-spa-deeplink-bug.md) | UI: SPA deep-link black screen | Browser UI | 🔴 BUG | 🔴 FAIL |
+| [TC30](TC30-ui-spa-deeplink-bug.md) | UI: SPA deep-link routing | Browser UI | Fixed | ✅ PASS |
+| [TC31](TC31-feature-suggested-questions-ui.md) | Feature: Suggested questions chips | Browser UI | New feature | ✅ PASS |
+| [TC32](TC32-feature-suggest-graph-node.md) | Feature: Suggest graph node | Graph / API | New feature | ✅ PASS |
+| [TC33](TC33-feature-knowledge-gap-tracker-ui.md) | Feature: Knowledge Gap Tracker UI | Browser UI | New feature | ✅ PASS |
+| [TC34](TC34-feature-knowledge-gaps-api.md) | Feature: Knowledge Gaps API | GET /api/knowledge-gaps | New feature | ✅ PASS |
+| [TC35](TC35-feature-proactive-intelligence-e2e.md) | Feature: Proactive Intelligence E2E | Full stack | New feature | ✅ PASS |
 
-**Pass rate: 25/30 full pass | 3/30 minor issue/partial | 2/30 fail**
+**Pass rate: 31/35 full pass | 2/35 minor issue/partial | 1/35 fail | 1/35 partial**
 
 ---
 
@@ -52,10 +57,11 @@
 
 | Verdict | Count |
 |---------|-------|
-| ✅ PASS | 25 |
-| ⚠️ PASS with minor issue | 3 |
-| 🔴 FAIL / BUG | 2 |
-| **Total** | **30** |
+| ✅ PASS | 31 |
+| ⚠️ PASS with minor issue | 2 |
+| ⚠️ PARTIAL | 1 |
+| 🔴 FAIL / BUG | 1 |
+| **Total** | **35** |
 
 ---
 
@@ -66,16 +72,15 @@
 | API Base | `http://localhost:8080` |
 | Frontend | `http://localhost:5173` |
 | Auth headers | `X-GreenNode-AgentBase-User-Id: qc-tester` |
-| Index source | Confluence: Risk (37) + Grow (23) + Bank (36) = 96 chunks |
+| Index source | Confluence: Risk (49) + Grow (23) + Bank (36) + Workflow (14) = 122 chunks |
 | GRADE_THRESHOLD | 0.3 |
 | TOPK | 8 |
 | BRANCH_TIMEOUT_S | 180 |
 | GRAPH_BUDGET_S | 240 |
-| Embedding model | `baai/bge-m3` |
-| Primary model | `qwen/qwen3.7-plus` (quota exhausted → fallback) |
-| Fallback model | `minimax/minimax-m2.5` (auto-discovered from `/v1/models`) |
-| Vector store | OpenSearch (HCM03) |
-| MySQL | AuditStore + FeedbackStore |
+| Embedding model | `baai/bge-m3` (VNG MaaS, 1024-dim) |
+| LLM model | `gpt-5.4-nano` (OpenAI — both SMALL_MODEL and MAIN_MODEL) |
+| Vector store | OpenSearch (GreenNode VDB, HCM03) |
+| MySQL | `49.213.71.45` — AuditStore + FeedbackStore |
 
 ---
 
@@ -109,21 +114,7 @@
 
 ---
 
-### 🔴 BUG-03 — SPA deep-link routing: black screen on direct navigation (TC30)
-
-| Field | Detail |
-|-------|--------|
-| **Severity** | Medium |
-| **TC** | [TC30](TC30-ui-spa-deeplink-bug.md) |
-| **Repro** | Direct browser navigation to `/chat`, `/dashboard`, `/settings`, or any subroute |
-| **Expected** | App renders normally |
-| **Actual** | Solid black screen — React app fails to mount |
-| **Root cause** | SPA routes not falling back to `index.html` on direct access |
-| **Suggested fix** | Nginx config: `try_files $uri $uri/ /index.html`; or Vite preview with `historyApiFallback` |
-
----
-
-### ⚠️ BUG-04 — bge-m3 cold-start: first query after restart exceeds GRAPH_BUDGET_S (known)
+### ⚠️ BUG-03 — bge-m3 cold-start: first query after restart exceeds GRAPH_BUDGET_S (known)
 
 | Field | Detail |
 |-------|--------|
@@ -137,26 +128,38 @@
 
 ---
 
+## Fixes applied in this test run
+
+| Fix | File | Description |
+|-----|------|-------------|
+| extract_claims merge | `app/graph/nodes/_helpers.py` | Merge citation-only lines (e.g. `[1]`) with preceding sentence — prevents verify node from rejecting empty claims |
+| reconcile status fix | `app/graph/nodes/reconcile.py` | Single-dept answered + citations → `status: answered` even when other depts refuse |
+| Embedding dimension fix | Container restart | `.env` `EMBEDDING_MODEL=baai/bge-m3` — resolves 3072-dim vs 1024-dim mismatch |
+| Index fresh sync | `POST /api/admin/reindex` | All 4 indexes recreated with correct 1024-dim vectors; Risk=49, Grow=23, Bank=36, Workflow=14 chunks |
+
+---
+
 ## Observations tổng quát
 
 ### ✅ Điều hoạt động tốt
 
 1. **Auto-routing chính xác** — tất cả câu hỏi route đúng dept không cần chỉ định
-2. **Model auto-fallback** — khi `qwen/qwen3.7-plus` hết quota, tự switch sang `minimax/minimax-m2.5` liền mạch
+2. **Citation-grounded** — mọi answer đều có citations trace ngược về Confluence
 3. **Cross-version handling** — phân biệt rõ v1 vs v2, không confuse thông tin
 4. **Refusal on real-time data** — từ chối đúng câu hỏi tỷ giá, không hallucinate
-5. **Citation-grounded** — mọi answer đều có citations trace ngược về Confluence
-6. **Bilingual bidirectional** — VI question → VI answer; EN question → EN answer
-7. **Health endpoints** — đầy đủ liveness/readiness probes cho K8s
-8. **Feedback round-trip** — POST /chat → feedback_id → POST /feedback 204 hoạt động
-9. **Auth validation** — missing headers 400, bad body 422, extra fields rejected
-10. **UI i18n** — full EN↔VI toggle instant, tất cả elements translated
-11. **Dashboard metrics** — real-time metrics từ MySQL, không mock
-12. **Admin sync panel** — live sync status per dept, trigger sync button
+5. **Bilingual bidirectional** — VI question → VI answer; EN question → EN answer
+6. **Health endpoints** — đầy đủ liveness/readiness probes cho K8s
+7. **Feedback round-trip** — POST /chat → feedback_id → POST /feedback 204 hoạt động
+8. **Auth validation** — missing headers 400, bad body 422, extra fields rejected
+9. **UI i18n** — full EN↔VI toggle instant, tất cả elements translated
+10. **Dashboard metrics** — real-time metrics từ MySQL, không mock
+11. **Admin sync panel** — live sync status per dept, trigger sync button
+12. **Suggested questions** — 3 follow-up chips sau mỗi answered response, auto-submit khi click
+13. **Knowledge Gap Tracker** — admin panel hiển thị refused questions + low-rated docs
+14. **SPA deep-link** — `SPAStaticFiles` phục vụ `index.html` cho mọi client route
 
 ### ⚠️ Điểm cần cải thiện
 
 1. **Chunking quality** (BUG-01) — Tech Doc chunks split không tối ưu, mất context API listing
 2. **Router out-of-scope coverage** (BUG-02) — Chưa cover contact info intent
-3. **SPA deep-link** (BUG-03) — Production Nginx config cần `try_files`
-4. **bge-m3 warm-up** (BUG-04) — Cần warm-up sau restart để tránh cold-start timeout
+3. **bge-m3 warm-up** (BUG-03) — Cần warm-up sau restart để tránh cold-start timeout

@@ -206,11 +206,27 @@ def extract_claims(answer: str, chunks: list[Chunk]) -> list[dict]:
         one per citation-bearing sentence.  Sentences with no marker are
         excluded (nothing to verify against).
     """
+    _ONLY_MARKERS_RE = re.compile(r"^[\s\[\d,\]]+$")
     claims: list[dict] = []
     # Split on sentence terminators and newlines while keeping it simple/robust.
-    segments = re.split(r"(?<=[.!?])\s+|\n+", answer)
+    raw_segs = re.split(r"(?<=[.!?])\s+|\n+", answer)
+
+    # Merge citation-only lines (e.g. "[1]" on its own line) with the
+    # preceding segment.  Some LLMs emit markers on a standalone line after the
+    # claim sentence; without this merge, extract_claims would produce a claim
+    # whose text is just "[1]", which the verifier always rejects.
+    merged: list[str] = []
+    for seg in raw_segs:
+        stripped = seg.strip()
+        if not stripped:
+            continue
+        if _ONLY_MARKERS_RE.match(stripped) and merged:
+            merged[-1] = merged[-1].rstrip() + " " + stripped
+        else:
+            merged.append(seg)
+
     claim_id = 0
-    for seg in segments:
+    for seg in merged:
         seg = seg.strip()
         if not seg:
             continue
