@@ -6,48 +6,61 @@ export interface CitationMarkerOptions {
   onCitationClick?: (index: number) => void;
 }
 
-/** Turn [n] citation markers in plain text into clickable links or buttons. */
-export function renderCitationMarkers(
-  text: string,
-  { citations, onCitationClick }: CitationMarkerOptions,
+function renderSingleCitation(
+  index: number,
+  citation: Citation,
+  key: string | number,
+  onCitationClick?: (index: number) => void,
 ): ReactNode {
-  const parts = text.split(/(\[\d+\])/g);
-  return parts.map((part, i) => {
-    const match = part.match(/^\[(\d+)\]$/);
-    if (!match) return part;
-
-    const index = parseInt(match[1], 10);
-    const citation = citations[index - 1];
-    if (!citation) return part;
-
-    if (onCitationClick) {
-      return (
-        <button
-          key={i}
-          type="button"
-          onClick={() => onCitationClick(index)}
-          className="citation-link"
-          title={citation.title}
-          aria-label={`Citation ${index}: ${citation.title}`}
-        >
-          {index}
-        </button>
-      );
-    }
-
+  if (onCitationClick) {
     return (
-      <a
-        key={i}
-        href={citation.url}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        key={key}
+        type="button"
+        onClick={() => onCitationClick(index)}
         className="citation-link"
         title={citation.title}
         aria-label={`Citation ${index}: ${citation.title}`}
       >
         {index}
-      </a>
+      </button>
     );
+  }
+  return (
+    <a
+      key={key}
+      href={citation.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="citation-link"
+      title={citation.title}
+      aria-label={`Citation ${index}: ${citation.title}`}
+    >
+      {index}
+    </a>
+  );
+}
+
+/** Turn [n] or [n,m,...] citation markers in plain text into clickable links or buttons. */
+export function renderCitationMarkers(
+  text: string,
+  { citations, onCitationClick }: CitationMarkerOptions,
+): ReactNode {
+  // Match both [n] and [n,m,...] patterns
+  const parts = text.split(/(\[\d+(?:,\s*\d+)*\])/g);
+  return parts.map((part, i) => {
+    const match = part.match(/^\[(\d+(?:,\s*\d+)*)\]$/);
+    if (!match) return part;
+
+    const indices = match[1].split(",").map((s) => parseInt(s.trim(), 10));
+
+    const buttons = indices.flatMap((index, j) => {
+      const citation = citations[index - 1];
+      if (!citation) return [];
+      return [renderSingleCitation(index, citation, `${i}-${j}`, onCitationClick)];
+    });
+
+    return buttons.length > 0 ? buttons : part;
   });
 }
 
