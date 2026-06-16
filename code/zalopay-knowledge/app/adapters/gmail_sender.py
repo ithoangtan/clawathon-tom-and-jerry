@@ -67,37 +67,41 @@ def _resolve_access_token(settings: Settings) -> str | None:
     """AgentBase identity first, then local refresh_token fallback."""
     if settings.is_agentbase:
         try:
+            import asyncio
             import time
+            from greennode_agentbase.identity import ThreeLoTokenRequest
             from app.adapters.identity_client import get_identity_client
-            from greennode_agentbase.identity import Get3loTokenRequest
-                provider = "identity-google-space"
-                identity = "identity-google-space"
-                t0 = time.monotonic()
-                logger.info("Gmail: get_3lo_token provider=%s identity=%s", provider, identity)
-                client = get_identity_client()
-                result = client.get_3lo_token(
+
+            provider = "identity-google-space"
+            identity = "identity-google-space"
+            t0 = time.monotonic()
+            logger.info("Gmail: get_3lo_token provider=%s identity=%s", provider, identity)
+            client = get_identity_client()
+            result = asyncio.run(
+                client.get_3lo_token_async(
                     provider_name=provider,
                     agent_identity_name=identity,
-                    request=Get3loTokenRequest(
+                    request=ThreeLoTokenRequest(
                         agent_user_id="itk160454@gmail.com",
                         scopes=[GMAIL_SEND_SCOPE],
                     ),
                 )
-                token = (getattr(result, "access_token", None) or "").strip()
-                if token:
-                    logger.info("Gmail: 3LO token OK (%.0fms)", (time.monotonic() - t0) * 1000)
-                    return token
-                auth_url = getattr(result, "authorization_url", None)
-                if auth_url:
-                    logger.warning(
-                        "Gmail: OAuth not yet authorized (%.0fms) — admin must visit: %s",
-                        (time.monotonic() - t0) * 1000, auth_url,
-                    )
-                else:
-                    logger.warning(
-                        "Gmail: get_3lo_token returned no token and no auth URL (%.0fms)",
-                        (time.monotonic() - t0) * 1000,
-                    )
+            )
+            token = (getattr(result, "access_token", None) or "").strip()
+            if token:
+                logger.info("Gmail: 3LO token OK (%.0fms)", (time.monotonic() - t0) * 1000)
+                return token
+            auth_url = getattr(result, "authorization_url", None)
+            if auth_url:
+                logger.warning(
+                    "Gmail: OAuth not yet authorized (%.0fms) — admin must visit: %s",
+                    (time.monotonic() - t0) * 1000, auth_url,
+                )
+            else:
+                logger.warning(
+                    "Gmail: get_3lo_token returned no token and no auth URL (%.0fms)",
+                    (time.monotonic() - t0) * 1000,
+                )
         except Exception as exc:
             logger.warning("Gmail: AgentBase identity token failed: %s", exc)
 

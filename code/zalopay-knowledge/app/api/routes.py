@@ -214,17 +214,20 @@ def admin_gmail_status() -> JSONResponse:
     # AgentBase 3LO path
     if cfg.is_agentbase:
         try:
-            from greennode_agentbase.identity import Get3loTokenRequest
+            import asyncio
+            from greennode_agentbase.identity import ThreeLoTokenRequest
             from app.adapters.identity_client import get_identity_client
             from app.adapters.gmail_sender import GMAIL_SEND_SCOPE
             client = get_identity_client()
-            result = client.get_3lo_token(
-                provider_name="identity-google-space",
-                agent_identity_name="identity-google-space",
-                request=Get3loTokenRequest(
-                    agent_user_id="itk160454@gmail.com",
-                    scopes=[GMAIL_SEND_SCOPE],
-                ),
+            result = asyncio.run(
+                client.get_3lo_token_async(
+                    provider_name="identity-google-space",
+                    agent_identity_name="identity-google-space",
+                    request=ThreeLoTokenRequest(
+                        agent_user_id="itk160454@gmail.com",
+                        scopes=[GMAIL_SEND_SCOPE],
+                    ),
+                )
             )
             token = (getattr(result, "access_token", None) or "").strip()
             if token:
