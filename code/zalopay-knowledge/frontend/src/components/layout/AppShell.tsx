@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/icons";
 import { runBrandPulse, runHeroFloat, runNavStagger, useGSAP } from "@/lib/gsap";
 import { t } from "@/lib/i18n";
-import { classNames, generateSessionId } from "@/lib/format";
+import { classNames } from "@/lib/format";
 import { useHealth } from "@/hooks/useHealth";
 import { useUserStore } from "@/store/userStore";
 import { useSessionStore } from "@/store/sessionStore";
@@ -110,7 +110,7 @@ export function Header() {
             {indexReady ? t("healthHealthy", locale) : t("healthIndexPending", locale)}
           </Badge>
           <TutorialHelpButton />
-          <Button variant="ghost" onClick={() => navigate(`/chat/${generateSessionId()}`)} className="hidden sm:inline-flex">
+          <Button variant="ghost" onClick={() => navigate("/")} className="hidden sm:inline-flex">
             <Plus size="sm" />
             {t("newSession", locale)}
           </Button>

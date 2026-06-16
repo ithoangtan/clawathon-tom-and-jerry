@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { api, ApiError, chatStream } from "@/lib/apiClient";
 import {
   hidePipeline,
@@ -34,7 +34,6 @@ function isTransportError(err: unknown): boolean {
 
 export function useChat() {
   const location = useLocation();
-  const navigate = useNavigate();
   const chatScenarioKey = useMockStore((s) => s.chatScenario);
   const sessionId = useUserStore((s) => s.sessionId);
   const sessionAction = useSessionStore((s) => s.sessionAction);
@@ -112,15 +111,10 @@ export function useChat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveThread?.messages?.length, liveThread?.processingStatus]);
 
-  // ── Effect 3: Handle session switch requests ─────────────────────────────
-  // This is the ONLY place that calls setSessionId + navigate together, so
-  // they are always batched in one render — no intermediate state where
-  // ChatPage sees urlSessionId ≠ currentSessionId and re-fires requestSwitchSession,
-  // which would resurrect a just-deleted session via an unwanted saveThread call.
+  // ── Effect 3: Handle session switch (existing sessions from sidebar click) ──
   useEffect(() => {
     if (!sessionAction) return;
     abortRef.current?.abort();
-    // Save the session we're leaving unless explicitly skipped (e.g. after delete).
     if (!sessionAction.skipSave) {
       saveThread(
         useUserStore.getState().sessionId,
@@ -129,13 +123,9 @@ export function useChat() {
         targetAutoRouteRef.current,
       );
     }
-    const targetId = sessionAction.sessionId;
-    // setSessionId + navigate in the same synchronous call → React 18 batches them
-    // so ChatPage always sees urlSessionId === currentSessionId in the next render.
-    useUserStore.getState().setSessionId(targetId);
-    navigate(`/chat/${targetId}`, { replace: false });
+    useUserStore.getState().setSessionId(sessionAction.sessionId);
     clearSessionAction();
-  }, [sessionAction, saveThread, clearSessionAction, navigate]);
+  }, [sessionAction, saveThread, clearSessionAction]);
 
   // ── Effect 4: Save after each complete exchange ───────────────────────────
   // Fires only when the last message is a fully-revealed assistant response.

@@ -23,7 +23,10 @@ export function ChatPage() {
   const requestSwitchSession = useSessionStore((s) => s.requestSwitchSession);
 
   useEffect(() => {
-    if (urlSessionId && urlSessionId !== currentSessionId) {
+    if (!urlSessionId) {
+      // Home ("/") — always start with a fresh blank session.
+      useUserStore.getState().newSession();
+    } else if (urlSessionId !== currentSessionId) {
       requestSwitchSession(urlSessionId);
     }
   }, [urlSessionId, currentSessionId, requestSwitchSession]);

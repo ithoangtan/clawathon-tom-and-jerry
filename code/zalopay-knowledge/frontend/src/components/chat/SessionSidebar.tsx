@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ArrowRight, ChevronLeft, History, Menu, Plus, Search, Trash2, X } from "@/components/ui/icons";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-import { classNames, formatDate, generateSessionId } from "@/lib/format";
+import { classNames, formatDate } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import {
   matchesSearch,
@@ -56,7 +56,6 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
   const threadsRecord = useSessionStore((s) => s.threads);
   const threadsLoaded = useSessionStore((s) => s.loaded);
   const deleteThread = useSessionStore((s) => s.deleteThread);
-  const requestSwitchSession = useSessionStore((s) => s.requestSwitchSession);
   const startPolling = useSessionStore((s) => s.startPolling);
   const stopPolling = useSessionStore((s) => s.stopPolling);
   const navigate = useNavigate();
@@ -94,10 +93,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
     deleteThread(sessionId);
     setPendingDeleteId(null);
     if (sessionId === activeSessionId) {
-      // skipSave=true: Effect 3 in useChat handles setSessionId + navigate atomically,
-      // preventing the race where ChatPage re-fires requestSwitchSession and re-saves
-      // the just-deleted session under the new ID.
-      requestSwitchSession(generateSessionId(), true);
+      navigate("/");
     }
   }
 
@@ -132,7 +128,7 @@ export function SessionSidebarPanel({ onCloseMobile, onCloseDesktop }: SessionSi
           variant="secondary"
           className="w-full justify-start"
           onClick={() => {
-            requestSwitchSession(generateSessionId());
+            navigate("/");
             onCloseMobile?.();
           }}
         >
