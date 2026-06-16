@@ -82,7 +82,7 @@ export function buildThread(
   targetAutoRoute: boolean,
   existing?: SessionThread,
 ): SessionThread | null {
-  if (!messages.some((m) => m.role === "assistant")) return null;
+  if (messages.length === 0) return null;
 
   const now = new Date().toISOString();
   const firstPrompt = firstUserQuestion(messages);

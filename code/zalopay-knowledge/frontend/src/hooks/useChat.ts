@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { api, ApiError, chatStream } from "@/lib/apiClient";
 import {
   hidePipeline,
@@ -101,7 +101,6 @@ function resetChatState(
 }
 
 export function useChat() {
-  const navigate = useNavigate();
   const location = useLocation();
   const chatScenarioKey = useMockStore((s) => s.chatScenario);
   const sessionId = useUserStore((s) => s.sessionId);
@@ -267,7 +266,9 @@ export function useChat() {
       if (!trimmed || loading) return;
 
       if (location.pathname === "/") {
-        navigate(`/chat/${sessionId}`, { replace: true });
+        // Use replaceState instead of navigate() to avoid React Router unmounting
+        // this component (which would abort the in-flight stream and lose the session).
+        window.history.replaceState(null, "", `/chat/${sessionId}`);
       }
 
       const now = new Date().toISOString();
@@ -452,7 +453,7 @@ export function useChat() {
         setStreamingStatus(null);
       }
     },
-    [loading, targetDepartments, targetAutoRoute, appendAssistant, chatScenarioKey, location.pathname, sessionId, navigate],
+    [loading, targetDepartments, targetAutoRoute, appendAssistant, chatScenarioKey, location.pathname, sessionId],
   );
 
   const retryLast = useCallback(() => {

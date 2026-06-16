@@ -101,7 +101,9 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
       threads: { ...state.threads, [sessionId]: thread },
     }));
 
-    api.upsertSession(sessionId, thread).catch(() => {/* best-effort */});
+    api.upsertSession(sessionId, thread).catch((err) => {
+      console.warn("[sessionStore] Failed to persist session:", sessionId, err);
+    });
   },
 
   deleteThread: (sessionId) => {
