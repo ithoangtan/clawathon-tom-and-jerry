@@ -43,13 +43,21 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
   loadThreads: async () => {
     try {
       const { threads } = await api.listSessions();
-      const record: Record<string, SessionThread> = {};
+      const dbRecord: Record<string, SessionThread> = {};
       for (const t of threads as SessionThread[]) {
-        record[t.sessionId] = t;
+        dbRecord[t.sessionId] = t;
       }
-      set({ threads: record, loaded: true });
+      // Merge: DB wins for existing sessions, but preserve any local sessions
+      // that haven't been persisted yet (e.g. in-flight PUT or optimistic saves).
+      set((state) => {
+        const merged: Record<string, SessionThread> = { ...state.threads };
+        for (const [id, thread] of Object.entries(dbRecord)) {
+          merged[id] = thread;
+        }
+        return { threads: merged, loaded: true };
+      });
       // Auto-start polling if any session is currently processing.
-      const hasProcessing = Object.values(record).some(
+      const hasProcessing = Object.values(dbRecord).some(
         (t) => t.processingStatus === "processing",
       );
       if (hasProcessing) get().startPolling();
@@ -63,13 +71,20 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     const timer = setInterval(async () => {
       try {
         const { threads } = await api.listSessions();
-        const record: Record<string, SessionThread> = {};
+        const dbRecord: Record<string, SessionThread> = {};
         for (const t of threads as SessionThread[]) {
-          record[t.sessionId] = t;
+          dbRecord[t.sessionId] = t;
         }
-        set({ threads: record });
+        // Same merge: preserve any local sessions not yet in DB.
+        set((state) => {
+          const merged: Record<string, SessionThread> = { ...state.threads };
+          for (const [id, thread] of Object.entries(dbRecord)) {
+            merged[id] = thread;
+          }
+          return { threads: merged };
+        });
         // Stop polling when nothing is processing anymore.
-        const stillProcessing = Object.values(record).some(
+        const stillProcessing = Object.values(dbRecord).some(
           (t) => t.processingStatus === "processing",
         );
         if (!stillProcessing) get().stopPolling();
