@@ -43,7 +43,8 @@ export const useUserStore = create<UserStore>()(
       name: "zalopay-knowledge-user",
       partialize: (state) => ({
         userId: state.userId,
-        sessionId: state.sessionId,
+        // sessionId intentionally NOT persisted — URL (/chat/:id) is the source of truth.
+        // Persisting it caused "/" to auto-load the last session instead of new chat.
         role: state.role,
         homeDept: state.homeDept,
         locale: state.locale,
