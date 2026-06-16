@@ -63,6 +63,28 @@ def send_email(*, to: str, subject: str, body_html: str, settings: Settings) -> 
     return False
 
 
+_GMAIL_IDENTITY_NAME = "zalopay-knowledge-gmail"
+_GMAIL_CALLBACK_URL = "https://agentbase.api.vngcloud.vn/identity/oauth2/callback/6a2d02f163c82faa1f1bc4b9"
+
+
+def _ensure_gmail_identity(client) -> None:
+    """Create the agent identity for Gmail if it doesn't exist yet (idempotent)."""
+    import asyncio
+    try:
+        asyncio.run(client.create_workload_identity_async(
+            name=_GMAIL_IDENTITY_NAME,
+            allowed_return_urls=[_GMAIL_CALLBACK_URL],
+        ))
+        logger.info("Gmail: created agent identity %s", _GMAIL_IDENTITY_NAME)
+    except Exception as exc:
+        # 409 = already exists — that's fine
+        msg = str(exc).lower()
+        if "409" in msg or "already exist" in msg or "conflict" in msg:
+            logger.debug("Gmail: agent identity %s already exists", _GMAIL_IDENTITY_NAME)
+        else:
+            raise
+
+
 def _resolve_access_token(settings: Settings) -> str | None:
     """AgentBase identity first, then local refresh_token fallback."""
     if settings.is_agentbase:
@@ -73,18 +95,18 @@ def _resolve_access_token(settings: Settings) -> str | None:
             from app.adapters.identity_client import get_identity_client
 
             provider = "identity-google-space"
-            identity = "identity-google-space"
             t0 = time.monotonic()
-            logger.info("Gmail: get_3lo_token provider=%s identity=%s", provider, identity)
             client = get_identity_client()
+            _ensure_gmail_identity(client)
+            logger.info("Gmail: get_3lo_token provider=%s identity=%s", provider, _GMAIL_IDENTITY_NAME)
             result = asyncio.run(
                 client.get_3lo_token_async(
                     provider_name=provider,
-                    agent_identity_name=identity,
+                    agent_identity_name=_GMAIL_IDENTITY_NAME,
                     request=ThreeLoTokenRequest(
                         agent_user_id="itk160454@gmail.com",
                         scopes=[GMAIL_SEND_SCOPE],
-                        return_url="https://agentbase.api.vngcloud.vn/identity/oauth2/callback/6a2d02f163c82faa1f1bc4b9",
+                        return_url=_GMAIL_CALLBACK_URL,
                     ),
                 )
             )

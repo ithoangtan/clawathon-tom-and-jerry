@@ -217,16 +217,22 @@ def admin_gmail_status() -> JSONResponse:
             import asyncio
             from greennode_agentbase.identity import ThreeLoTokenRequest
             from app.adapters.identity_client import get_identity_client
-            from app.adapters.gmail_sender import GMAIL_SEND_SCOPE
+            from app.adapters.gmail_sender import (
+                GMAIL_SEND_SCOPE,
+                _GMAIL_CALLBACK_URL,
+                _GMAIL_IDENTITY_NAME,
+                _ensure_gmail_identity,
+            )
             client = get_identity_client()
+            _ensure_gmail_identity(client)
             result = asyncio.run(
                 client.get_3lo_token_async(
                     provider_name="identity-google-space",
-                    agent_identity_name="identity-google-space",
+                    agent_identity_name=_GMAIL_IDENTITY_NAME,
                     request=ThreeLoTokenRequest(
                         agent_user_id="itk160454@gmail.com",
                         scopes=[GMAIL_SEND_SCOPE],
-                        return_url="https://agentbase.api.vngcloud.vn/identity/oauth2/callback/6a2d02f163c82faa1f1bc4b9",
+                        return_url=_GMAIL_CALLBACK_URL,
                     ),
                 )
             )
