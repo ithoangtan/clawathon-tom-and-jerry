@@ -23,16 +23,17 @@ from datetime import datetime, timezone
 from app.adapters.confluence_writer import text_to_storage
 from app.config import Settings, get_settings
 from app.integrations.jira_events import JiraEvent
+from app.integrations.source_links import resolve_description_sources
 from app.ports.confluence_writer import ConfluenceWriterPort
 from app.ports.errors import ConfluenceUnavailable, JiraUnavailable, RetrieverUnavailable, WorkflowParseError
 from app.ports.jira import JiraPort
 from app.ports.llm import LLMPort
 from app.ports.retriever import RetrieverPort
 from app.ports.types import ModelTier
-from app.workflow.parser import parse_workflow
-from app.workflow.triggers import match_trigger
-
 from app.workflow.labels import WORKFLOW_LABEL_PREFIX
+from app.workflow.parser import parse_workflow
+from app.workflow.reactions import apply_reactions, parse_decision
+from app.workflow.triggers import match_trigger
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,9 @@ def handle_jira_event(
                        workflow=defn.name, n_triggers=len(defn.triggers))
 
     # 4. Run the action (LLM) + side-effects.
-    result_text = _run_action(event, issue, defn, trig.action, llm=llm, retriever=retriever, cfg=cfg)
+    result_text = _run_action(
+        event, issue, defn, trig.action, llm=llm, retriever=retriever, jira=jira, cfg=cfg
+    )
 
     out: dict = {
         "status": "acted",
@@ -125,9 +128,21 @@ def handle_jira_event(
         except ConfluenceUnavailable as exc:
             out["confluence_error"] = str(exc)
 
+    # 4c. Decision-driven reactions — verbs declared on the page (## Reactions),
+    # not hardcoded here: reassign / label / append_confluence. Comment-only when
+    # the workflow declares no Reactions table (backward compatible).
+    decision = parse_decision(result_text)
+    out["decision"] = decision
+    out["reactions"] = apply_reactions(
+        decision, defn,
+        issue_key=event.issue_key, report_text=result_text, issue=issue,
+        jira=jira, confluence_writer=confluence_writer, page_id=page_id,
+    )
+
     logger.info(
-        "Jira event handled: issue=%s workflow=%r action=%r jira=%s confluence=%s",
-        event.issue_key, defn.name, trig.action, out["jira_comment"], out["confluence_updated"],
+        "Jira event handled: issue=%s workflow=%r action=%r decision=%s jira=%s confluence=%s reactions=%s",
+        event.issue_key, defn.name, trig.action, decision,
+        out["jira_comment"], out["confluence_updated"], out["reactions"].get("verbs"),
     )
     return out
 
@@ -187,26 +202,74 @@ def _run_action(
     *,
     llm: LLMPort,
     retriever: RetrieverPort,
+    jira: JiraPort,
     cfg: Settings,
 ) -> str:
-    """Produce the action result text via the LLM, grounded on ticket + RAG context."""
+    """Produce the action result text via the LLM.
+
+    Grounding sources, in order: (1) the in-system documents linked from the
+    ticket Description (Confluence/Jira/GDrive — see :mod:`source_links`),
+    (2) the zalopay wiki via RAG. The review questions are read from the
+    workflow page's step checklists (data, not hardcoded).
+    """
     context = [
         f"Workflow: {defn.name}",
         f"Ticket {event.issue_key}: {issue.get('summary', '')} (status: {issue.get('status', '')})",
         _event_description(event),
     ]
-    # Optional RAG grounding using the action text as the query (risk domain default).
+
+    # 1. In-system documents referenced in the ticket Description (campaign spec…).
+    description = (issue.get("fields") or {}).get("description")
+    resolution = resolve_description_sources(description, settings=cfg, jira=jira)
+    for src in resolution.sources:
+        context.append(f"[tài liệu · {src.kind} · {src.title}]\n{src.text}")
+    if resolution.skipped_external or resolution.unreadable:
+        notes = []
+        if resolution.skipped_external:
+            notes.append(f"{resolution.skipped_external} link ngoài hệ thống (không hỗ trợ)")
+        if resolution.unreadable:
+            notes.append(f"{resolution.unreadable} link in-system không đọc được")
+        context.append("(Lưu ý: đã bỏ qua " + "; ".join(notes) + ".)")
+
+    # 2. zalopay wiki grounding (RAG) using the action text as the query. Pull enough
+    # policy text that the rule definitions are present (else the LLM over-marks "Chưa rõ").
     try:
-        hits = retriever.search(department="risk", query=action, k=2, language="vi")
+        hits = retriever.search(department="risk", query=action, k=6, language="vi")
         for h in hits:
-            context.append(f"[ref] {h.title}: {(h.text or '')[:300]}")
+            context.append(f"[chính sách] {h.title}: {(h.text or '')[:1500]}")
     except RetrieverUnavailable:
         pass
 
+    # Review questions + valid decisions live on the workflow page — data, not code.
+    questions = [item for step in defn.steps for item in (step.checklist or [])]
+    decisions = [r.decision for r in (defn.reactions or []) if r.decision]
+    spec_parts: list[str] = []
+    if questions:
+        q_block = "\n".join(f"- {q}" for q in questions)
+        spec_parts.append(
+            "Mỗi mục dưới đây ĐÃ nêu sẵn tiêu chí của rule — hãy đánh giá campaign spec "
+            "theo đúng tiêu chí đó, KHÔNG đợi tài liệu policy lặp lại rule. Format: "
+            '"- <mục>: **Comply/Violate/Chưa rõ** — <dẫn chứng ngắn từ campaign spec>":\n'
+            f"{q_block}\n"
+            'Chỉ ghi "Chưa rõ" khi CHÍNH CAMPAIGN SPEC thiếu thông tin để kết luận '
+            "(không phải vì thiếu tài liệu policy). Nếu campaign spec nêu rõ đã đáp ứng "
+            "tiêu chí → **Comply**."
+        )
+    else:
+        spec_parts.append("Trả về kết quả ngắn gọn, có căn cứ.")
+    if decisions:
+        spec_parts.append(
+            "Kết thúc bằng đúng MỘT dòng cuối: `DECISION: X` — với X là MỘT trong "
+            f"[{', '.join(decisions)}]."
+        )
+    answer_spec = "\n\n".join(spec_parts)
+
     prompt = (
-        f"Bạn là agent vận hành workflow. Một sự kiện vừa xảy ra trên Jira. "
-        f"Thực hiện chỉ thị sau và trả về kết quả ngắn gọn, có căn cứ (tiếng Việt), "
-        f"không bịa thông tin.\n\nChỉ thị: {action}\n\nNgữ cảnh:\n" + "\n".join(context)
+        f"Bạn là agent review rủi ro, vận hành theo workflow \"{defn.name}\". "
+        f"Một sự kiện vừa xảy ra trên Jira. Thực hiện chỉ thị dưới đây, CHỈ dựa trên "
+        f"tài liệu campaign và chính sách được cung cấp trong phần Ngữ cảnh — không bịa, "
+        f"không dùng kiến thức ngoài. Trả lời bằng tiếng Việt, ngắn gọn.\n\n"
+        f"Chỉ thị: {action}\n\n{answer_spec}\n\nNgữ cảnh:\n" + "\n".join(context)
     )
     try:
         res = llm.complete(

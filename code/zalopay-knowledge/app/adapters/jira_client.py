@@ -187,6 +187,15 @@ class JiraClient:
         self._request("PUT", f"issue/{key}", json={"update": {"labels": [{"add": lbl} for lbl in clean]}})
         return {"key": key, "labels": clean, "dry_run": False}
 
+    def assign_issue(self, *, key: str, account_id: str) -> dict:
+        if not (account_id or "").strip():
+            return {"key": key, "account_id": "", "dry_run": self._dry_run}
+        if self._dry_run:
+            logger.info("Jira dry-run assign_issue %s → %s", key, account_id)
+            return {"key": key, "account_id": account_id, "dry_run": True}
+        self._request("PUT", f"issue/{key}/assignee", json={"accountId": account_id})
+        return {"key": key, "account_id": account_id, "dry_run": False}
+
     def is_ready(self) -> bool:
         """Cheap reachability + credential check. Never raises."""
         if not self.configured():
@@ -215,6 +224,9 @@ class NullJiraClient:
         raise JiraUnavailable("Jira is not configured")
 
     def add_labels(self, **_kwargs) -> dict:
+        raise JiraUnavailable("Jira is not configured")
+
+    def assign_issue(self, **_kwargs) -> dict:
         raise JiraUnavailable("Jira is not configured")
 
     def is_ready(self) -> bool:

@@ -79,6 +79,14 @@ class JiraPort(Protocol):
         """
         ...
 
+    def assign_issue(self, *, key: str, account_id: str) -> dict:
+        """Reassign issue *key* to the Atlassian *account_id* (the ``reassign``
+        reaction verb — e.g. return a ticket to its reporter).
+
+        Returns ``{"key", "account_id"}`` or a synthetic ``dry_run`` dict.
+        """
+        ...
+
     def is_ready(self) -> bool:
         """True when Jira is configured and reachable. Never raises."""
         ...

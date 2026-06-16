@@ -115,6 +115,27 @@ class WorkflowTrigger(BaseModel):
     (e.g. "Post tổng kết review lên Confluence", "Chạy step 2-3")."""
 
 
+class WorkflowReaction(BaseModel):
+    """One row of the workflow page's ``## Reactions`` table — decision→side-effects.
+
+    After the agent runs a trigger's action and the LLM emits a ``DECISION:``
+    token, the generic reaction dispatcher (``app.workflow.reactions``) looks up
+    the matching row and applies its ``verbs``. Verbs and their arguments are
+    **data on the Confluence page**, so a new workflow declares its own reactions
+    with no code change — code only supplies the capability primitives.
+    """
+
+    decision: str
+    """The decision token this row reacts to, e.g. ``PASS`` / ``PARTIAL_FAIL`` / ``FAIL``."""
+
+    verbs: list[str] = Field(default_factory=list)
+    """Side-effect verbs, e.g. ``["comment", "reassign:reporter", "label:risk-rejected"]``.
+
+    Supported by the dispatcher: ``comment``, ``reassign:<reporter|accountId>``,
+    ``label:<name>``, ``append_confluence``. Unknown verbs are logged and skipped.
+    """
+
+
 class WorkflowDefinition(BaseModel):
     """The full parsed workflow page."""
 
@@ -142,6 +163,9 @@ class WorkflowDefinition(BaseModel):
 
     triggers: list[WorkflowTrigger] = Field(default_factory=list)
     """Event→action rules from the ``## Triggers`` table (Jira webhook reactions)."""
+
+    reactions: list[WorkflowReaction] = Field(default_factory=list)
+    """Decision→side-effect rules from the ``## Reactions`` table (applied after an action)."""
 
     # ── Normalisation ─────────────────────────────────────────────────────────
 

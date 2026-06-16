@@ -26,6 +26,9 @@ system: |
      "> **Policy ref:** ..." line.
   5. An optional `## Triggers` table with columns Event | Condition | Action.
      Each row defines an event→action rule for reacting to Jira ticket changes.
+  6. An optional `## Reactions` table with columns Decision | Do.
+     Each row maps a decision token (e.g. PASS / PARTIAL_FAIL / FAIL) to a
+     `;`-separated list of side-effect verbs to apply after the action runs.
 
   ## Extraction rules
 
@@ -61,6 +64,10 @@ system: |
       - comment: 'contains "X"' / 'chứa "X"' → comment_contains="X".
       - field: 'field=NAME to=VALUE' → field="NAME", field_to="VALUE" (field_to null if unspecified).
     Copy the "Action" cell verbatim into `action`. Leave unused fields null.
+  - `reactions`: one object per `## Reactions` table row (empty list if no such table).
+    `decision` = the Decision cell, uppercased with spaces→underscores (e.g. "PARTIAL FAIL"→"PARTIAL_FAIL").
+    `verbs` = the Do cell split on ";" into a trimmed list, each item kept verbatim
+    (e.g. "reassign:reporter", "label:risk-rejected", "comment", "append_confluence").
 
   ## Output format
 
@@ -100,6 +107,12 @@ system: |
         "field_to": "<string|null>",
         "comment_contains": "<string|null>",
         "action": "<string>"
+      }
+    ],
+    "reactions": [
+      {
+        "decision": "<string>",
+        "verbs": ["<string>", ...]
       }
     ]
   }

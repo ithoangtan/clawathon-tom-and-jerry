@@ -160,6 +160,38 @@ def test_add_comment_posts_adf_body() -> None:
     assert result["comment_id"] == "10001"
 
 
+# ── assign_issue ──────────────────────────────────────────────────────────────────
+
+def test_assign_issue_puts_account_id() -> None:
+    ctx, fake_client, _ = _patched_request({})
+    _bind(ctx, fake_client)
+    try:
+        result = JiraClient(_settings()).assign_issue(key="KAN-1", account_id="acc-9")
+    finally:
+        ctx.stop()
+
+    method, url = fake_client.request.call_args.args
+    payload = fake_client.request.call_args.kwargs["json"]
+    assert method == "PUT"
+    assert url.endswith("/rest/api/3/issue/KAN-1/assignee")
+    assert payload == {"accountId": "acc-9"}
+    assert result == {"key": "KAN-1", "account_id": "acc-9", "dry_run": False}
+
+
+def test_assign_issue_empty_account_is_noop() -> None:
+    with patch("app.adapters.jira_client.httpx.Client") as mock_cls:
+        result = JiraClient(_settings()).assign_issue(key="KAN-1", account_id="")
+    mock_cls.assert_not_called()
+    assert result["account_id"] == ""
+
+
+def test_dry_run_assign_does_no_network() -> None:
+    with patch("app.adapters.jira_client.httpx.Client") as mock_cls:
+        result = JiraClient(_settings(), dry_run=True).assign_issue(key="KAN-1", account_id="acc-9")
+    mock_cls.assert_not_called()
+    assert result["dry_run"] is True
+
+
 # ── dry_run ──────────────────────────────────────────────────────────────────────
 
 def test_dry_run_create_does_no_network() -> None:
@@ -223,6 +255,8 @@ class TestNullJiraClient:
             null.create_issue(summary="x")
         with pytest.raises(JiraUnavailable):
             null.add_comment(key="KAN-1", body="x")
+        with pytest.raises(JiraUnavailable):
+            null.assign_issue(key="KAN-1", account_id="acc-9")
 
     def test_is_ready_false(self) -> None:
         assert NullJiraClient().is_ready() is False
