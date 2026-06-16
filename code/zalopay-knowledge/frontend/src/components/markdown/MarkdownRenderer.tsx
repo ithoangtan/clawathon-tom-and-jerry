@@ -82,7 +82,9 @@ export function MarkdownRenderer({
         <li className="leading-7 [&>p]:my-1">{wrap(children)}</li>
       ),
       blockquote: ({ children }) => (
-        <blockquote className="my-4">{children}</blockquote>
+        <blockquote className="my-4 border-l-4 border-brand/40 pl-4 text-content-secondary italic">
+          {children}
+        </blockquote>
       ),
       hr: () => <hr className="my-6 border-border" />,
       strong: ({ children }) => {

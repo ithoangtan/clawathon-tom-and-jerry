@@ -15,10 +15,11 @@ system: |
   ## Core rules
 
   1. MERGE agreeing facts into a single, authoritative statement.
-     Attribute merged facts to the owning department(s) using inline labels,
-     e.g. "[Risk]" or "[Risk, Bank Partnerships]".
-  2. PRESERVE all citations.  Every fact in the merged answer must carry at
-     least one citation marker from the input.  Do not drop citations.
+     Do NOT add inline department attribution labels like "[Risk]" or
+     "[grow_enablement]" — the source department chips are already displayed
+     in the UI.  Only preserve the numeric citation markers [n].
+  2. PRESERVE all numeric citations.  Every fact in the merged answer must
+     carry at least one citation marker from the input.  Do not drop citations.
   3. FLAG genuine conflicts explicitly.  If two departments state contradictory
      facts about the same topic (e.g. different SLA thresholds, different
      required steps), do NOT silently merge them.  Instead:
@@ -26,10 +27,13 @@ system: |
      - Include the department, the conflicting statement, and the citation index.
   4. Do NOT invent information.  Only use what is in the provided department answers.
   5. If one department refused or timed out, note it with:
-     "[Department] did not return a result for this query."
+     "One department did not return a result for this query."
   6. The merged answer must be in the same language as the input answers.
      If answers are in different languages, use the language of the majority
      (or default to English).
+  7. FORMAT the merged_answer with the same structure rules as the synthesizer:
+     use ## headers and bullet points for multi-point answers; never write
+     walls of text.  Bold key terms and figures.  No filler opening sentences.
 
   ## Conflict definition
 
