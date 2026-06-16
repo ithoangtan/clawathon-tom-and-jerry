@@ -148,6 +148,19 @@ export function MarkdownRenderer({
         }
         return <input type={type} checked={checked} disabled={disabled} readOnly />;
       },
+      img: ({ src, alt }) => {
+        if (alt === "avatar") {
+          return (
+            <img
+              src={src}
+              alt=""
+              aria-hidden
+              className="inline-block h-6 w-6 rounded-full object-cover align-middle ring-1 ring-border"
+            />
+          );
+        }
+        return <img src={src} alt={alt ?? ""} className="max-w-full rounded" />;
+      },
       pre: ({ children }) => <>{children}</>,
       code: ({ className: codeClassName, children }) => {
         const text = String(children).replace(/\n$/, "");

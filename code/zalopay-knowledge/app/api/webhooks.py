@@ -369,7 +369,7 @@ def _send_assignee_notification(
 
     sent = send_email(to=assignee_email, subject=subject, body_html=body_html, settings=settings)
 
-    avatar_md = f"![avatar]({assignee_avatar}){{width=24}}" if assignee_avatar else ""
+    avatar_md = f"![avatar]({assignee_avatar})" if assignee_avatar else ""
     recipient = f"{avatar_md} **{assignee_name}** ({assignee_email})" if assignee_name else f"**{assignee_email}**"
 
     if sent:
