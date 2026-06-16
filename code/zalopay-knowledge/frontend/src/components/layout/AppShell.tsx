@@ -22,7 +22,7 @@ import { classNames } from "@/lib/format";
 import { useHealth } from "@/hooks/useHealth";
 import { useUserStore } from "@/store/userStore";
 import { useSessionStore } from "@/store/sessionStore";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 const NAV_ICONS = {
   "/": MessageSquare,
