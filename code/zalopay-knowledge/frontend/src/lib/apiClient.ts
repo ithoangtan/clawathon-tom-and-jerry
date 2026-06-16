@@ -282,6 +282,10 @@ export const api = {
     return request<void>(`/api/sessions/${sessionId}`, { method: "DELETE" });
   },
 
+  gmailStatus(): Promise<{ status: string; method?: string; auth_url?: string; detail?: string }> {
+    return request("/api/admin/gmail-status", { method: "GET" });
+  },
+
   testEmail(payload: { to: string; subject: string; body: string }): Promise<{ status: string; detail?: string }> {
     return request<{ status: string; detail?: string }>("/api/admin/test-email", {
       method: "POST",

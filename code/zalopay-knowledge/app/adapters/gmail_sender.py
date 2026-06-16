@@ -71,8 +71,8 @@ def _resolve_access_token(settings: Settings) -> str | None:
             if identity_runtime_ready(settings):
                 import time
                 from greennode_agentbase.identity import Get3loTokenRequest
-                provider = (settings.gdrive_oauth_provider or "identity-google-space").strip()
-                identity = (settings.greennode_agent_identity or "").strip()
+                provider = "identity-google-space"
+                identity = "identity-google-space"
                 t0 = time.monotonic()
                 logger.info("Gmail: get_3lo_token provider=%s identity=%s", provider, identity)
                 client = get_identity_client()
@@ -80,7 +80,7 @@ def _resolve_access_token(settings: Settings) -> str | None:
                     provider_name=provider,
                     agent_identity_name=identity,
                     request=Get3loTokenRequest(
-                        agent_user_id=settings.gdrive_oauth_agent_user_id,
+                        agent_user_id="itk160454@gmail.com",
                         scopes=[GMAIL_SEND_SCOPE],
                     ),
                 )

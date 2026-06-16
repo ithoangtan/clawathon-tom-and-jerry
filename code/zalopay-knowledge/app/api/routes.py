@@ -201,6 +201,46 @@ class _TestEmailBody(BaseModel):
     body: str
 
 
+@router.get("/api/admin/gmail-status")
+def admin_gmail_status() -> JSONResponse:
+    """Check Gmail auth status. Returns ok / need_auth (with auth_url) / not_configured."""
+    from app.config import get_settings
+    from app.adapters.identity_client import identity_runtime_ready
+    cfg = get_settings()
+
+    # Local refresh_token path
+    if cfg.gmail_refresh_token and cfg.gmail_client_id and cfg.gmail_client_secret:
+        return JSONResponse({"status": "ok", "method": "refresh_token"})
+
+    # AgentBase 3LO path
+    if identity_runtime_ready(cfg):
+        try:
+            from greennode_agentbase.identity import Get3loTokenRequest
+            from app.adapters.identity_client import get_identity_client
+            from app.adapters.gmail_sender import GMAIL_SEND_SCOPE
+            client = get_identity_client()
+            result = client.get_3lo_token(
+                provider_name="identity-google-space",
+                agent_identity_name="identity-google-space",
+                request=Get3loTokenRequest(
+                    agent_user_id="itk160454@gmail.com",
+                    scopes=[GMAIL_SEND_SCOPE],
+                ),
+            )
+            token = (getattr(result, "access_token", None) or "").strip()
+            if token:
+                return JSONResponse({"status": "ok", "method": "agentbase_3lo"})
+            auth_url = (getattr(result, "authorization_url", None) or "").strip()
+            if auth_url:
+                return JSONResponse({"status": "need_auth", "auth_url": auth_url})
+            return JSONResponse({"status": "failed", "detail": "No token and no auth URL returned."})
+        except Exception as exc:
+            return JSONResponse({"status": "failed", "detail": str(exc)})
+
+    return JSONResponse({"status": "not_configured",
+                         "detail": "Chưa cấu hình Gmail. Cần APP_ENV=agentbase + GREENNODE_AGENT_IDENTITY, hoặc GMAIL_REFRESH_TOKEN + GMAIL_CLIENT_ID + GMAIL_CLIENT_SECRET."})
+
+
 @router.post("/api/admin/test-email")
 def admin_test_email(payload: _TestEmailBody) -> JSONResponse:
     """Send a plain-text test email to verify the current Gmail token."""
