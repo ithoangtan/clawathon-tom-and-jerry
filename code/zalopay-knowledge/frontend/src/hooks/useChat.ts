@@ -142,16 +142,21 @@ export function useChat() {
     };
   }, []);
 
-  // Re-sync messages from the store when a webhook-triggered session is updated
-  // by the background polling (new progress messages arrive every ~3s).
+  // Re-sync messages from the store in two cases:
+  // 1. Webhook sessions — background polling delivers new progress messages every ~3s.
+  // 2. Late hydration — loadThreads completed AFTER the session switch, so the initial
+  //    hydration found no thread and left messages empty; sync once the store catches up.
   useEffect(() => {
     if (!liveThread) return;
     const isWebhook = liveThread.processingStatus != null;
-    const isActive = !loading;  // don't clobber mid-stream user sessions
-    // Use >= so when processingStatus flips to "done" we still sync even if
-    // message count didn't change between the last two polls (final state capture).
+    const isActive = !loading;
     if (isWebhook && isActive && liveThread.messages.length > 0 && liveThread.messages.length >= messages.length) {
+      // Webhook polling update.
       setMessages(liveThread.messages as ChatMessage[]);
+    } else if (!isWebhook && !loading && messages.length === 0 && liveThread.messages.length > 0) {
+      // Late hydration: store was empty at switch time, now populated from DB.
+      setMessages(liveThread.messages as ChatMessage[]);
+      loadedMessageCountRef.current = liveThread.messages.length;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveThread?.messages?.length, liveThread?.processingStatus]);
@@ -231,11 +236,12 @@ export function useChat() {
   }, [sessionAction, saveThread, getThread, clearSessionAction]);
 
   useEffect(() => {
-    // Only save when messages have grown past the baseline set on session load.
-    // This prevents merely viewing a session from triggering a save and bumping
-    // its updatedAt (which would push it to the top of the list).
     if (messages.length === 0) return;
     if (messages.length <= loadedMessageCountRef.current) return;
+    // Skip while the assistant is still streaming — the final setMessages (streaming: false)
+    // will trigger this effect again with the complete content, giving exactly 2 PUTs per
+    // exchange: one when the user message is appended, one when the response is complete.
+    if (messages.some((m) => m.streaming)) return;
     saveThread(sessionId, messages, targetDepartments, targetAutoRoute);
   }, [messages, targetDepartments, targetAutoRoute, sessionId, saveThread]);
 
