@@ -58,10 +58,15 @@ export function useChat() {
   const messagesRef = useRef(messages);
   const targetDepartmentsRef = useRef(targetDepartments);
   const targetAutoRouteRef = useRef(targetAutoRoute);
+  // Always-current sessionId ref — lets Effect 4 read sessionId without it being a dep.
+  // This prevents Effect 4 from firing when only sessionId changes (which would save stale
+  // messages from the previous session into the newly created one).
+  const sessionIdRef = useRef(sessionId);
 
   messagesRef.current = messages;
   targetDepartmentsRef.current = targetDepartments;
   targetAutoRouteRef.current = targetAutoRoute;
+  sessionIdRef.current = sessionId;
 
   // Abort in-flight requests on unmount.
   useEffect(() => {
@@ -130,14 +135,18 @@ export function useChat() {
   // ── Effect 4: Save after each complete exchange ───────────────────────────
   // Fires only when the last message is a fully-revealed assistant response.
   // This gives exactly 1 PUT per exchange (not 2).
+  // sessionId is intentionally read via ref (not in deps): including it as a dep caused
+  // Effect 4 to run when newSession() changed sessionId while messages still held the
+  // previous session's data, creating a phantom history entry with the wrong title.
   useEffect(() => {
     if (messages.length === 0) return;
     const last = messages[messages.length - 1];
     if (!last || last.role !== "assistant" || last.streaming) return;
     if (messages.length <= lastSavedCountRef.current) return;
     lastSavedCountRef.current = messages.length;
-    saveThread(sessionId, messages, targetDepartments, targetAutoRoute);
-  }, [messages, targetDepartments, targetAutoRoute, sessionId, saveThread]);
+    saveThread(sessionIdRef.current, messages, targetDepartments, targetAutoRoute);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, targetDepartments, targetAutoRoute, saveThread]);
 
   const appendAssistant = useCallback(
     (response: ChatResponse, assistantId: string) => {

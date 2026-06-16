@@ -19,17 +19,19 @@ const SIDEBAR_MAX_PX = 420;
 
 export function ChatPage() {
   const { sessionId: urlSessionId } = useParams<{ sessionId: string }>();
-  const currentSessionId = useUserStore((s) => s.sessionId);
   const requestSwitchSession = useSessionStore((s) => s.requestSwitchSession);
 
   useEffect(() => {
     if (!urlSessionId) {
       // Home ("/") — always start with a fresh blank session.
       useUserStore.getState().newSession();
-    } else if (urlSessionId !== currentSessionId) {
+    } else if (urlSessionId !== useUserStore.getState().sessionId) {
       requestSwitchSession(urlSessionId);
     }
-  }, [urlSessionId, currentSessionId, requestSwitchSession]);
+  // currentSessionId intentionally excluded — reading via getState() avoids the
+  // feedback loop where newSession() changes sessionId → re-runs effect → newSession() again.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSessionId, requestSwitchSession]);
 
   const locale = useUserStore((s) => s.locale);
   const sidebarOpen = useSidebarStore((s) => s.open);

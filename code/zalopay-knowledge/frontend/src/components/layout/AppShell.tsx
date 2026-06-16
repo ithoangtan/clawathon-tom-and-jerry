@@ -110,10 +110,6 @@ export function Header() {
             {indexReady ? t("healthHealthy", locale) : t("healthIndexPending", locale)}
           </Badge>
           <TutorialHelpButton />
-          <Button variant="ghost" onClick={() => navigate("/")} className="hidden sm:inline-flex">
-            <Plus size="sm" />
-            {t("newSession", locale)}
-          </Button>
         </div>
       </div>
     </header>
