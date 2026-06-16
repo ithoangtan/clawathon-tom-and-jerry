@@ -26,18 +26,28 @@ export function firstUserQuestion(messages: ChatMessage[]): string | null {
   return first?.content.trim() || null;
 }
 
-export function previewText(text: string, maxLen = 72): string {
+/** Common Vietnamese/English filler openers that add no meaning to a title. */
+const FILLER_OPENER = /^(?:(?:bạn\s+)?(?:hãy\s+)?(?:cho\s+(?:tôi|mình)\s+biết|giải\s+thích|mô\s+tả|liệt\s+kê|tóm\s+tắt)|(?:can\s+you|please|tell\s+me|explain|describe|list)\s+(?:the\s+|a\s+)?)[,:\s]*/i;
+
+/** Truncate at the last word boundary before maxLen — never cuts mid-word. */
+export function previewText(text: string, maxLen = 60): string {
   const trimmed = text.trim();
   if (trimmed.length <= maxLen) return trimmed;
-  return `${trimmed.slice(0, maxLen - 1)}…`;
+  // Find last space at or before maxLen - 1 to leave room for "…"
+  const cut = trimmed.lastIndexOf(" ", maxLen - 1);
+  const end = cut > 0 ? cut : maxLen - 1;
+  return `${trimmed.slice(0, end)}…`;
 }
 
-/** First sentence or line from a submitted prompt, trimmed for sidebar display. */
-export function deriveSessionTitle(prompt: string, maxLen = 72): string {
-  const trimmed = prompt.trim();
+/** Derive a concise sidebar title from the user's first prompt. */
+export function deriveSessionTitle(prompt: string, maxLen = 60): string {
+  const trimmed = prompt.trim().replace(FILLER_OPENER, "");
   if (!trimmed) return "";
 
+  // Use first non-empty line (multi-line messages)
   const firstLine = trimmed.split(/\n+/)[0]?.trim() ?? trimmed;
+
+  // If the first sentence ends with a sentence-terminating punctuation, use it
   const sentenceEnd = firstLine.search(/[.!?。！？](?:\s|$)/);
   const firstIdea =
     sentenceEnd >= 0 ? firstLine.slice(0, sentenceEnd + 1).trim() : firstLine;
