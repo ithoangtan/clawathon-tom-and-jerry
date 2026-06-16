@@ -217,25 +217,9 @@ def admin_gmail_status() -> JSONResponse:
             import asyncio
             from greennode_agentbase.identity import ThreeLoTokenRequest
             from app.adapters.identity_client import get_identity_client
-            from app.adapters.gmail_sender import (
-                GMAIL_SEND_SCOPE,
-                _GMAIL_CALLBACK_URL,
-                _GMAIL_IDENTITY_NAME,
-                _ensure_gmail_identity,
-            )
+            from app.adapters.gmail_sender import _ensure_and_get_gmail_token_async
             client = get_identity_client()
-            _ensure_gmail_identity(client)
-            result = asyncio.run(
-                client.get_3lo_token_async(
-                    provider_name="identity-google-space",
-                    agent_identity_name=_GMAIL_IDENTITY_NAME,
-                    request=ThreeLoTokenRequest(
-                        agent_user_id="itk160454@gmail.com",
-                        scopes=[GMAIL_SEND_SCOPE],
-                        return_url=_GMAIL_CALLBACK_URL,
-                    ),
-                )
-            )
+            result = asyncio.run(_ensure_and_get_gmail_token_async(client, ThreeLoTokenRequest))
             token = (getattr(result, "access_token", None) or "").strip()
             if token:
                 return JSONResponse({"status": "ok", "method": "agentbase_3lo"})
