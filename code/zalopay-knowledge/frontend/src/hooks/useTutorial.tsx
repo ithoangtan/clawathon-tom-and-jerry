@@ -250,10 +250,13 @@ function useTutorialController() {
       setActiveKey(key);
 
       if (key === "chat" && fromStep === 0) {
-        const { newSession } = useUserStore.getState();
-        newSession();
-        const freshSessionId = useUserStore.getState().sessionId;
-        navigate(`/chat/${freshSessionId}`);
+        if (normalizePathToTutorialRoute(location.pathname) !== "/") {
+          // Not on chat page yet — create fresh session and navigate there first
+          const { newSession } = useUserStore.getState();
+          newSession();
+          const freshSessionId = useUserStore.getState().sessionId;
+          navigate(`/chat/${freshSessionId}`);
+        }
         void waitForElement('[data-tour="chat-input"]').then(() => tour.drive(0));
         return;
       }
@@ -271,19 +274,19 @@ function useTutorialController() {
 
   useEffect(() => () => destroyTour(), [destroyTour]);
 
-  // Auto-start chat tutorial on first visit
+  // Auto-start chat tutorial every time user enters the chat page (unless dismissed)
   const chatDismissed = useTutorialStore((s) => s.dismissed["chat"] ?? false);
-  const autoStartedRef = useRef(false);
 
   useEffect(() => {
-    if (!hasHydrated || chatDismissed || autoStartedRef.current || isRunning) return;
+    if (!hasHydrated || chatDismissed) return;
     if (normalizePathToTutorialRoute(location.pathname) !== "/") return;
     const timerId = window.setTimeout(() => {
-      autoStartedRef.current = true;
       startTutorial("chat", 0);
     }, 3000);
     return () => window.clearTimeout(timerId);
-  }, [hasHydrated, chatDismissed, isRunning, startTutorial, location.pathname]);
+    // isRunning intentionally omitted — we don't want the tutorial to re-trigger when it ends
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasHydrated, chatDismissed, location.pathname]);
 
   const pauseTutorial = useCallback(() => {
     destroyTour();
