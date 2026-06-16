@@ -273,6 +273,7 @@ export function ChatInterface() {
                       key={msg.id}
                       content={msg.content}
                       timestamp={msg.timestamp}
+                      isWebhookTrigger={msg.id.startsWith("wh-user-")}
                     />
                   ) : msg.response ? (
                     <AssistantMessage

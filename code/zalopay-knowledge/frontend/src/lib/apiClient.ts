@@ -281,4 +281,12 @@ export const api = {
   deleteSession(sessionId: string): Promise<void> {
     return request<void>(`/api/sessions/${sessionId}`, { method: "DELETE" });
   },
+
+  testEmail(payload: { to: string; subject: string; body: string }): Promise<{ status: string; detail?: string }> {
+    return request<{ status: string; detail?: string }>("/api/admin/test-email", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+    });
+  },
 };

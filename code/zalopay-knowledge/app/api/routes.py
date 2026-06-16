@@ -10,6 +10,7 @@ import logging
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel
 
 from app.adapters.deps import get_deps
 from app.api.context import UserContext, require_user_context
@@ -190,6 +191,27 @@ def knowledge_gaps() -> JSONResponse:
     refused = get_audit_store().refused_questions(limit=20, days=30)
     low_rated = get_feedback_store().feedback_gaps(limit=20)
     return JSONResponse(content={"refused_questions": refused, "low_rated_docs": low_rated})
+
+
+# ── Admin: test email ────────────────────────────────────────────────────────
+
+class _TestEmailBody(BaseModel):
+    to: str
+    subject: str
+    body: str
+
+
+@router.post("/api/admin/test-email")
+def admin_test_email(payload: _TestEmailBody) -> JSONResponse:
+    """Send a plain-text test email to verify the current Gmail token."""
+    from app.adapters.gmail_sender import send_email
+    from app.config import get_settings
+    cfg = get_settings()
+    html_body = f"<pre style='font-family:sans-serif'>{payload.body}</pre>"
+    ok = send_email(to=payload.to, subject=payload.subject, body_html=html_body, settings=cfg)
+    if ok:
+        return JSONResponse({"status": "sent"})
+    return JSONResponse({"status": "failed", "detail": "Check server logs for Gmail error."}, status_code=502)
 
 
 # ── Shared session threads ────────────────────────────────────────────────────
