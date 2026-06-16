@@ -193,6 +193,21 @@ def knowledge_gaps() -> JSONResponse:
     return JSONResponse(content={"refused_questions": refused, "low_rated_docs": low_rated})
 
 
+# ── Admin: debug identity provider ──────────────────────────────────────────
+
+@router.get("/api/admin/gmail-provider-info")
+def admin_gmail_provider_info() -> JSONResponse:
+    """Return raw AgentBase OAuth2 provider config for identity-google-space (debug)."""
+    try:
+        import asyncio
+        from app.adapters.identity_client import get_identity_client
+        client = get_identity_client()
+        result = asyncio.run(client.get_oauth2_provider_async(name="identity-google-space"))
+        return JSONResponse({"provider": result.model_dump() if hasattr(result, "model_dump") else str(result)})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
 # ── Admin: test email ────────────────────────────────────────────────────────
 
 class _TestEmailBody(BaseModel):
