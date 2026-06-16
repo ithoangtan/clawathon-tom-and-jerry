@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS chat_sessions (
-    session_id        VARCHAR(36)   NOT NULL,
+    session_id        VARCHAR(100)  NOT NULL,
     title             VARCHAR(500),
     messages_json     MEDIUMTEXT    NOT NULL,
     target_departments_json TEXT    NOT NULL,
@@ -37,6 +37,11 @@ _MIGRATION_COLS = [
     ("processing_status", "ALTER TABLE chat_sessions ADD COLUMN processing_status VARCHAR(20) DEFAULT NULL"),
 ]
 
+# Widen session_id from VARCHAR(36) to VARCHAR(100) to support prefixed IDs like "sess-<uuid>".
+_WIDEN_SESSION_ID = (
+    "ALTER TABLE chat_sessions MODIFY COLUMN session_id VARCHAR(100) NOT NULL"
+)
+
 
 class SessionStore:
     """MySQL-backed store for shared chat session threads."""
@@ -51,11 +56,17 @@ class SessionStore:
                 cur.execute(_CREATE_TABLE)
                 # Add missing columns for existing deployments.
                 cur.execute("SHOW COLUMNS FROM chat_sessions")
-                existing_cols = {row["Field"] for row in cur.fetchall()}
+                existing_cols = {row["Field"]: row for row in cur.fetchall()}
                 for col_name, alter_sql in _MIGRATION_COLS:
                     if col_name not in existing_cols:
                         cur.execute(alter_sql)
                         logger.info("SessionStore migration: added column %r", col_name)
+                # Widen session_id if it's still VARCHAR(36) — prefixed IDs like
+                # "sess-<uuid>" are 41 chars and were rejected with DataError.
+                sid_col = existing_cols.get("session_id", {})
+                if sid_col.get("Type", "").lower() in ("varchar(36)",):
+                    cur.execute(_WIDEN_SESSION_ID)
+                    logger.info("SessionStore migration: widened session_id to VARCHAR(100)")
             ensure_index(conn, "chat_sessions", "idx_sessions_updated_at", "updated_at DESC")
             conn.commit()
         except Exception:
