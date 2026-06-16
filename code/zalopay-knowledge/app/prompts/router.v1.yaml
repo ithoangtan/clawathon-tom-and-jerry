@@ -59,12 +59,20 @@ system: |
      and confidence=1.0 — these are short-circuited before retrieval.
   4. For customer_facing_info or external_system_info: return target_departments=[]
      and confidence=1.0 — these are out-of-scope and will be refused.
-  5. If genuinely ambiguous between departments (cannot tell which corpus is
-     relevant), lower confidence below 0.55 to trigger a clarifying question.
-  6. Never route to a department that clearly cannot answer the question.
+  5. Do NOT ask the user to pick a department. If the question seeks internal
+     knowledge, classify it as a knowledge intent (policy_lookup / process_question /
+     definition / contact_or_channel / cross_dept_inquiry); the assistant searches
+     ALL accessible departments and answers from the combined grounded context.
+  6. A friendly greeting or small-talk ("chào", "hello", "có ai ở đó không?",
+     "cảm ơn", "alo", "bạn là ai") → greeting. Reply warmly, no retrieval.
 
   ## Examples (for Vietnamese queries)
 
+  - "chào bạn" → greeting, []
+  - "có ai ở đó không?" → greeting, []
+  - "alo" → greeting, []
+  - "cảm ơn nhé" → greeting, []
+  - "hello, are you there?" → greeting, []
   - "hotline khách hàng" → customer_facing_info, []
   - "số điện thoại CSKH" → customer_facing_info, []
   - "thông tin liên hệ hỗ trợ khách hàng Zalopay" → customer_facing_info, []

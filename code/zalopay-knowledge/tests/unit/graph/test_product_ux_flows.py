@@ -7,11 +7,9 @@ import time
 
 from app.api.service import state_to_response
 from app.graph.build import GraphDeps, build_graph
-from app.graph.nodes.respond import make_respond_node
-from app.graph.nodes.router import make_router_node
 from app.ports.types import LLMResult, RetrievedChunk
 from tests.unit.graph.conftest import StubLLM, StubRetriever
-from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
+from tests.department_fixtures import GROW, RISK
 
 
 class QueueLLM(StubLLM):
@@ -83,13 +81,18 @@ def test_partial_multi_dept_exposes_refusals_on_api(test_settings):
     )
 
     api = state_to_response(result)
+    # Fan-out hits all accessible departments: GROW answers, the rest refuse → partial.
     assert api.status == "partial"
-    assert api.refusals == [RISK]
     assert api.source_departments == [GROW]
+    assert RISK in (api.refusals or [])
+    assert GROW not in (api.refusals or [])
     assert len(api.citations) == 1
 
 
-def test_out_of_scope_short_circuit_includes_escalation(test_settings):
+def test_out_of_scope_question_fans_out_then_refuses(test_settings):
+    # Out-of-scope intents no longer short-circuit: they fan out to the accessible
+    # departments and refuse only because nothing relevant is found. The
+    # refusal_reason still surfaces "out_of_scope" for the UI.
     deps = GraphDeps(
         llm=StubLLM(
             json.dumps(
@@ -118,6 +121,4 @@ def test_out_of_scope_short_circuit_includes_escalation(test_settings):
 
     assert api.status == "refused"
     assert api.refusal_reason == "out_of_scope"
-    assert "Risk Management" in api.answer
-    assert "MVP scope" in api.answer
     assert api.citations == []

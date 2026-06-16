@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """``suggest`` node — generate proactive follow-up questions.
 
-Runs AFTER the respond node, using the ROUTING (small/fast) LLM tier.
+Runs AFTER the respond node, using the SMALL (fast) LLM tier.
 Returns up to 3 concise follow-up questions derived from the Q&A context and
 retrieved source titles.  Failures are silently swallowed — suggestions are
 a UX enhancement, never a correctness requirement.
@@ -86,13 +86,13 @@ def make_suggest_node(
                 {"role": "user", "content": rendered["user"]},
             ]
             result = llm.complete(
-                tier=ModelTier.ROUTING,
+                tier=ModelTier.SMALL,
                 messages=messages,
                 temperature=0.3,
                 response_format="text",
                 timeout_s=min(cfg.branch_timeout_s, 20),  # fast timeout — UX only
             )
-            questions = _extract_questions(result.content)
+            questions = _extract_questions(result.text)
             logger.info("suggest: generated %d follow-up questions", len(questions))
             return {"suggested_questions": questions}
         except Exception as exc:  # noqa: BLE001 — never fail the request

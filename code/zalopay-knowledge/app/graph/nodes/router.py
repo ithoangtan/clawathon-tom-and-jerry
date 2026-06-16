@@ -1,23 +1,27 @@
 from __future__ import annotations
 
-"""``router`` node — intent classification and department fan-out selection.
+"""``router`` node — intent classification and department fan-out.
 
 Uses the SMALL model tier with ``router.v1.yaml``.  It writes ``intent``,
-``target_departments``, ``routing_confidence`` and (when confidence is too low)
-``clarify_question`` to the state.  It never answers the question itself.
+``target_departments`` and ``routing_confidence`` to the state and never answers
+the question itself.
 
-Three control paths leave this node:
+Control paths:
 
-1. **Short-circuit intents** (greeting / capability_query / action_request):
+1. **Greeting fast-path** (deterministic, no LLM): obvious greetings / small-talk
+   short-circuit to a friendly canned reply — never clarify, never "not in docs".
+2. **Short-circuit intents** (greeting / capability_query / action_request):
    ``target_departments=[]`` — the ``respond`` node emits a canned reply.
-2. **Clarify**: confidence below ``ROUTE_CONFIDENCE_MIN`` ⇒ a clarifying
-   question is set and no department branches run.
-3. **Fan-out**: one department subgraph per entry in ``target_departments``.
+3. **Workflow execution**: routed to the discover→execute path.
+4. **Knowledge questions**: fan out to **ALL** departments the role may access
+   (no department clarification — a question may live in several places; we
+   answer from the combined grounded context, refusing only when truly absent).
 
-User-pinned departments bypass the LLM and the confidence gate entirely.
+User-pinned departments still bypass the LLM and answer only those.
 """
 
 import logging
+import re
 from typing import Callable
 
 from app.common.departments import (
@@ -47,7 +51,25 @@ WORKFLOW_INTENT = "workflow_execution"
 # Out-of-scope intents — refusal with escalation pointer (no retrieval).
 OUT_OF_SCOPE_INTENTS = frozenset({"status_or_data", "customer_facing_info", "external_system_info"})
 
-_VALID_DEPARTMENTS = frozenset(routable_keys())
+# Deterministic greeting / small-talk detector — keeps chit-chat friendly and
+# off the wiki-retrieval path (no clarify, no "not in docs"). Conservative: only
+# short messages so real knowledge questions that happen to contain "chào"/"thanks"
+# still fan out normally. The LLM intent path covers anything this misses.
+_GREETING_RE = re.compile(
+    r"(?:^|\b)(?:hi|hello|hey|yo|howdy|good\s+(?:morning|afternoon|evening)|thanks|thank\s+you)(?:\b|$)"
+    r"|xin\s*chào|\bchào\b|\balo\b|\bhế\s*lô\b"
+    r"|có\s+ai|ai\s+(?:ở\s+)?đó|ai\s+đấy"
+    r"|cảm\s+ơn|cám\s+ơn"
+    r"|bạn\s+(?:là\s+ai|tên\s+(?:gì|là)|khỏe\s+không)",
+    re.IGNORECASE,
+)
+
+
+def _looks_like_greeting(question: str) -> bool:
+    q = (question or "").strip()
+    if not q or len(q) > 30:
+        return False
+    return bool(_GREETING_RE.search(q))
 
 
 def make_router_node(
@@ -100,6 +122,16 @@ def make_router_node(
                 "clarify_question": None,
             }
 
+        # ── Path G: deterministic greeting / small-talk (no LLM, no clarify) ──
+        if _looks_like_greeting(state.get("question", "")):
+            logger.info("Router: greeting fast-path")
+            return {
+                "intent": "greeting",
+                "target_departments": [],
+                "routing_confidence": 1.0,
+                "clarify_question": None,
+            }
+
         # ── Guard: out of budget before we even start ─────────────────────────
         if budget_exceeded(state.get("deadline_ts")):
             logger.warning("Router: budget exhausted before classification")
@@ -128,10 +160,6 @@ def make_router_node(
 
         intent = str(data.get("intent", "unclear"))
         confidence = _clamp(data.get("confidence", 0.0))
-        raw_targets = [
-            d for d in data.get("target_departments", []) if d in _VALID_DEPARTMENTS
-        ]
-        targets = [d for d in raw_targets if d in allowed]
 
         # ── Path 2: short-circuit intents (no retrieval needed) ───────────────
         if intent in SHORT_CIRCUIT_INTENTS:
@@ -154,53 +182,18 @@ def make_router_node(
                 "clarify_question": None,
             }
 
-        # ── Path 2b: out-of-scope (live data / not in corpus) ─────────────────
-        if intent in OUT_OF_SCOPE_INTENTS:
-            return {
-                "intent": intent,
-                "target_departments": [],
-                "routing_confidence": confidence,
-                "clarify_question": None,
-            }
-
-        # ── Path 2c: LLM routed to valid departments but all denied for this role ──
-        if raw_targets and not targets:
-            denied_names = ", ".join(raw_targets)
-            logger.warning("Router: all LLM targets denied (role=%s, targets=%s)", state.get("role"), raw_targets)
-            if lang == "vi":
-                msg = f"Bạn không có quyền truy cập các phòng ban: {denied_names}."
-            else:
-                msg = f"You do not have permission to access the requested department(s): {denied_names}."
-            return {
-                "intent": intent,
-                "target_departments": [],
-                "routing_confidence": confidence,
-                "clarify_question": None,
-                "status": "refused",
-                "answer": msg,
-                "errors": ["access_denied"],
-            }
-
-        # ── Path 3: clarify on low confidence / no usable target ──────────────
-        if not targets or confidence < cfg.route_confidence_min:
-            logger.info(
-                "Router: clarify (intent=%s confidence=%.2f targets=%s)",
-                intent,
-                confidence,
-                targets,
-            )
-            return {
-                "intent": intent,
-                "target_departments": [],
-                "routing_confidence": confidence,
-                "clarify_question": _clarify_prompt(state.get("request_language", "en"), allowed),
-            }
-
-        # ── Path 4: normal fan-out ────────────────────────────────────────────
-        logger.info("Router: intent=%s targets=%s conf=%.2f", intent, targets, confidence)
+        # ── Path 3: knowledge question → fan out to ALL accessible departments ─
+        # No department clarification: a question may live in several places, so we
+        # search everything the role can access and let the grounded pipeline
+        # (grade → synthesize → verify → reconcile) answer from the combined
+        # context — refusing only when truly nothing relevant exists. The LLM's
+        # department picks (``raw_targets``) are advisory only and intentionally
+        # ignored here. ``confidence`` is kept for telemetry/UI, not for gating.
+        fan = sorted(allowed)
+        logger.info("Router: intent=%s → fan-out all %d dept(s) conf=%.2f", intent, len(fan), confidence)
         return {
             "intent": intent,
-            "target_departments": targets,
+            "target_departments": fan,
             "routing_confidence": confidence,
             "clarify_question": None,
         }
@@ -246,19 +239,3 @@ def _clamp(value, lo: float = 0.0, hi: float = 1.0) -> float:
         return max(lo, min(hi, float(value)))
     except (TypeError, ValueError):
         return 0.0
-
-
-def _clarify_prompt(lang: str, allowed: set[str] | None = None) -> dict:
-    """Build the ``ClarifyingQuestion`` payload (matches the API schema shape)."""
-    options = sorted(allowed) if allowed else list(routable_keys())
-    if lang == "vi":
-        prompt = (
-            "Câu hỏi của bạn có thể liên quan đến nhiều bộ phận. "
-            "Bạn muốn hỏi bộ phận nào?"
-        )
-    else:
-        prompt = (
-            "Your question could relate to more than one department. "
-            "Which department are you asking about?"
-        )
-    return {"prompt": prompt, "options": options}

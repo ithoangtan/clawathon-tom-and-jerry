@@ -8,8 +8,7 @@ from app.config import Settings
 from app.graph.nodes.respond import make_respond_node
 from app.graph.state import Citation, DeptResult
 
-from tests.unit.graph.conftest import answered_dept_result
-from tests.department_fixtures import ALL_DEPARTMENT_KEYS, ALL_KEYS, BANK, DEFAULT_HOME, GROW, RISK
+from tests.department_fixtures import GROW, RISK
 
 
 def test_respond_issues_feedback_id(test_settings: Settings):
@@ -34,22 +33,6 @@ def test_respond_passthrough_ingest_refusal(test_settings: Settings):
     assert out["source_departments"] == []
 
 
-def test_respond_clarify_question(test_settings: Settings):
-    node = make_respond_node(settings=test_settings)
-    clarify = {"prompt": "Which department?", "options": [RISK]}
-    out = node(
-        {
-            "clarify_question": clarify,
-            "routing_confidence": 0.3,
-            "request_language": "en",
-        }
-    )
-    assert out["status"] == "refused"
-    assert out["answer"] == "Which department?"
-    assert out["clarify_question"] == clarify
-    assert out["confidence"] == 0.3
-
-
 def test_respond_short_circuit_capability_includes_scope(test_settings: Settings):
     node = make_respond_node(settings=test_settings)
     out = node({"intent": "capability_query", "request_language": "en"})
@@ -58,14 +41,7 @@ def test_respond_short_circuit_capability_includes_scope(test_settings: Settings
     assert "Bank Partnerships" in out["answer"]
 
 
-def test_respond_out_of_scope_includes_escalation(test_settings: Settings):
-    node = make_respond_node(settings=test_settings)
-    out = node({"intent": "status_or_data", "request_language": "en"})
-    assert out["status"] == "refused"
-    assert "Risk Management" in out["answer"]
-    assert "MVP scope" in out["answer"]
-    assert out["citations"] == []
-
+def test_respond_greeting_is_friendly(test_settings: Settings):
     node = make_respond_node(settings=test_settings)
     out = node({"intent": "greeting", "request_language": "en"})
     assert out["status"] == "answered"
@@ -73,6 +49,16 @@ def test_respond_out_of_scope_includes_escalation(test_settings: Settings):
     assert out["citations"] == []
     assert out["source_departments"] == []
     assert out["confidence"] == 1.0
+
+
+def test_respond_falls_back_to_refusal_when_no_answer(test_settings: Settings):
+    # No dept_results + no answer (e.g. every department refused) → graceful refusal,
+    # no special out-of-scope short-circuit anymore.
+    node = make_respond_node(settings=test_settings)
+    out = node({"intent": "status_or_data", "request_language": "en", "dept_results": []})
+    assert out["status"] == "refused"
+    assert out["citations"] == []
+    assert out["answer"]
 
 
 def test_respond_normal_answer_from_reconcile(

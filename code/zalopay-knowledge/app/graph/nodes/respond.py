@@ -8,11 +8,11 @@ arrive here into one consistent state that the API layer maps directly onto
 
 * **ingest refusal** (index not ready): ``ingest_context`` already set
   ``status="refused"`` + ``answer`` — pass it through.
-* **clarify**: the router set ``clarify_question`` — surface it, no answer body.
 * **short-circuit intent** (greeting / capability / action): emit a canned,
   source-free reply.
 * **normal**: take ``reconcile``'s ``answer`` / ``citations`` / ``conflicts`` /
-  ``confidence`` / ``status`` as-is.
+  ``confidence`` / ``status`` as-is. Knowledge questions always fan out across
+  all accessible departments; refusal ("not in docs") only when truly absent.
 
 Always issues a fresh ``feedback_id`` and computes ``source_departments``.
 No LLM call.
@@ -25,9 +25,9 @@ from typing import Callable
 from langchain_core.messages import AIMessage
 
 from app.common.departments import routable_departments
-from app.common.product_copy import escalation_hint, maybe_append_high_stakes_disclaimer, out_of_scope_notice
+from app.common.product_copy import maybe_append_high_stakes_disclaimer, out_of_scope_notice
 from app.config import Settings, get_settings
-from app.graph.nodes.router import OUT_OF_SCOPE_INTENTS, SHORT_CIRCUIT_INTENTS
+from app.graph.nodes.router import SHORT_CIRCUIT_INTENTS
 from app.graph.state import DeptResult, GraphState
 
 logger = logging.getLogger(__name__)
@@ -64,34 +64,8 @@ def make_respond_node(
             out["messages"] = [AIMessage(content=state["answer"])]
             return out
 
-        # ── Case 2: router asked a clarifying question ────────────────────────
-        if state.get("clarify_question"):
-            cq = state["clarify_question"]
-            out.update(
-                status="refused",
-                answer=cq.get("prompt", "") if isinstance(cq, dict) else "",
-                citations=[],
-                confidence=state.get("routing_confidence", 0.0),
-                source_departments=[],
-                clarify_question=cq,
-            )
-            if out["answer"]:
-                out["messages"] = [AIMessage(content=out["answer"])]
-            return out
-
-        # ── Case 3: short-circuit intents (no retrieval happened) ─────────────
+        # ── Case 2: short-circuit intents (no retrieval happened) ─────────────
         intent = state.get("intent", "")
-        if intent in OUT_OF_SCOPE_INTENTS:
-            out.update(
-                status="refused",
-                answer=_out_of_scope_reply(lang, intent=intent),
-                citations=[],
-                confidence=0.0,
-                source_departments=[],
-            )
-            out["messages"] = [AIMessage(content=out["answer"])]
-            return out
-
         if intent in SHORT_CIRCUIT_INTENTS:
             out.update(
                 status="answered",
@@ -200,29 +174,6 @@ def _canned_reply(intent: str, lang: str) -> str:
         else "I can only look up and answer information from the internal "
         "documentation — I can't perform actions or change any systems."
     )
-
-
-def _out_of_scope_reply(lang: str, intent: str = "status_or_data") -> str:
-    vi = lang == "vi"
-    if intent == "customer_facing_info":
-        lead = (
-            "Thông tin liên hệ dành cho khách hàng không có trong tài liệu nội bộ của Zalopay."
-            if vi
-            else "Customer-facing contact information is not in Zalopay's internal knowledge base."
-        )
-    elif intent == "external_system_info":
-        lead = (
-            "Thông tin về hệ thống bên ngoài hoặc sản phẩm của bên thứ ba không có trong tài liệu nội bộ."
-            if vi
-            else "Information about external systems or third-party products is not in the internal knowledge base."
-        )
-    else:
-        lead = (
-            "Câu hỏi này nằm ngoài phạm vi tài liệu đã lập chỉ mục (ví dụ: số liệu thời gian thực)."
-            if vi
-            else "This question is outside indexed documentation (e.g. live or real-time data)."
-        )
-    return f"{lead}\n\n{escalation_hint(lang)}\n\n{out_of_scope_notice(lang)}"
 
 
 def _empty_message(lang: str) -> str:

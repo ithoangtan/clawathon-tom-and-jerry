@@ -329,3 +329,57 @@ def test_pass_comments_only_no_reassign():
                             jira=jira, confluence_writer=RecordingConfluence(), settings=SETTINGS)
     assert out["decision"] == "PASS"
     assert jira.comments and jira.assigned == [] and jira.labeled == []
+
+
+# ── decision gate (Step type=gate) is surfaced to the LLM, not guessed ─────────
+
+_PARSED_GATE = {
+    "name": "Risk: Campaign Review — Lucky Wheel",
+    "definition_status": "ACTIVE",
+    "steps": [
+        {"index": 1, "title": "Fetch", "type": "fetch"},
+        {"index": 2, "title": "Policy", "type": "rag",
+         "checklist": ["Payment channel loại trừ VietQR?"]},
+        {"index": 3, "title": "Decision", "type": "gate",
+         "condition": "0 vi phạm thì PASS; 1 đến 4 vi phạm fixable thì PARTIAL_FAIL; "
+                      "nghiêm trọng hoặc đa số rule thì FAIL."},
+    ],
+    "triggers": [
+        {"event_type": "status_changed", "from_status": "TO DO", "to_status": "RISK REVIEW",
+         "action": "Đối chiếu policy, ra quyết định, đăng Quick Risk Report"},
+    ],
+    "reactions": [
+        {"decision": "PASS", "verbs": ["comment"]},
+        {"decision": "PARTIAL_FAIL", "verbs": ["comment", "label:risk-partial-fail"]},
+        {"decision": "FAIL", "verbs": ["comment", "label:risk-rejected"]},
+    ],
+}
+
+
+class GateLLM:
+    """Returns the gate-bearing workflow; records the action-call prompt."""
+
+    def __init__(self) -> None:
+        self.action_prompt = ""
+
+    def complete(self, **kwargs):
+        blob = " ".join(m.get("content", "") for m in kwargs.get("messages", []))
+        if "convert a Zalopay workflow" in blob:
+            return LLMResult(text=json.dumps(_PARSED_GATE), raw={}, usage={})
+        self.action_prompt = blob
+        return LLMResult(text="- Payment channel: **Comply** — spec.\nDECISION: PARTIAL_FAIL",
+                         raw={}, usage={})
+
+
+def test_gate_condition_is_injected_into_action_prompt():
+    # Without the gate text in the prompt the LLM has the verdicts but not the rule
+    # for combining them, so it guesses the DECISION. Assert the page-declared gate
+    # (Step type=gate, condition) reaches the prompt.
+    jira = JiraWithDescription(["wf-risk-campaign-review-lucky-wheel"], None)
+    llm = GateLLM()
+    out = handle_jira_event(_ev_rr(), llm=llm, retriever=StubRetriever(),
+                            jira=jira, confluence_writer=RecordingConfluence(), settings=SETTINGS)
+    assert out["status"] == "acted"
+    assert "vi phạm fixable" in llm.action_prompt
+    assert "ÁP DỤNG CHÍNH XÁC quy tắc quyết định" in llm.action_prompt
+    assert out["decision"] == "PARTIAL_FAIL"

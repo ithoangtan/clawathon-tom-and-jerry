@@ -12,6 +12,7 @@ Stable values are hardcoded module constants (default project key), per the
 """
 
 import logging
+import re
 
 import httpx
 
@@ -29,19 +30,78 @@ DEFAULT_PROJECT_KEY = "KAN"
 _TIMEOUT = 30.0
 
 
-def _to_adf(text: str, *, code_block: str | None = None, code_language: str = "json") -> dict:
-    """Wrap text into a minimal Atlassian Document Format doc.
+_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+_BULLET_RE = re.compile(r"^\s*[-*]\s+(.*)$")
+_HEADING_RE = re.compile(r"^\s*(#{1,6})\s+(.*)$")
+_DECISION_RE = re.compile(r"^\s*DECISION\s*[:=]\s*(.+)$", re.IGNORECASE)
+_DECISION_EMOJI = {"PASS": "✅", "PARTIAL_FAIL": "⚠️", "FAIL": "❌"}
 
-    Jira Cloud v3 requires ADF for ``description`` and comment ``body``. Each
-    non-empty line of *text* becomes a paragraph; an empty doc gets one empty
-    paragraph. When *code_block* is given it is appended as an ADF ``codeBlock``
-    node so Jira renders it as a fenced, syntax-highlighted block.
+
+def _adf_inline(text: str) -> list[dict]:
+    """Parse ``**bold**`` runs into ADF text nodes (with ``strong`` marks)."""
+    nodes: list[dict] = []
+    pos = 0
+    for m in _BOLD_RE.finditer(text):
+        if m.start() > pos and text[pos:m.start()]:
+            nodes.append({"type": "text", "text": text[pos:m.start()]})
+        nodes.append({"type": "text", "text": m.group(1), "marks": [{"type": "strong"}]})
+        pos = m.end()
+    if pos < len(text) and text[pos:]:
+        nodes.append({"type": "text", "text": text[pos:]})
+    return nodes
+
+
+def _to_adf(text: str, *, code_block: str | None = None, code_language: str = "json") -> dict:
+    """Render lightweight Markdown into an Atlassian Document Format doc.
+
+    Jira Cloud v3 requires ADF for ``description`` and comment ``body`` and does
+    NOT interpret Markdown, so ``**bold**`` / ``- bullets`` would otherwise show
+    as raw text. This renders: ``**bold**`` → strong, ``- ``/``* `` lines →
+    bulletList, ``#``-headings → heading, and a ``DECISION: X`` line → a bold
+    paragraph with a status emoji. Plain text degrades to paragraphs (so issue
+    descriptions are unaffected). When *code_block* is given it is appended as an
+    ADF ``codeBlock``.
     """
-    lines = (text or "").split("\n")
     content: list[dict] = []
-    for line in lines:
-        para_content = [{"type": "text", "text": line}] if line else []
-        content.append({"type": "paragraph", "content": para_content})
+    lines = (text or "").split("\n")
+    i, n = 0, len(lines)
+    while i < n:
+        stripped = lines[i].strip()
+        if not stripped:
+            i += 1
+            continue
+
+        dm = _DECISION_RE.match(stripped)
+        if dm:
+            token = dm.group(1).strip().upper().replace(" ", "_").replace("-", "_")
+            emoji = _DECISION_EMOJI.get(token, "📋")
+            content.append({"type": "paragraph", "content": [
+                {"type": "text", "text": f"{emoji} DECISION: {dm.group(1).strip()}",
+                 "marks": [{"type": "strong"}]}]})
+            i += 1
+            continue
+
+        hm = _HEADING_RE.match(stripped)
+        if hm:
+            inline = _adf_inline(hm.group(2).strip()) or [{"type": "text", "text": hm.group(2).strip()}]
+            content.append({"type": "heading", "attrs": {"level": min(len(hm.group(1)) + 2, 6)},
+                            "content": inline})
+            i += 1
+            continue
+
+        if _BULLET_RE.match(lines[i]):
+            items: list[dict] = []
+            while i < n and _BULLET_RE.match(lines[i]):
+                item_text = _BULLET_RE.match(lines[i]).group(1).strip()
+                items.append({"type": "listItem", "content": [
+                    {"type": "paragraph", "content": _adf_inline(item_text)}]})
+                i += 1
+            content.append({"type": "bulletList", "content": items})
+            continue
+
+        content.append({"type": "paragraph", "content": _adf_inline(stripped)})
+        i += 1
+
     if code_block:
         content.append({
             "type": "codeBlock",

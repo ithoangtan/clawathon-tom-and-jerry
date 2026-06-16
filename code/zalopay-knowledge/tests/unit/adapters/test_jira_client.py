@@ -64,6 +64,27 @@ class TestToAdf:
         assert cb["attrs"]["language"] == "json"
         assert cb["content"][0]["text"] == '{"a": 1}'
 
+    def test_bold_becomes_strong(self) -> None:
+        adf = _to_adf("Payment: **Violate** here")
+        nodes = adf["content"][0]["content"]
+        strong = [nd for nd in nodes if nd.get("marks") == [{"type": "strong"}]]
+        assert strong and strong[0]["text"] == "Violate"
+
+    def test_bullets_become_bullet_list(self) -> None:
+        adf = _to_adf("- one **bold**\n- two")
+        bl = adf["content"][0]
+        assert bl["type"] == "bulletList"
+        assert len(bl["content"]) == 2
+        assert bl["content"][0]["content"][0]["type"] == "paragraph"
+        # bold inside a bullet still renders strong
+        assert any(nd.get("marks") for nd in bl["content"][0]["content"][0]["content"])
+
+    def test_decision_line_becomes_strong_with_emoji(self) -> None:
+        adf = _to_adf("review...\nDECISION: PARTIAL_FAIL")
+        last = adf["content"][-1]["content"][0]
+        assert last["marks"] == [{"type": "strong"}]
+        assert "DECISION: PARTIAL_FAIL" in last["text"] and "⚠️" in last["text"]
+
 
 # ── config / base URL ──────────────────────────────────────────────────────────
 

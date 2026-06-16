@@ -113,7 +113,7 @@ def handle_jira_event(
 
     # 4a. Always post the result as a Jira comment (visible, safe side-effect).
     try:
-        res = jira.add_comment(key=event.issue_key, body=f"[Agent · {defn.name}]\n\n{result_text}")
+        res = jira.add_comment(key=event.issue_key, body=f"**[Agent · {defn.name}]**\n\n{result_text}")
         out["jira_comment"] = {"dry_run": bool(res.get("dry_run")), "url": res.get("url")}
     except JiraUnavailable as exc:
         out["jira_comment"] = {"error": str(exc)}
@@ -240,9 +240,14 @@ def _run_action(
     except RetrieverUnavailable:
         pass
 
-    # Review questions + valid decisions live on the workflow page — data, not code.
+    # Review questions, decision gate, and valid decisions all live on the
+    # workflow page — data, not code.
     questions = [item for step in defn.steps for item in (step.checklist or [])]
     decisions = [r.decision for r in (defn.reactions or []) if r.decision]
+    # The decision gate (Step type=gate) maps rule outcomes → a DECISION token.
+    # Without it the LLM has the verdicts but not the rule for combining them, so
+    # it guesses (e.g. 3 fixable violations wrongly → FAIL instead of PARTIAL_FAIL).
+    gate_rules = [s.condition for s in defn.steps if s.type == "gate" and s.condition]
     spec_parts: list[str] = []
     if questions:
         q_block = "\n".join(f"- {q}" for q in questions)
@@ -258,10 +263,18 @@ def _run_action(
     else:
         spec_parts.append("Trả về kết quả ngắn gọn, có căn cứ.")
     if decisions:
-        spec_parts.append(
+        decision_block = (
             "Kết thúc bằng đúng MỘT dòng cuối: `DECISION: X` — với X là MỘT trong "
             f"[{', '.join(decisions)}]."
         )
+        if gate_rules:
+            decision_block += (
+                "\n\nÁP DỤNG CHÍNH XÁC quy tắc quyết định sau để chọn X — đếm số mục "
+                '**Violate** (mục "Chưa rõ" KHÔNG tính là vi phạm); chỉ kết luận nghiêm '
+                "trọng/FAIL khi đúng quy tắc dưới đây, KHÔNG tự suy diễn:\n"
+                + "\n".join(f"- {g}" for g in gate_rules)
+            )
+        spec_parts.append(decision_block)
     answer_spec = "\n\n".join(spec_parts)
 
     prompt = (
