@@ -1,5 +1,7 @@
 # Zalopay Internal Knowledge Agent
 
+🌐 [English version available → README-en.md](README-en.md)
+
 > **"Knowledge stays. Legacy grows."**
 >
 > Nền tảng kiến thức sống cho Zalopay — giúp mọi team quyết định nhanh hơn, nhất quán hơn, và kế thừa kinh nghiệm tích lũy qua từng thế hệ.
