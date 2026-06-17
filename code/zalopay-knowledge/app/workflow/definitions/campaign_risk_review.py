@@ -72,11 +72,12 @@ CAMPAIGN_RISK_REVIEW = WorkflowDefinition(
                 "comment",
                 f"assign_from_field:{_RISK_PIC_FIELD}",
                 f"mention_pic_confirm:{_RISK_PIC_FIELD}",
+                f"email_pic:{_RISK_PIC_FIELD}"
             ],
         ),
         WorkflowReaction(
             decision="PARTIAL_FAIL",
-            verbs=["comment"],
+            verbs=["comment", "update_status:REJECT"],
         ),
         WorkflowReaction(
             decision="FAIL",

@@ -41,6 +41,15 @@ def parse_decision(text: str) -> str | None:
     return _norm(m.group(1)) if m else None
 
 
+def _pic_email(field_value) -> str | None:
+    """Extract emailAddress from a user-picker field (single dict or multi-value list)."""
+    if isinstance(field_value, list):
+        return (field_value[0] or {}).get("emailAddress") if field_value else None
+    if isinstance(field_value, dict):
+        return field_value.get("emailAddress")
+    return None
+
+
 def _pic_account_id(field_value) -> str | None:
     """Extract accountId from a user-picker field (single dict or multi-value list)."""
     if isinstance(field_value, list):
@@ -60,6 +69,7 @@ def apply_reactions(
     jira: JiraPort,
     confluence_writer: ConfluenceWriterPort,
     page_id: str,
+    settings=None,
 ) -> dict:
     """Apply the page-declared verbs for *decision*. Returns an applied-summary dict.
 
@@ -141,6 +151,34 @@ def apply_reactions(
                 )
                 applied["verbs"].append(
                     f"mention_pic_confirm:{arg}" + (" (dry-run)" if res.get("dry_run") else "")
+                )
+            elif name == "email_pic":
+                # arg = custom field ID; email from field → fallback reporter → assignee
+                fields = issue.get("fields") or {}
+                to_email = (
+                    _pic_email(fields.get(arg) if arg else None)
+                    or _pic_email(fields.get("reporter"))
+                    or _pic_email(fields.get("assignee"))
+                )
+                if not to_email:
+                    applied["verbs"].append("email_pic:skipped-no-email")
+                    continue
+                if settings is None:
+                    applied["verbs"].append("email_pic:skipped-no-settings")
+                    continue
+                from app.adapters.gmail_sender import send_email as _send_email
+                summary = fields.get("summary") or issue_key
+                jira_url = issue.get("url") or ""
+                subject = f"[Zalopay Wiki] Risk Review PASS — {issue_key}"
+                body_html = (
+                    f"<p>Campaign <strong>{issue_key}: {summary}</strong> "
+                    f"đã được Zalopay Wiki review tự động và kết quả là <strong>PASS</strong>.</p>"
+                    f"<p>Nhờ bạn xác nhận tại: <a href='{jira_url}'>{issue_key}</a></p>"
+                    f"<hr/><pre style='font-size:13px'>{report_text}</pre>"
+                )
+                ok = _send_email(to=to_email, subject=subject, body_html=body_html, settings=settings)
+                applied["verbs"].append(
+                    f"email_pic:{to_email}" if ok else f"email_pic:{to_email}:failed"
                 )
             elif name == "append_confluence":
                 ts = datetime.now(timezone.utc).isoformat(timespec="seconds")

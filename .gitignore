@@ -1,2 +1,3 @@
 agent-base-docs/
-node_modules/
+node_modules/.agentbase/
+.agentbase/

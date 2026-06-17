@@ -87,11 +87,17 @@ def normalize_jira_event(payload: dict[str, Any]) -> JiraEvent:
         et: EventType = explicit if explicit in (
             "status_changed", "comment_added", "field_changed", "issue_updated"
         ) else "unknown"
+        status_from_val = _s(payload.get("status_from"))
+        status_to_val = _s(payload.get("status_to"))
+        # Normalise "issue_updated" that carries a status change → "status_changed"
+        # so trigger matching works regardless of which event_type the automation sends.
+        if et == "issue_updated" and status_to_val is not None:
+            et = "status_changed"
         return JiraEvent(
             event_type=et,
             issue_key=_s(payload.get("issue_key")) or "",
-            status_from=_s(payload.get("status_from")),
-            status_to=_s(payload.get("status_to")),
+            status_from=status_from_val,
+            status_to=status_to_val,
             field=_s(payload.get("field")),
             field_from=_s(payload.get("from") or payload.get("field_from")),
             field_to=_s(payload.get("to") or payload.get("field_to")),

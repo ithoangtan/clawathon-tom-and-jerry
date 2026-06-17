@@ -213,6 +213,7 @@ def handle_jira_event(
         decision, defn,
         issue_key=event.issue_key, report_text=result_text, issue=issue,
         jira=jira, confluence_writer=confluence_writer, page_id=page_id,
+        settings=cfg,
     )
 
     logger.info(

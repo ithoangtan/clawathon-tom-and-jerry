@@ -188,6 +188,11 @@ def _process_event(event: JiraEvent) -> None:
         logger.info("Jira webhook processed %s → %s", event.issue_key, result.get("status"))
         final_status = "done" if result.get("status") not in ("error",) else "error"
 
+        # Show error reason in session so it's visible in the UI (not just logs).
+        if final_status == "error":
+            reason = result.get("reason") or result.get("status") or "unknown"
+            progress(f"❌ **Lỗi xử lý** `{event.issue_key}`: `{reason}`", 99)
+
         # Final message: format for chat display.
         result_text = result.get("result_text") or ""
         decision = result.get("decision") or ""
